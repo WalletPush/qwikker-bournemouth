@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update subscription
+    // Admin-granted upgrades have NO expiry (current_period_end = NULL)
+    // Only Stripe-managed subscriptions have a period end that gets renewed via webhook
     const { data: subscription, error: subError } = await supabase
       .from('business_subscriptions')
       .upsert({
@@ -41,8 +43,8 @@ export async function POST(request: NextRequest) {
         status: 'active',
         subscription_start_date: new Date().toISOString(),
         current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        base_price: 89.00,
+        current_period_end: null,
+        base_price: 0,
         billing_cycle: 'monthly',
         is_in_free_trial: false
       })

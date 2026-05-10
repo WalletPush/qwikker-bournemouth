@@ -179,12 +179,16 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   
   // Transform real businesses to match expected format
   const realBusinesses = (activeBusinesses || []).map(business => {
-    // Check if business has secret menu items
+    // Check if business has secret menu items and extract them
     let hasSecretMenu = false
+    let secretMenuItems: { name: string; description?: string; price?: string; image_url?: string }[] = []
     if (business.additional_notes) {
       try {
         const notes = JSON.parse(business.additional_notes)
-        hasSecretMenu = notes.secret_menu_items && notes.secret_menu_items.length > 0
+        if (notes.secret_menu_items && notes.secret_menu_items.length > 0) {
+          hasSecretMenu = true
+          secretMenuItems = notes.secret_menu_items
+        }
       } catch (e) {
         console.error('Error parsing additional_notes for business:', business.business_name, e)
         hasSecretMenu = false
@@ -261,8 +265,9 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         if (offer.offer_start_date && new Date(offer.offer_start_date) > nowCheck) return false
         return true
       })?.length || 0,
-      menuPreview: business.menu_preview || [], // Add menu preview for popular items
-      hasSecretMenu, // Now properly checks for real secret menu data
+      menuPreview: business.menu_preview || [],
+      hasSecretMenu,
+      secretMenu: hasSecretMenu ? { items: secretMenuItems } : null,
       // 🎯 TIER LOGIC: Free listings (unclaimed/claimed_free) have NO tier badge
       tier: (business.status === 'unclaimed' || business.status === 'claimed_free') 
         ? null // No tier badge for free listings

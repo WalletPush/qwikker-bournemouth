@@ -1978,9 +1978,9 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
     if (isDetailRequest && state?.currentBusiness) {
       console.log(`📋 [FACT MODE] Detail request detected for business: ${state.currentBusiness.name}`)
       
-      // Fetch full business data from DB to get all structured fields
+      // Fetch full business data — use eligibility view to prevent expired businesses leaking
       const { data: fullBusiness } = await supabase
-        .from('business_profiles')
+        .from('business_profiles_chat_eligible')
         .select('*')
         .eq('id', state.currentBusiness.id)
         .single()
@@ -2989,12 +2989,11 @@ async function generateBusinessDetailResponse(
     }
   }
   
-  // Fetch business (allow cross-city for "More details" from Atlas)
+  // Fetch business — use eligibility view to prevent expired/ineligible businesses
   const { data: business, error} = await supabase
-    .from('business_profiles')
+    .from('business_profiles_chat_eligible')
     .select('*')
     .eq('id', businessId)
-    // ✅ REMOVED: .eq('city', context.city) to allow cross-city details
     .single()
   
   if (error || !business) {

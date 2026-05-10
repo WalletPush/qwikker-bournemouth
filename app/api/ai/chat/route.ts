@@ -619,8 +619,9 @@ export async function POST(request: NextRequest) {
             let dbErr: any = null
 
             // Try 1: exact substring match (e.g. "bellaggio" in "Bellaggio")
+            // SECURITY: Use chat_eligible view to prevent expired/ineligible businesses from appearing
             const result1 = await supabase
-              .from('business_profiles')
+              .from('business_profiles_chat_eligible')
               .select('id, business_name')
               .eq('city', city)
               .ilike('business_name', `%${searchTerm}%`)
@@ -633,7 +634,7 @@ export async function POST(request: NextRequest) {
               for (const token of nameTokens) {
                 if (token.length < 4) continue
                 const { data: tokenMatches } = await supabase
-                  .from('business_profiles')
+                  .from('business_profiles_chat_eligible')
                   .select('id, business_name')
                   .eq('city', city)
                   .ilike('business_name', `%${token}%`)
@@ -654,7 +655,7 @@ export async function POST(request: NextRequest) {
                 const prefix = longestToken.substring(0, Math.ceil(longestToken.length * 0.6))
                 console.log(`🔍 [DB LOOKUP] Trying fuzzy prefix: "${prefix}%"`)
                 const { data: fuzzyMatches } = await supabase
-                  .from('business_profiles')
+                  .from('business_profiles_chat_eligible')
                   .select('id, business_name')
                   .eq('city', city)
                   .ilike('business_name', `%${prefix}%`)
@@ -760,10 +761,10 @@ export async function POST(request: NextRequest) {
         let biz = null
         let matchedBy = 'none'
 
-        // 1️⃣ Try ID (best)
+        // 1️⃣ Try ID (best) — use eligibility view to prevent expired businesses
         if (currentBusinessId) {
           const { data } = await supabase
-            .from('business_profiles')
+            .from('business_profiles_chat_eligible')
             .select(selectFields)
             .eq('id', currentBusinessId)
             .maybeSingle()
@@ -780,7 +781,7 @@ export async function POST(request: NextRequest) {
           const pattern = `%${words.join('%')}%` // e.g. "%triangle%gyross%"
           
           const { data } = await supabase
-            .from('business_profiles')
+            .from('business_profiles_chat_eligible')
             .select(selectFields)
             .eq('city', city)
             .ilike('business_name', pattern)

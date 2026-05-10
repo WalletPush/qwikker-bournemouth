@@ -836,3 +836,90 @@ export async function updateBusinessTier(params: {
     }
   }
 }
+
+/**
+ * Downgrade a business to Free Listing (removes subscription, resets profile)
+ * Used when admin selects "Free Listing" in the tier management card.
+ */
+export async function downgradeToFreeListing(params: { businessId: string }) {
+  const supabaseAdmin = createAdminClient()
+  const { businessId } = params
+
+  try {
+    console.log('🚀 SERVER ACTION: downgradeToFreeListing', { businessId })
+
+    const { data: businessProfile, error: profileFetchError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('status, business_name')
+      .eq('id', businessId)
+      .single()
+
+    if (profileFetchError || !businessProfile) {
+      console.error('❌ Business profile not found:', profileFetchError)
+      return { success: false, error: 'Business profile not found' }
+    }
+
+    const now = new Date()
+
+    // 1. Update business_profiles to free listing state
+    const { error: profileError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({
+        plan: 'free',
+        business_tier: 'claimed_free',
+        features: {
+          social_wizard: false,
+          loyalty_cards: false,
+          analytics: false,
+          push_notifications: false
+        },
+        updated_at: now.toISOString()
+      })
+      .eq('id', businessId)
+
+    if (profileError) {
+      console.error('❌ Profile update failed:', profileError)
+      return { success: false, error: profileError.message }
+    }
+
+    // 2. Deactivate subscription (set status to 'canceled', clear trial flags)
+    const { data: existingSub } = await supabaseAdmin
+      .from('business_subscriptions')
+      .select('id')
+      .eq('business_id', businessId)
+      .maybeSingle()
+
+    if (existingSub) {
+      const { error: subError } = await supabaseAdmin
+        .from('business_subscriptions')
+        .update({
+          status: 'canceled',
+          is_in_free_trial: false,
+          free_trial_start_date: null,
+          free_trial_end_date: null,
+          current_period_end: now.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq('business_id', businessId)
+
+      if (subError) {
+        console.error('❌ Subscription deactivation failed:', subError)
+        return { success: false, error: subError.message }
+      }
+    }
+
+    console.log('✅ Business downgraded to Free Listing:', businessProfile.business_name)
+
+    return {
+      success: true,
+      message: `${businessProfile.business_name} downgraded to Free Listing`
+    }
+
+  } catch (error: any) {
+    console.error('❌ downgradeToFreeListing error:', error)
+    return {
+      success: false,
+      error: error?.message || 'Unknown error occurred'
+    }
+  }
+}

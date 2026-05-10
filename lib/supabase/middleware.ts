@@ -64,6 +64,29 @@ export async function updateSession(request: NextRequest) {
     console.warn(`Could not set city context: ${error}`)
   }
 
+  // 🔒 WALLET PASS GATE: All /user/* routes require a wallet pass.
+  // Without a pass, redirect to /join so the user installs one first.
+  // Preserves the original destination as ?returnTo= so they land back after install.
+  // Checks both cookie (returning users) and URL param (fresh installs redirecting back).
+  if (request.nextUrl.pathname.startsWith('/user')) {
+    const cookiePassId = request.cookies.get('qwikker_wallet_pass_id')?.value
+    const urlPassId = request.nextUrl.searchParams.get('wallet_pass_id')
+    const walletPassId = cookiePassId || urlPassId
+
+    if (!walletPassId || walletPassId.length < 10) {
+      const joinUrl = request.nextUrl.clone()
+      joinUrl.pathname = '/join'
+      joinUrl.search = ''
+      // Build clean returnTo (strip any stale wallet_pass_id to avoid duplication)
+      const cleanParams = new URLSearchParams(request.nextUrl.search)
+      cleanParams.delete('wallet_pass_id')
+      const qs = cleanParams.toString()
+      const returnTo = request.nextUrl.pathname + (qs ? `?${qs}` : '')
+      joinUrl.searchParams.set('returnTo', returnTo)
+      return NextResponse.redirect(joinUrl)
+    }
+  }
+
   // 🎯 PUBLIC ROUTES: Allow access without Supabase auth session
   const publicPaths = [
     '/',            // Root landing page (marketing)

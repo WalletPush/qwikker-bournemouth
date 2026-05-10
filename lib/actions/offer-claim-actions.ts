@@ -94,14 +94,26 @@ export async function claimOffer(data: {
     
     console.log('✅ Claim stored successfully:', claimRecord)
 
-    // Notify the business
+    // Look up user details (for notification + GHL)
+    let user: { email?: string; first_name?: string; last_name?: string; city?: string } | null = null
+    if (data.visitorWalletPassId) {
+      const { data: userData } = await supabase
+        .from('app_users')
+        .select('email, first_name, last_name, city')
+        .eq('wallet_pass_id', data.visitorWalletPassId)
+        .single()
+      user = userData
+    }
+
+    // Notify the business with the user's first name
     if (realBusinessId) {
+      const claimerName = user?.first_name || 'Someone'
       import('@/lib/actions/business-notification-actions').then(({ createBusinessNotification }) => {
         createBusinessNotification({
           businessId: realBusinessId,
           type: 'offer_claim',
           title: 'Offer claimed',
-          message: `Someone claimed "${data.offerTitle}"`,
+          message: `${claimerName} claimed "${data.offerTitle}"`,
         }).catch(() => {})
       })
     }
@@ -110,13 +122,6 @@ export async function claimOffer(data: {
     if (data.visitorWalletPassId) {
       try {
         console.log('🎫 Triggering GHL Redemption Made workflow for:', data.offerTitle)
-        
-        // Get user details for GHL submission (including city for dynamic routing)
-        const { data: user } = await supabase
-          .from('app_users')
-          .select('email, first_name, last_name, city')
-          .eq('wallet_pass_id', data.visitorWalletPassId)
-          .single()
         
         // Prepare data for GHL "Redemption Made" workflow
         const ghlData = {

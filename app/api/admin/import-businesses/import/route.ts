@@ -586,6 +586,7 @@ export async function POST(request: NextRequest) {
                 phone: place.nationalPhoneNumber || null,
                 website_url: place.websiteUri || null, // ✅ FIXED: Use correct column name (website_url, not website)
                 rating: place.rating || null,
+                rating_source: place.rating ? 'google_verified' : null,
                 review_count: place.userRatingCount || null,
                 google_reviews_highlights: null, // ✅ LEGAL COMPLIANCE: Do not store review text per Google ToS
                 business_hours: businessHoursText, // Human-readable text

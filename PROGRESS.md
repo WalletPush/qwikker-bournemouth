@@ -4,7 +4,7 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## Current Status (Updated May 5, 2026)
+## Current Status (Updated May 10, 2026)
 
 - **Tier 0:** 22/22 complete. All P0/P1 critical bugs fixed (April 2026). 0.14 (marketing pages) DONE. Remaining: 0.22 (pre-launch env vars — Stripe live keys in progress).
 - **Pricing & Tier Audit (May 5):** All business-facing pricing cards, onboarding modals, support pages, and trial upsells now use canonical `getTierFeatures()` source of truth. Prices updated to £19.99/£49.99/£129. DB migration rewrites all existing city pricing_cards. Training scripts EP1-EP6 committed.
@@ -15,7 +15,9 @@
 - **Home Feed:** 3 bugs fixed (tonight links, loyalty display, personalized reasons). Menu item images added. Placeholder image fallback fix for imported businesses (April 29).
 - **Claim Trial Flow:** 3 critical fixes applied (April 20). **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
 - **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI done (canonical city subdomain). **Security hardening DONE (May 5):** auth on all 4 business payment routes + admin Connect route, HMAC-signed OAuth state. Remaining: webhook endpoint + env vars in Vercel for live mode.
-- **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. All steps pending.
+- **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. Core fixes done (May 8): scan tracking working, deep linking fixed, logo visibility fixed, business dropdown fixed, analytics live on business dashboard. **NEXT: BV-16 QR Scan Auto-Push** — auto-deliver wallet push notification with current offer when user scans a Spotlight business QR code.
+- **AI Chat Eligibility Leak Fix (May 10):** CRITICAL fix — expired businesses were appearing in AI chat results via a direct DB lookup bypass in the chat route's "tell me about X" detail mode. Fixed 4 locations that queried `business_profiles` directly instead of `business_profiles_chat_eligible` view. Also fixed admin dashboard filter logic that failed to catch expired paid subscriptions and trials with missing end dates.
+- **Admin Dashboard Expired Filter Fix (May 10):** Live Listings and Expired Trials tabs now correctly handle 3 scenarios: (1) trial with expired end date, (2) trial with NULL end date (broken data), (3) paid subscription with lapsed `current_period_end`. Previously only caught scenario 1.
 - **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
 
 ## Bournemouth Launch Strategy (Target: October 2026)
@@ -40,6 +42,33 @@
 **Post-Launch Pricing Evaluation (November 2026):**
 - Review tier distribution. If nobody sits on Featured (Starter → Spotlight skip pattern), consider merging Starter + Featured into a single mid-tier (~£29.99-35.99). Grandfather existing Starter subscribers up for free.
 - If Featured has healthy adoption, keep 4 tiers.
+
+---
+
+## ⚠️ Testing Needed (May 10 Changes — Not Yet Fully Tested)
+
+### AI Chat Eligibility Fix
+**What changed:** All "tell me about X" queries and detail-mode business fetches now go through `business_profiles_chat_eligible` view instead of raw `business_profiles` table.
+
+**What could break:**
+- If the view doesn't expose a column the detail mode needs (e.g. `business_description`, `booking_url`) → detail mode returns no data. Mitigated: view definition includes all BP columns.
+- If a LEGITIMATE active business isn't in the view due to data issues (NULL `current_period_end` on a paid subscription) → user asks about it, AI says "I don't have info on that." Fix: ensure all active subscriptions have correct `current_period_end`.
+- The `generateBusinessDetailResponse` function (carousel "More details") now uses the view — cross-city detail expansion may fail if the view only returns the current city's businesses. Low risk since it filters by ID not city.
+
+**Files changed:**
+- `app/api/ai/chat/route.ts` — DB LOOKUP and detail mode fetch now use `business_profiles_chat_eligible`
+- `lib/ai/hybrid-chat.ts` — FACT MODE and `generateBusinessDetailResponse` now use the view
+
+**How to test:** Ask "tell me about [expired business]" → should get generic "I don't have info" response. Ask "tell me about [active business]" → should still work normally.
+
+### Admin Dashboard Expired Filter Fix
+**What changed:** Live Listings now excludes businesses with expired `current_period_end` (paid) AND trials with NULL `free_trial_end_date`. Expired Trials tab catches all three scenarios.
+
+**What could break:**
+- If a real active business has `current_period_end` slightly in the past due to Stripe webhook delay → briefly disappears from Live. Low risk: Stripe webhooks update period on renewal.
+- Businesses with `is_in_free_trial = true` but NULL `free_trial_end_date` will now appear in Expired tab. Correct behaviour for test data; for real businesses this would indicate a setup bug.
+
+**Files changed:** `components/admin/admin-dashboard.tsx`
 
 ---
 
@@ -153,7 +182,7 @@
 36. **TEST SESSION** — Full end-to-end test of trial system + claim trial flow.
 37. Finish Tier 2 remaining (2.10 Sentry, 2.11 Loyalty PDF sheets, 2.17 AI regression test)
 38. **3.5 Real AI Chat Streaming** — Blocking OpenAI call (20-35s) → true SSE streaming. Biggest UX win remaining.
-39. **Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)** — Mass-print QR code table tents with unique short codes (e.g. `QWIK-7291`). Each QR points to `/promo/:code` — initially unlinked (shows generic page). When a business sets up their loyalty program, they enter the 4-digit code → QR redirects to their loyalty join page. New `promo_codes` table (`code`, `city`, `business_id` nullable, `linked_at`). Admin batch-generate per city. Dashboard UI: "Already have a promo pack QR? Enter your code." Franchise-scalable — each city admin generates their own batch. High-conversion launch strategy: deliver 250-300 packs to Bournemouth businesses with table tents, stickers, and marketing materials.
+39. **~~Promo Pack QR Codes (Pre-Linked Loyalty Table Tents)~~** — SUPERSEDED by BV-17 Smart Promo Pack System. See "Priority 4c" in Business Value Enhancement Roadmap for full spec. The new system is significantly more powerful: admin-activated packs with personalised business welcome pages, full attribution funnel, and automated follow-up triggers.
 
 ### Business Value Enhancement Roadmap (May 2026)
 
@@ -198,7 +227,252 @@ Strategic audit of what would make Qwikker irresistible to local businesses. Fin
 | BV-13 | **Business Value Analytics (Admin)** | Redesign Business Performance tab: per-business expandable rows showing visits, QR scans, offer claims, AI chat mentions, loyalty stamps, secret unlocks, vibes, saves, push CTR. Expandable section shows 30-day trend chart + weekly digest preview card. New `chat_business_mentions` table to track when AI recommends a business. New `/api/admin/business-value-metrics` aggregation route. Sortable columns, tier filter, time range toggle. | Proves Qwikker's value to businesses during free trial. Digest preview doubles as template for automated weekly emails (Resend + Vercel Cron). Essential for retention and reducing churn. Also feeds HQ aggregate metrics. |
 | BV-14 | **Automated Weekly Digest Emails** | Vercel Cron (Monday 9am) triggers per-business email via Resend using the same metrics API. Shows what Qwikker did for them that week. Includes upsell CTA for lower tiers. | Passive retention tool. Businesses see value without logging in. Key for trial-to-paid conversion. |
 
-**Priority 4b — AI Chat Quality:**
+**Priority 4b — QR Scan Auto-Push (NEXT STEP):**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-16 | **QR Scan Auto-Push Notification** | When a user with an existing wallet pass scans a business's QR code, they automatically receive a push notification via their wallet pass with the business's current offer (e.g. "Welcome to David's Grill Shack! Today's deal: 2-for-1 Burgers"). Cooldown: max 1 push per user per business per hour. Only fires if scanner has a wallet pass (`wallet_pass_id` captured on scan). Businesses on Spotlight tier get this automatically; lower tiers see scan count data but pushes are gated behind upgrade. Fallback: if no active offer, push a welcome message with business tagline. | Turns every printed QR sticker into a live, two-way marketing channel. Creates an instant "wow" moment for consumers (scan → personalised offer on lock screen in seconds). Strongest Spotlight upgrade incentive: "Want your QR codes to talk back? Upgrade." Zero effort for businesses — fully automated. Leverages existing wallet push infrastructure + scan tracking. |
+
+**Implementation plan for BV-16:**
+
+**Path A — Existing pass holder scans QR:**
+1. In `app/api/qr/scan/[code]/route.ts`: after recording the scan, check if `wallet_pass_id` exists and business has Spotlight tier
+2. Cooldown check: query `qr_push_events` — last push to this user for this business must be > 1 hour ago
+3. Fetch business's active offer (or tagline as fallback message)
+4. Call WalletPush API to update `Last_Message` field with `push: true` on the scanner's pass
+5. Log push event to `qr_push_events` table (`wallet_pass_id`, `business_id`, `qr_code_id`, `offer_text`, `pushed_at`)
+
+**Path B — New user scans QR (no wallet pass yet) → queued push on install:**
+1. In scan route: if no `wallet_pass_id`, set cookie `qwikker_pending_push` = `{businessId, offerTitle, businessName, scannedAt}` (30-min TTL)
+2. User lands on business page → sees "Add to Wallet" → installs pass
+3. In `app/api/walletpass/create-main-pass/route.ts`: after pass creation, check for `qwikker_pending_push` cookie
+4. If present and < 30 minutes old: fire WalletPush `Last_Message` update with `push: true` using the queued offer text
+5. Clear the cookie after push fires
+6. Log to `qr_push_events` with `source: 'queued_on_install'`
+7. If cookie expired (> 30 min): ignore silently, clear cookie
+
+**Shared:**
+- Admin QR dashboard: show "Auto-push enabled" badge on Spotlight business QR codes
+- Business dashboard: show push delivery count in QR analytics section (total pushes, unique recipients)
+- Tier gating: only Spotlight businesses trigger auto-push. Lower tiers see scan data but get upgrade CTA: "Upgrade to auto-deliver your offer to every scanner"
+- DB: new `qr_push_events` table (id, wallet_pass_id, business_id, qr_code_id, offer_text, source enum ['direct_scan', 'queued_on_install'], pushed_at, city)
+
+**Priority 4c — Promo Pack System (BV-17):**
+
+| # | Feature | What it does | Why it matters |
+|---|---------|-------------|----------------|
+| BV-17 | **Smart Promo Pack System** | Pre-printed generic QR code packs (5 codes per box: 1 activation + 4 content). Franchise admin scans the outside activation code on delivery → selects business from dropdown → all codes inside instantly assign to that business. Outside code then becomes a personalised welcome page for the business owner. Full attribution funnel from print → deliver → engage → claim → active. | Solves logistics (no pre-planning), onboarding friction (one scan to claim), attribution (every step timestamped), scalability (identical boxes for any city), and follow-up automation (non-engaged businesses flagged). Physical-to-digital bridge that no competitor has. |
+
+**BV-17 Full Specification — Smart Promo Pack System:**
+
+**Concept:**
+Generic, identical promo pack boxes are mass-printed with 5 unique QR codes each. No business-specific printing required. The franchise admin activates a pack by scanning the outside code and assigning it to a business on the spot — all 4 content codes inside instantly link to that business's pages. The outside code then transforms into a personalised welcome/onboarding page for the business owner.
+
+**Physical Pack Contents (per box):**
+
+| Position | Code Format | Purpose |
+|----------|-------------|---------|
+| Outside of box (visible) | `QWK-{CITY}-ACT-{XXXXXX}` | Activation code — admin scans to assign, then becomes business welcome page |
+| Inside — Window sticker | `QWK-{CITY}-DIS-{XXXXXX}` | Discover — links to business profile page |
+| Inside — Counter tent | `QWK-{CITY}-OFF-{XXXXXX}` | Offers — links to business offers page |
+| Inside — Menu card | `QWK-{CITY}-SEC-{XXXXXX}` | Secret Menu — links to business secret menu page |
+| Inside — Poster/flyer | `QWK-{CITY}-EVT-{XXXXXX}` | Events — links to business events page |
+
+All 5 codes share the same `pack_id`. All use the existing redirect system (`/api/qr/scan/[code]`).
+
+**Database Schema:**
+
+```sql
+-- Pack registry
+CREATE TABLE qr_code_packs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pack_code TEXT UNIQUE NOT NULL,           -- e.g. 'PACK-BOU-000001'
+  activation_qr_code TEXT UNIQUE NOT NULL,  -- e.g. 'QWK-BOU-ACT-123456'
+  city TEXT NOT NULL,
+  business_id UUID REFERENCES business_profiles(id),  -- NULL until assigned
+  business_name TEXT,                       -- Cached for welcome page
+  status TEXT DEFAULT 'unassigned',         -- unassigned | assigned | claimed | active
+  generated_at TIMESTAMPTZ DEFAULT NOW(),
+  assigned_at TIMESTAMPTZ,                  -- When admin scanned + assigned
+  assigned_by UUID,                         -- Admin user ID
+  business_first_scan_at TIMESTAMPTZ,       -- When business owner scanned outside code
+  business_claimed_at TIMESTAMPTZ,          -- When business completed claim flow
+  notes TEXT                                -- Admin can add delivery notes
+);
+
+-- Extend existing qr_codes table
+ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS pack_id UUID REFERENCES qr_code_packs(id);
+ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS pack_position TEXT; -- 'activation', 'discover', 'offers', 'secret_menu', 'events'
+
+-- Pack scan events (tracks every scan of the activation code)
+CREATE TABLE pack_activation_scans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pack_id UUID REFERENCES qr_code_packs(id),
+  scanned_at TIMESTAMPTZ DEFAULT NOW(),
+  scanner_type TEXT NOT NULL,               -- 'admin_assign', 'business_owner', 'unknown'
+  user_agent TEXT,
+  ip_address TEXT
+);
+```
+
+**Activation Flow (Admin scans outside code):**
+
+1. Admin scans `QWK-BOU-ACT-123456` with their phone
+2. Scan route detects code type = `activation` and pack is `unassigned`
+3. Checks if scanner is authenticated admin (via session cookie)
+4. **If admin:** Redirects to `/admin/pack-assign/[pack_code]` page showing:
+   - City dropdown (pre-filled from pack's city)
+   - Business search/dropdown (all imported + approved businesses in that city)
+   - "Assign Pack" button
+5. Admin selects "David's Grill Shack" → hits Assign
+6. Server action:
+   - Sets `qr_code_packs.business_id`, `business_name`, `status = 'assigned'`, `assigned_at = NOW()`
+   - Updates all 4 content QR codes in `qr_codes` table: sets `business_id` + computes `current_target_url` for each:
+     - Discover → `https://{city}.qwikker.com/user/business/{slug}?highlight=true`
+     - Offers → `https://{city}.qwikker.com/user/business/{slug}?tab=offers`
+     - Secret Menu → `https://{city}.qwikker.com/user/business/{slug}?tab=secret-menu`
+     - Events → `https://{city}.qwikker.com/user/business/{slug}?tab=events`
+   - Logs `pack_activation_scans` with `scanner_type = 'admin_assign'`
+7. Admin sees confirmation: "Pack assigned to David's Grill Shack. All 4 codes are now live."
+
+**Business Owner Scans Outside Code (post-assignment):**
+
+1. Business owner scans `QWK-BOU-ACT-123456`
+2. Scan route detects: code type = `activation`, pack status = `assigned`, scanner is NOT admin
+3. Redirects to `/pack/welcome/[pack_code]` — a personalised welcome page:
+
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│         [Qwikker Logo]                  │
+│                                         │
+│   Welcome, David's Grill Shack          │
+│                                         │
+│   You've been hand-selected to join     │
+│   Qwikker — Bournemouth's AI-powered    │
+│   discovery platform.                   │
+│                                         │
+│   Inside this pack you'll find:         │
+│                                         │
+│   🪟 Window Sticker                     │
+│      So customers can discover you      │
+│                                         │
+│   🎫 Offers Code                        │
+│      Your deals, on customers'          │
+│      lock screens                       │
+│                                         │
+│   🤫 Secret Menu Code                   │
+│      Create exclusivity, drive          │
+│      repeat visits                      │
+│                                         │
+│   📅 Events Code                        │
+│      Promote what's happening           │
+│                                         │
+│   ─────────────────────────────         │
+│                                         │
+│   Ready to get started?                 │
+│                                         │
+│   [Claim Your Free Listing]             │
+│   → /claim?business_id=xxx&pack=xxx     │
+│                                         │
+│   Already have an account?              │
+│   [Sign In] → /dashboard               │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+4. Logs `pack_activation_scans` with `scanner_type = 'business_owner'`
+5. Updates `qr_code_packs.business_first_scan_at = NOW()`
+
+**Unassigned Pack Scanned (by anyone):**
+
+- Redirects to a generic page: "This Qwikker promo pack hasn't been activated yet. If you're a business owner and received this pack, contact your local Qwikker team."
+- Provides city landing page link as fallback
+
+**Batch Generation (Admin UI):**
+
+- New section in QR Management: "Generate Promo Packs"
+- Input: Number of packs (e.g. 250), City
+- Generates: 250 × 5 = 1,250 QR codes, grouped into 250 packs
+- Output: Downloadable CSV/spreadsheet with columns:
+  - `pack_number`, `activation_code`, `discover_code`, `offers_code`, `secret_menu_code`, `events_code`
+  - This goes to the printer — they place each code in the correct position on the box template
+- Also generates a "print sheet" PDF with all QR codes arranged in print-ready layout (optional, nice-to-have)
+
+**Attribution Funnel & Analytics (Admin Dashboard):**
+
+| Stage | Data Point | Trigger |
+|-------|-----------|---------|
+| Generated | Pack created in system | Batch generation |
+| Assigned | Admin scanned + selected business | Admin activation scan |
+| Delivered | Implicit from assignment | Same as assigned (admin is physically there) |
+| Engaged | Business owner scanned outside code | Non-admin scan of assigned pack |
+| Claimed | Business completed claim flow | `claim_requests` row with `pack_id` |
+| Active | Business approved + codes being scanned by consumers | Consumer scans of content codes |
+
+**Admin Pack Dashboard (new tab in QR Management):**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Promo Pack Distribution                                  │
+│                                                          │
+│  250 Generated  │  180 Assigned  │  142 Engaged  │  98 Claimed │
+│                                                          │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │ Pack       │ Business          │ Assigned │ Engaged │ │
+│  │ PACK-001   │ David's Grill     │ May 15   │ May 15  │ │
+│  │ PACK-002   │ Chaplin's Bar     │ May 15   │ May 16  │ │
+│  │ PACK-003   │ Coastal Pantry    │ May 16   │ —       │ │
+│  │ PACK-004   │ (unassigned)      │ —        │ —       │ │
+│  └─────────────────────────────────────────────────────┘ │
+│                                                          │
+│  ⚠️ 38 packs assigned > 7 days ago with no engagement   │
+│     [Export Follow-Up List]                               │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Follow-Up Automation:**
+
+- Pack assigned but no business scan after 3 days → flag for follow-up
+- Pack assigned but no business scan after 7 days → auto-email: "Did you receive your Qwikker promo pack? Scan the QR on the outside to get started."
+- Business scanned but hasn't claimed after 3 days → auto-email: "Ready to activate your listing? It takes 2 minutes."
+- All follow-up lists exportable for manual outreach
+
+**Content QR Behaviour (the 4 inside codes):**
+
+- **Before pack assigned:** Redirect to city landing page (generic fallback)
+- **After pack assigned, before business claims:** Redirect to business profile page (imported data shows — basic info, Google rating, category). Banner at top: "This business hasn't claimed their listing yet. Are you the owner? [Claim now]"
+- **After business claims:** Full business pages with all their content (offers, secret menu, events, profile)
+
+**Print Design Notes:**
+
+- All boxes are physically identical in layout/design/branding
+- Only the QR code images differ (unique per pack)
+- Suggested box text: "Scan the code on the outside to get started" (works for both admin AND business owner)
+- Inside instruction card explains where to place each sticker/tent
+- Premium feel: matte black box, green Qwikker branding, minimal text
+
+**Scalability:**
+
+- Same system works for any city — just generate a batch with the city code
+- New franchise partners get their own batch generated from their admin dashboard
+- Print template is universal — only QR images change between production runs
+- Could extend to different pack types in future (e.g. "Loyalty Pack" with NFC tag + loyalty QR, "Premium Pack" with branded table tents)
+
+**Implementation Steps:**
+
+1. Create `qr_code_packs` table + extend `qr_codes` with `pack_id`/`pack_position`
+2. Build batch generation server action (generates N packs × 5 codes each)
+3. Build admin "Generate Packs" UI in QR Management dashboard
+4. Build CSV export for printer
+5. Modify scan route to detect activation codes and route appropriately
+6. Build `/admin/pack-assign/[pack_code]` page (business dropdown + assign button)
+7. Build `/pack/welcome/[pack_code]` page (personalised welcome for business owners)
+8. Build pack analytics dashboard tab
+9. Wire claim flow to accept `pack_id` param and update pack status on claim
+10. Add follow-up automation triggers (Vercel Cron checks for stale packs)
+
+**Priority 4c — AI Chat Quality:**
 
 | # | Feature | What it does | Why it matters |
 |---|---------|-------------|----------------|

@@ -1156,7 +1156,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
-              <span className={`font-semibold text-xl leading-tight block ${
+              <span className={`font-semibold leading-tight block ${
+                business.trial_status === 'expired' ? 'text-sm' : 'text-xl'
+              } ${
                 // PRIORITY 1: Expired trial
                 business.trial_status === 'expired'
                   ? 'text-red-400'
@@ -1173,7 +1175,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 // DEFAULT: Inactive
                 : 'text-red-400'
               }`}>
-                {/* ✅ FIXED: Show "EXPIRED" not "LIVE" */}
                 {business.trial_status === 'expired'
                   ? 'EXPIRED' 
                   : (business.status === 'approved' || 

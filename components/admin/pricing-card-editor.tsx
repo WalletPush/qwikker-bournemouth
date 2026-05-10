@@ -304,12 +304,12 @@ export function PricingCardEditor({ city, initialConfig }: PricingCardEditorProp
       features: [
         'Listed in Discover directory',
         'Basic business profile',
-        'Update profile info',
-        'Limited visibility',
-        '❌ No AI chat visibility',
-        '❌ No offers or events',
+        'Basic AI chat visibility',
+        'Up to 5 menu items',
+        '1 active offer',
         '❌ No secret menu items',
-        '❌ No analytics'
+        '❌ No events',
+        '❌ No analytics dashboard'
       ],
       cta_text: 'Free',
       popular: false,

@@ -541,6 +541,21 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
   const currentStatus = profile?.status || 'incomplete'
   const businessName = profile?.business_name || 'Your Business'
 
+  // Check if subscription has actually expired (paid period lapsed or trial ended)
+  const isSubscriptionExpired = (() => {
+    const sub = profile?.subscription
+    if (!sub) return false
+    const now = new Date()
+    if (sub.is_in_free_trial && sub.free_trial_end_date) {
+      return new Date(sub.free_trial_end_date) < now
+    }
+    if (!sub.is_in_free_trial && sub.current_period_end) {
+      return new Date(sub.current_period_end) < now
+    }
+    if (sub.is_in_free_trial && !sub.free_trial_end_date) return true
+    return false
+  })()
+
   // Calculate required fields count for status display
   const getRequiredFieldsCount = () => {
     let count = 0
@@ -643,6 +658,19 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
           )
         }
       case 'approved':
+        if (isSubscriptionExpired) {
+          return {
+            text: 'Subscription Expired',
+            subtext: 'Your listing is no longer visible to customers',
+            color: 'text-red-400',
+            bgColor: 'bg-red-500/10 border-red-500/20',
+            icon: (
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )
+          }
+        }
         return {
           text: 'Live on Qwikker!',
           subtext: 'Your business is discoverable by customers',
@@ -1167,14 +1195,16 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
                 </Button>
               </div>
             ) : (
-              <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/50">
+              <div className={`p-4 rounded-lg border ${isSubscriptionExpired ? 'bg-red-500/10 border-red-500/20' : 'bg-slate-700/30 border-slate-600/50'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-[#00d083]">{displayPlanName}</p>
-                    <p className="text-sm text-slate-400">Active subscription</p>
+                    <p className={`font-semibold ${isSubscriptionExpired ? 'text-red-400' : 'text-[#00d083]'}`}>{displayPlanName}</p>
+                    <p className="text-sm text-slate-400">
+                      {isSubscriptionExpired ? 'Subscription expired — renew to go live again' : 'Active subscription'}
+                    </p>
                   </div>
-                  <Button asChild size="sm" variant="outline" className="border-slate-600 text-gray-300 hover:bg-slate-700">
-                    <Link href="/dashboard/settings">Manage</Link>
+                  <Button asChild size="sm" variant="outline" className={isSubscriptionExpired ? 'border-red-500/30 text-red-300 hover:bg-red-500/10' : 'border-slate-600 text-gray-300 hover:bg-slate-700'}>
+                    <Link href="/dashboard/settings">{isSubscriptionExpired ? 'Renew' : 'Manage'}</Link>
                   </Button>
                 </div>
               </div>

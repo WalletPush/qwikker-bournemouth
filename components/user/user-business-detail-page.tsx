@@ -318,7 +318,8 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
     { id: 'overview', label: 'Overview', count: null },
     { id: 'menu', label: 'Menu', count: business.menuPreview?.length || 0 },
     { id: 'offers', label: 'Offers', count: businessOffers.length },
-    { id: 'reviews', label: 'What People Think', count: null }, // Changed from "Reviews" to "What People Think"
+    ...(secretMenu ? [{ id: 'secret-menu', label: 'Secret Menu', count: secretMenu.items.length }] : []),
+    { id: 'reviews', label: 'What People Think', count: null },
   ]
 
   // Reviews are from Google Places - link to Google Maps to view them
@@ -933,56 +934,6 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             </Card>
             )}
                 
-            {/* Secret Menu - Enhanced with Chat CTA */}
-            {secretMenu && (
-              <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-700/30 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-purple-500/20 to-transparent rounded-bl-full"></div>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                      <svg className="w-5 h-5 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-purple-300 font-semibold text-lg">Secret Menu Preview</h4>
-                      <p className="text-purple-200 text-sm">Exclusive off-menu items</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 mb-4">
-                    {secretMenu.items.slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex items-start justify-between bg-slate-800/30 rounded-lg p-3">
-                        <div className="flex-1">
-                          <p className="text-slate-100 font-medium">{item.name}</p>
-                          <p className="text-slate-300 text-sm">{item.description}</p>
-                        </div>
-                        {item.price && (
-                          <span className="text-purple-400 font-semibold ml-4">{item.price}</span>
-                        )}
-                      </div>
-                    ))}
-                    {secretMenu.items.length > 2 && (
-                      <div className="bg-slate-800/30 rounded-lg p-3 text-center border-2 border-dashed border-purple-500/30">
-                        <p className="text-purple-300 text-sm font-medium mb-2">
-                          + {secretMenu.items.length - 2} more secret items
-                        </p>
-                        <p className="text-slate-400 text-xs">Ask your AI guide to unlock them all</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-slate-100 font-semibold">
-                    <Link href={getNavUrl(`/user/chat?business=${business.name}&topic=secret-menu`)}>
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      Unlock All Secret Items
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
 
@@ -1027,6 +978,60 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                 </CardContent>
               </Card>
             )}
+          </div>
+        )}
+
+        {activeTab === 'secret-menu' && secretMenu && (
+          <div className="space-y-4">
+            <Card className="bg-slate-900/60 border-purple-500/20 backdrop-blur-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="p-1.5 bg-purple-500/10 border border-purple-500/20 rounded-md">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <p className="text-purple-300/80 text-sm">Exclusive off-menu items</p>
+                </div>
+
+                <div className="space-y-3">
+                  {secretMenu.items.map((item: { name: string; description?: string; price?: string; image_url?: string }, index: number) => (
+                    <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/40 border border-slate-700/50">
+                      {item.image_url && (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-14 h-14 rounded-md object-cover border border-purple-500/20 flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-slate-100 font-medium text-sm">{item.name}</p>
+                          {item.price && (
+                            <span className="text-purple-400 text-sm font-medium flex-shrink-0">{item.price}</span>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <Link
+                    href={getNavUrl(`/user/secret-menu`)}
+                    className="flex items-center justify-center gap-2 text-sm text-purple-300 hover:text-purple-200 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    View all secret menus
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { updateBusinessTier } from '@/lib/actions/admin-crm-actions'
+import { updateBusinessTier, downgradeToFreeListing } from '@/lib/actions/admin-crm-actions'
 import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 
 interface TierManagementCardProps {
@@ -120,12 +120,12 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       features: [
         '✅ Listed in Discover directory',
         '✅ Basic business profile',
-        '✅ Update profile info',
-        '✅ Limited visibility',
-        '❌ No AI chat visibility',
-        '❌ No offers or events',
+        '✅ Basic AI chat visibility',
+        '✅ Up to 5 menu items',
+        '✅ 1 active offer',
         '❌ No secret menu items',
-        '❌ No analytics'
+        '❌ No events',
+        '❌ No analytics dashboard'
       ]
     },
     trial: {
@@ -262,22 +262,27 @@ export function TierManagementCard({ business, onUpdate }: TierManagementCardPro
       // Calculate trial days from trial end date
       const trialDays = selectedTier === 'trial' ? calculateTrialDays() : undefined
 
-      console.log('💾 CALLING updateBusinessTier WITH:', {
-        businessId: business.id,
-        selectedTier,
-        features,
-        trialDays
-      })
+      let result: { success: boolean; error?: string; message?: string }
 
-      // Call the server action (uses service role, bypasses RLS)
-      const result = await updateBusinessTier({
-        businessId: business.id,
-        userId: business.user_id || business.id,
-        city: business.city,
-        selectedTier,
-        features,
-        trialDays
-      })
+      if (selectedTier === 'free') {
+        console.log('💾 CALLING downgradeToFreeListing for:', business.id)
+        result = await downgradeToFreeListing({ businessId: business.id })
+      } else {
+        console.log('💾 CALLING updateBusinessTier WITH:', {
+          businessId: business.id,
+          selectedTier,
+          features,
+          trialDays
+        })
+        result = await updateBusinessTier({
+          businessId: business.id,
+          userId: business.user_id || business.id,
+          city: business.city,
+          selectedTier,
+          features,
+          trialDays
+        })
+      }
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to update tier')

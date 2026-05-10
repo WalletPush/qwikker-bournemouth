@@ -506,26 +506,38 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   // ORIGINAL counts for sidebar (NEVER filtered)
   const allPendingBusinesses = businessList.filter(b => b.status === 'pending_review')
   
-  // ✅ FIXED: Exclude expired trials from Live Listings
-  // ✅ INCLUDE claimed_free businesses (they're live with free tier)
-  // ✅ INCLUDE unclaimed businesses (they're live, show in "Free" card)
-  const allLiveBusinesses = businessList.filter(b => {
-    // Include: approved, claimed_free, unclaimed (all are "live")
-    if (b.status !== 'approved' && b.status !== 'claimed_free' && b.status !== 'unclaimed') return false
+  // Helper: check if a business has an expired subscription (using CRM data)
+  const isSubscriptionExpired = (businessId: string): boolean => {
+    const crm = crmData.find(c => c.id === businessId)
+    if (!crm?.subscription) return false
     
-    // Check if trial is expired (only for approved businesses with trials)
-    if (b.status === 'approved' && b.subscription && Array.isArray(b.subscription) && b.subscription.length > 0) {
-      const sub = b.subscription[0]
-      if (sub.is_in_free_trial && sub.free_trial_end_date) {
-        const endDate = new Date(sub.free_trial_end_date)
-        const now = new Date()
-        if (endDate < now) {
-          return false // ❌ Exclude expired trials from Live
-        }
-      }
+    // subscription is stored as [sub] array at runtime (despite type saying single object)
+    const sub = Array.isArray(crm.subscription) ? crm.subscription[0] : crm.subscription
+    if (!sub) return false
+    
+    const now = new Date()
+    
+    // Case 1: Trial with end date in the past
+    if (sub.is_in_free_trial && sub.free_trial_end_date) {
+      if (new Date(sub.free_trial_end_date) < now) return true
     }
     
-    return true // ✅ Include approved, claimed_free, AND unclaimed
+    // Case 2: Trial without end date (broken data — treat as expired)
+    if (sub.is_in_free_trial && !sub.free_trial_end_date) return true
+    
+    // Case 3: Paid subscription with expired period (no Stripe renewal)
+    if (!sub.is_in_free_trial && sub.current_period_end) {
+      if (new Date(sub.current_period_end) < now) return true
+    }
+    
+    return false
+  }
+
+  // Exclude ALL expired subscriptions from Live Listings
+  const allLiveBusinesses = businessList.filter(b => {
+    if (b.status !== 'approved' && b.status !== 'claimed_free' && b.status !== 'unclaimed') return false
+    if (b.status === 'approved' && isSubscriptionExpired(b.id)) return false
+    return true
   })
   
   // ✅ NEW: Unclaimed businesses (separate tab)
@@ -534,19 +546,10 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const allIncompleteBusinesses = businessList.filter(b => b.status === 'incomplete')
   const allRejectedBusinesses = businessList.filter(b => b.status === 'rejected')
   
-  // ✅ FIXED: Check subscription end date, not status
+  // Catch ALL expired subscriptions (trials + paid with lapsed period)
   const allExpiredTrialBusinesses = businessList.filter(b => {
-    // Check if business has subscription data
-    if (!b.subscription || !Array.isArray(b.subscription) || b.subscription.length === 0) return false
-    
-    const sub = b.subscription[0] // Get first subscription
-    if (!sub.free_trial_end_date || !sub.is_in_free_trial) return false
-    
-    // Check if trial is expired
-    const endDate = new Date(sub.free_trial_end_date)
-    const now = new Date()
-    
-    return endDate < now
+    if (b.status !== 'approved') return false
+    return isSubscriptionExpired(b.id)
   })
 
   // FILTERED businesses for display content only
