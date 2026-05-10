@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { BarChart, TrendingUp, Smartphone, Clock } from 'lucide-react'
+import { getAdminQRAnalytics } from '@/lib/actions/admin-qr-analytics-actions'
 
 interface QRAnalytics {
   qr_code: string
@@ -38,89 +38,12 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
   const fetchAnalytics = async () => {
     setLoading(true)
     try {
-      const supabase = createClientComponentClient()
       const daysAgo = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 60
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - daysAgo)
+      const result = await getAdminQRAnalytics(city, daysAgo)
 
-      // 1. Get QR codes with their total scans (FAST - no loop)
-      const { data: qrCodes, error: qrError } = await supabase
-        .from('qr_codes')
-        .select('id, qr_code, name, total_scans, last_scanned_at')
-        .eq('city', city)
-        .eq('status', 'active')
-        .order('total_scans', { ascending: false })
-
-      if (qrError) {
-        console.error('QR codes fetch error:', qrError)
-        throw qrError
-      }
-
-      console.log(`✅ Fetched ${qrCodes?.length || 0} QR codes for ${city}`)
-
-      // 2. Get ALL scans in one query (MUCH FASTER than loop)
-      const qrIds = qrCodes?.map(qr => qr.id) || []
-      
-      let deviceCounts: Record<string, { mobile: number, desktop: number, tablet: number }> = {}
-      
-      if (qrIds.length > 0) {
-        const { data: allScans } = await supabase
-          .from('qr_code_scans')
-          .select('qr_code_id, device_type')
-          .in('qr_code_id', qrIds)
-          .gte('scanned_at', startDate.toISOString())
-
-        // Aggregate in memory (fast)
-        allScans?.forEach(scan => {
-          if (!deviceCounts[scan.qr_code_id]) {
-            deviceCounts[scan.qr_code_id] = { mobile: 0, desktop: 0, tablet: 0 }
-          }
-          if (scan.device_type === 'mobile') deviceCounts[scan.qr_code_id].mobile++
-          else if (scan.device_type === 'desktop') deviceCounts[scan.qr_code_id].desktop++
-          else if (scan.device_type === 'tablet') deviceCounts[scan.qr_code_id].tablet++
-        })
-
-        console.log(`✅ Fetched ${allScans?.length || 0} scans across all QRs`)
-      }
-
-      // 3. Map analytics data
-      const analyticsData: QRAnalytics[] = qrCodes?.map(qr => ({
-        qr_code: qr.qr_code,
-        qr_name: qr.name,
-        total_scans: qr.total_scans || 0,
-        mobile_scans: deviceCounts[qr.id]?.mobile || 0,
-        desktop_scans: deviceCounts[qr.id]?.desktop || 0,
-        tablet_scans: deviceCounts[qr.id]?.tablet || 0,
-        last_scanned: qr.last_scanned_at
-      })) || []
-
-      setAnalytics(analyticsData)
-      setTotalScans(analyticsData.reduce((sum, qr) => sum + qr.total_scans, 0))
-
-      // 4. Get daily scans for chart (join through qr_code_id → qr_codes for city filter)
-      const { data: dailyData } = await supabase
-        .from('qr_code_analytics')
-        .select('date, total_scans, qr_code_id')
-        .in('qr_code_id', qrIds.length > 0 ? qrIds : ['no-matches'])
-        .gte('date', startDate.toISOString().split('T')[0])
-        .order('date', { ascending: true })
-
-      console.log(`✅ Fetched ${dailyData?.length || 0} daily data points`)
-
-      // Aggregate by date
-      const scansByDate = new Map<string, number>()
-      dailyData?.forEach(day => {
-        const existing = scansByDate.get(day.date) || 0
-        scansByDate.set(day.date, existing + day.total_scans)
-      })
-
-      const dailyArray = Array.from(scansByDate.entries()).map(([date, scans]) => ({
-        date,
-        scans
-      }))
-
-      setDailyScans(dailyArray)
-
+      setAnalytics(result.analytics)
+      setTotalScans(result.totalScans)
+      setDailyScans(result.dailyScans)
     } catch (error) {
       console.error('❌ Error fetching QR analytics:', error)
     } finally {
