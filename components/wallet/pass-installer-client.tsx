@@ -2,12 +2,28 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { Mail, ArrowRight, Loader2 } from 'lucide-react'
 
 interface PassInstallerClientProps {
   city: string
   displayName: string
   currencySymbol: string
   returnTo?: string
+}
+
+function getContextMessage(returnTo: string): { heading: string; description: string } {
+  if (returnTo.startsWith('/user/secret-menu')) return { heading: 'To unlock secret menus', description: 'Exclusive off-menu items from local businesses' }
+  if (returnTo.startsWith('/user/offers')) return { heading: 'To claim exclusive offers', description: 'Deals and discounts from businesses near you' }
+  if (returnTo.startsWith('/user/chat')) return { heading: 'To chat with our AI concierge', description: 'Get personalised recommendations and answers' }
+  if (returnTo.startsWith('/user/discover')) return { heading: 'To discover local businesses', description: 'Find the best spots in your area' }
+  if (returnTo.startsWith('/user/events')) return { heading: 'To browse local events', description: 'What\'s happening near you right now' }
+  if (returnTo.startsWith('/user/business/')) return { heading: 'To view this business', description: 'See their menu, offers, and secret items' }
+  if (returnTo.startsWith('/user/rewards')) return { heading: 'To view your rewards', description: 'Track your points and unlock perks' }
+  if (returnTo.startsWith('/user/badges')) return { heading: 'To view your badges', description: 'Your achievements and discoveries' }
+  if (returnTo.startsWith('/user/loyalty')) return { heading: 'To access loyalty rewards', description: 'Collect stamps and earn rewards' }
+  if (returnTo.startsWith('/user/saved')) return { heading: 'To view your saved places', description: 'Businesses you\'ve bookmarked' }
+  if (returnTo.startsWith('/user/notifications')) return { heading: 'To view your notifications', description: 'Updates from your favourite businesses' }
+  return { heading: 'To access Qwikker', description: 'Exclusive offers, secret menus, and local perks' }
 }
 
 export function PassInstallerClient({ 
@@ -38,6 +54,43 @@ export function PassInstallerClient({
   const [showSecondChance, setShowSecondChance] = useState(false)
   const [marketingPushConsent, setMarketingPushConsent] = useState(false)
   const [emailMarketingConsent, setEmailMarketingConsent] = useState(false)
+
+  // Email lookup state (for returning users redirected from /user/* pages)
+  const [showEmailLookup, setShowEmailLookup] = useState(false)
+  const [lookupEmail, setLookupEmail] = useState('')
+  const [isLookingUp, setIsLookingUp] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+
+  const contextMessage = returnTo ? getContextMessage(returnTo) : null
+
+  async function handleEmailLookup(e: React.FormEvent) {
+    e.preventDefault()
+    if (!lookupEmail.trim()) return
+
+    setIsLookingUp(true)
+    setLookupError(null)
+
+    try {
+      const res = await fetch('/api/loyalty/identify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: lookupEmail.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (data.found && data.walletPassId && returnTo) {
+        const sep = returnTo.includes('?') ? '&' : '?'
+        window.location.href = `${returnTo}${sep}wallet_pass_id=${encodeURIComponent(data.walletPassId)}`
+      } else {
+        setLookupError('No Qwikker Pass found with that email. You can install one below.')
+      }
+    } catch {
+      setLookupError('Connection failed. Please try again.')
+    } finally {
+      setIsLookingUp(false)
+    }
+  }
 
   // Detect device type
   useEffect(() => {
@@ -238,16 +291,95 @@ export function PassInstallerClient({
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header - Dark, restrained */}
           <div className="bg-neutral-900 border-b border-neutral-800 p-6 text-center">
-            <h1 className="text-2xl font-medium text-white mb-2">
-              Get your {displayName} pass
-            </h1>
-            <p className="text-sm text-neutral-400">
-              Join your local community and unlock exclusive offers
-            </p>
+            {contextMessage ? (
+              <>
+                <h1 className="text-2xl font-medium text-white mb-2">
+                  {contextMessage.heading}
+                </h1>
+                <p className="text-sm text-neutral-400">
+                  you need a free Qwikker Pass
+                </p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {contextMessage.description}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-medium text-white mb-2">
+                  Get your {displayName} pass
+                </h1>
+                <p className="text-sm text-neutral-400">
+                  Join your local community and unlock exclusive offers
+                </p>
+              </>
+            )}
           </div>
 
           {/* Content */}
           <div className="p-6">
+            {/* Returning user: email lookup (only when redirected from /user/* pages) */}
+            {returnTo && !success && !showConsent && !showSecondChance && deviceType !== 'desktop' && (
+              <div className="mb-6">
+                {!showEmailLookup ? (
+                  <button
+                    onClick={() => setShowEmailLookup(true)}
+                    className="w-full flex items-center justify-center gap-2 h-12 bg-white text-neutral-900 font-semibold rounded-xl transition-colors text-sm hover:bg-neutral-100"
+                  >
+                    <Mail className="w-4 h-4" />
+                    I already have a Qwikker Pass
+                  </button>
+                ) : (
+                  <form onSubmit={handleEmailLookup} className="space-y-3">
+                    <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 space-y-3">
+                      <p className="text-neutral-300 text-sm font-medium">
+                        Enter the email linked to your Qwikker Pass
+                      </p>
+                      <input
+                        type="email"
+                        value={lookupEmail}
+                        onChange={(e) => setLookupEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        autoFocus
+                        autoComplete="email"
+                        className="w-full h-11 px-3 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:border-[#00D083]/50 transition-colors"
+                      />
+                      {lookupError && (
+                        <p className="text-amber-400 text-xs">{lookupError}</p>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLookingUp || !lookupEmail.trim()}
+                      className="w-full flex items-center justify-center gap-2 h-12 bg-[#00D083] hover:bg-[#00b86f] disabled:opacity-50 text-black font-semibold rounded-xl transition-colors text-sm"
+                    >
+                      {isLookingUp ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Continue
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowEmailLookup(false); setLookupError(null) }}
+                      className="w-full py-2 text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
+                    >
+                      Back
+                    </button>
+                  </form>
+                )}
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 w-full mt-4">
+                  <div className="flex-1 h-px bg-neutral-800" />
+                  <span className="text-neutral-600 text-xs">or install a new pass</span>
+                  <div className="flex-1 h-px bg-neutral-800" />
+                </div>
+              </div>
+            )}
+
             {/* Device-Specific Message */}
             <div className="mb-6">
               {deviceType === 'iphone' && (
