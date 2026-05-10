@@ -54,10 +54,10 @@ export async function getAdminQRAnalytics(
     topRegions: {}
   }
 
-  // 1. Get active QR codes for this city with business name via join
+  // 1. Get active QR codes for this city
   const { data: qrCodes, error: qrError } = await supabase
     .from('qr_codes')
-    .select('id, qr_code, name, total_scans, last_scanned_at, category, qr_type, business_id, business_profiles(business_name)')
+    .select('id, qr_code, name, total_scans, last_scanned_at, category, qr_type, business_id')
     .eq('city', city.toLowerCase())
     .eq('status', 'active')
     .order('total_scans', { ascending: false })
@@ -69,6 +69,19 @@ export async function getAdminQRAnalytics(
 
   const qrIds = qrCodes?.map(qr => qr.id) || []
   if (qrIds.length === 0) return emptyResult
+
+  // 1b. Look up business names for QR codes that have a business_id
+  const businessIds = [...new Set(qrCodes.filter(qr => qr.business_id).map(qr => qr.business_id))]
+  const businessNameMap: Record<string, string> = {}
+
+  if (businessIds.length > 0) {
+    const { data: businesses } = await supabase
+      .from('business_profiles')
+      .select('id, business_name')
+      .in('id', businessIds)
+
+    businesses?.forEach(b => { businessNameMap[b.id] = b.business_name })
+  }
 
   // 2. Fetch all scan records with device/geo/time fields
   const { data: allScans } = await supabase
@@ -142,12 +155,11 @@ export async function getAdminQRAnalytics(
 
   // 4. Build per-code analytics with enriched data
   const analytics: QRAnalyticsItem[] = qrCodes?.map(qr => {
-    const biz = qr.business_profiles as unknown as { business_name: string } | null
     const entry = perQR[qr.id]
     return {
       qr_code: qr.qr_code,
       qr_name: qr.name,
-      business_name: biz?.business_name || null,
+      business_name: qr.business_id ? (businessNameMap[qr.business_id] || null) : null,
       category: qr.category || null,
       qr_type: qr.qr_type || null,
       total_scans: qr.total_scans || 0,

@@ -47,26 +47,26 @@ function BreakdownBar({ label, value, total, color }: { label: string; value: nu
 
 function PeakTimeChart({ times }: { times: { morning: number; afternoon: number; evening: number; night: number } }) {
   const entries = [
-    { label: '6am–12pm', value: times.morning, emoji: '🌅' },
-    { label: '12pm–6pm', value: times.afternoon, emoji: '☀️' },
-    { label: '6pm–12am', value: times.evening, emoji: '🌇' },
-    { label: '12am–6am', value: times.night, emoji: '🌙' },
+    { label: '6am–12pm', short: 'Morning', value: times.morning, color: 'from-amber-400 to-amber-500' },
+    { label: '12pm–6pm', short: 'Afternoon', value: times.afternoon, color: 'from-orange-400 to-orange-500' },
+    { label: '6pm–12am', short: 'Evening', value: times.evening, color: 'from-indigo-400 to-indigo-500' },
+    { label: '12am–6am', short: 'Night', value: times.night, color: 'from-slate-500 to-slate-600' },
   ]
   const max = Math.max(...entries.map(e => e.value), 1)
 
   return (
     <div className="grid grid-cols-4 gap-2">
-      {entries.map(({ label, value, emoji }) => (
+      {entries.map(({ label, short, value, color }) => (
         <div key={label} className="text-center">
           <div className="h-20 flex items-end justify-center mb-2">
             <div
-              className="w-8 bg-gradient-to-t from-[#00d083] to-[#00b570] rounded-t-md transition-all duration-500"
+              className={`w-8 bg-gradient-to-t ${color} rounded-t-md transition-all duration-500`}
               style={{ height: `${max > 0 ? (value / max) * 100 : 0}%`, minHeight: value > 0 ? '4px' : '0' }}
             />
           </div>
-          <p className="text-lg mb-0.5">{emoji}</p>
           <p className="text-white font-semibold text-sm">{value}</p>
-          <p className="text-slate-500 text-xs">{label}</p>
+          <p className="text-slate-400 text-xs font-medium">{short}</p>
+          <p className="text-slate-500 text-[10px]">{label}</p>
         </div>
       ))}
     </div>
