@@ -340,9 +340,9 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
                   <div key={tp.qr_code} className="flex items-center gap-4">
                     <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
                       idx === 0 ? 'bg-amber-400/20 text-amber-400' :
-                      idx === 1 ? 'bg-slate-400/20 text-slate-300' :
-                      idx === 2 ? 'bg-amber-700/20 text-amber-600' :
-                      'bg-slate-700/50 text-slate-400'
+                      idx === 1 ? 'bg-blue-400/20 text-blue-400' :
+                      idx === 2 ? 'bg-orange-400/20 text-orange-400' :
+                      'bg-emerald-500/20 text-emerald-400'
                     }`}>
                       #{idx + 1}
                     </div>
@@ -355,13 +355,13 @@ export function QRAnalyticsDetailed({ city }: QRAnalyticsProps) {
                           </span>
                         )}
                       </div>
-                      <div className="mt-1.5 bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                      <div className="mt-1.5 bg-slate-700/50 rounded-full h-2.5 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             idx === 0 ? 'bg-amber-400' :
-                            idx === 1 ? 'bg-slate-300' :
-                            idx === 2 ? 'bg-amber-600' :
-                            'bg-slate-500'
+                            idx === 1 ? 'bg-blue-400' :
+                            idx === 2 ? 'bg-orange-400' :
+                            'bg-emerald-500'
                           }`}
                           style={{ width: `${barPct}%` }}
                         />
