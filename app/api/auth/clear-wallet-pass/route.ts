@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * GET /api/auth/clear-wallet-pass
@@ -8,8 +8,9 @@ import { NextResponse } from 'next/server'
  * inactive pass (DB validation fails but cookie still exists).
  * Cookies can only be modified in Route Handlers, not Server Components.
  */
-export function GET() {
-  const response = NextResponse.redirect(new URL('/join', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'))
+export function GET(request: NextRequest) {
+  const joinUrl = new URL('/join', request.url)
+  const response = NextResponse.redirect(joinUrl)
 
   response.cookies.set({
     name: 'qwikker_wallet_pass_id',
