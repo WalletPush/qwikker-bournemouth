@@ -2,14 +2,22 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
+interface CountMap {
+  [key: string]: number
+}
+
 interface QRAnalyticsItem {
   qr_code: string
   qr_name: string
+  business_name: string | null
+  category: string | null
+  qr_type: string | null
   total_scans: number
-  mobile_scans: number
-  desktop_scans: number
-  tablet_scans: number
+  unique_scans: number
   last_scanned: string | null
+  os_breakdown: CountMap
+  browser_breakdown: CountMap
+  peak_times: { morning: number; afternoon: number; evening: number; night: number }
 }
 
 interface DailyScan {
@@ -21,6 +29,10 @@ interface AdminQRAnalyticsResult {
   analytics: QRAnalyticsItem[]
   dailyScans: DailyScan[]
   totalScans: number
+  globalOsBreakdown: CountMap
+  globalBrowserBreakdown: CountMap
+  globalPeakTimes: { morning: number; afternoon: number; evening: number; night: number }
+  topRegions: CountMap
 }
 
 /**
@@ -35,76 +47,146 @@ export async function getAdminQRAnalytics(
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - daysAgo)
 
-  // 1. Get active QR codes for this city
+  const emptyResult: AdminQRAnalyticsResult = {
+    analytics: [], dailyScans: [], totalScans: 0,
+    globalOsBreakdown: {}, globalBrowserBreakdown: {},
+    globalPeakTimes: { morning: 0, afternoon: 0, evening: 0, night: 0 },
+    topRegions: {}
+  }
+
+  // 1. Get active QR codes for this city with business name via join
   const { data: qrCodes, error: qrError } = await supabase
     .from('qr_codes')
-    .select('id, qr_code, name, total_scans, last_scanned_at')
+    .select('id, qr_code, name, total_scans, last_scanned_at, category, qr_type, business_id, business_profiles(business_name)')
     .eq('city', city.toLowerCase())
     .eq('status', 'active')
     .order('total_scans', { ascending: false })
 
   if (qrError) {
     console.error('❌ Admin QR analytics - qr_codes fetch error:', qrError)
-    return { analytics: [], dailyScans: [], totalScans: 0 }
+    return emptyResult
   }
 
   const qrIds = qrCodes?.map(qr => qr.id) || []
+  if (qrIds.length === 0) return emptyResult
 
-  // 2. Get scans with device breakdown (single query, aggregate in memory)
-  const deviceCounts: Record<string, { mobile: number; desktop: number; tablet: number }> = {}
+  // 2. Fetch all scan records with device/geo/time fields
+  const { data: allScans } = await supabase
+    .from('qr_code_scans')
+    .select('qr_code_id, wallet_pass_id, os, browser, country, region, scanned_at')
+    .in('qr_code_id', qrIds)
+    .gte('scanned_at', startDate.toISOString())
 
-  if (qrIds.length > 0) {
-    const { data: allScans } = await supabase
-      .from('qr_code_scans')
-      .select('qr_code_id, device_type')
-      .in('qr_code_id', qrIds)
-      .gte('scanned_at', startDate.toISOString())
+  // 3. Aggregate per-QR and global breakdowns in a single pass
+  const perQR: Record<string, {
+    uniqueUsers: Set<string>
+    os: CountMap
+    browser: CountMap
+    peakTimes: { morning: number; afternoon: number; evening: number; night: number }
+  }> = {}
 
-    allScans?.forEach(scan => {
-      if (!deviceCounts[scan.qr_code_id]) {
-        deviceCounts[scan.qr_code_id] = { mobile: 0, desktop: 0, tablet: 0 }
+  const globalOs: CountMap = {}
+  const globalBrowser: CountMap = {}
+  const globalPeakTimes = { morning: 0, afternoon: 0, evening: 0, night: 0 }
+  const globalRegions: CountMap = {}
+
+  allScans?.forEach(scan => {
+    const qrId = scan.qr_code_id
+
+    if (!perQR[qrId]) {
+      perQR[qrId] = {
+        uniqueUsers: new Set(),
+        os: {},
+        browser: {},
+        peakTimes: { morning: 0, afternoon: 0, evening: 0, night: 0 }
       }
-      if (scan.device_type === 'mobile') deviceCounts[scan.qr_code_id].mobile++
-      else if (scan.device_type === 'desktop') deviceCounts[scan.qr_code_id].desktop++
-      else if (scan.device_type === 'tablet') deviceCounts[scan.qr_code_id].tablet++
-    })
-  }
+    }
+    const entry = perQR[qrId]
 
-  // 3. Build per-code analytics
-  const analytics: QRAnalyticsItem[] = qrCodes?.map(qr => ({
-    qr_code: qr.qr_code,
-    qr_name: qr.name,
-    total_scans: qr.total_scans || 0,
-    mobile_scans: deviceCounts[qr.id]?.mobile || 0,
-    desktop_scans: deviceCounts[qr.id]?.desktop || 0,
-    tablet_scans: deviceCounts[qr.id]?.tablet || 0,
-    last_scanned: qr.last_scanned_at
-  })) || []
+    // Unique scanners
+    const userId = scan.wallet_pass_id || `_anon_${scan.scanned_at}`
+    entry.uniqueUsers.add(userId)
+
+    // OS
+    const os = scan.os || 'Unknown'
+    entry.os[os] = (entry.os[os] || 0) + 1
+    globalOs[os] = (globalOs[os] || 0) + 1
+
+    // Browser
+    const browser = scan.browser || 'Unknown'
+    entry.browser[browser] = (entry.browser[browser] || 0) + 1
+    globalBrowser[browser] = (globalBrowser[browser] || 0) + 1
+
+    // Time of day
+    if (scan.scanned_at) {
+      const hour = new Date(scan.scanned_at).getHours()
+      if (hour >= 6 && hour < 12) { entry.peakTimes.morning++; globalPeakTimes.morning++ }
+      else if (hour >= 12 && hour < 18) { entry.peakTimes.afternoon++; globalPeakTimes.afternoon++ }
+      else if (hour >= 18 && hour < 24) { entry.peakTimes.evening++; globalPeakTimes.evening++ }
+      else { entry.peakTimes.night++; globalPeakTimes.night++ }
+    }
+
+    // Region/country
+    const region = [scan.region, scan.country].filter(Boolean).join(', ') || 'Unknown'
+    if (region !== 'Unknown') {
+      globalRegions[region] = (globalRegions[region] || 0) + 1
+    }
+  })
+
+  // Sort regions by count, keep top 10
+  const topRegions: CountMap = {}
+  Object.entries(globalRegions)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .forEach(([key, val]) => { topRegions[key] = val })
+
+  // 4. Build per-code analytics with enriched data
+  const analytics: QRAnalyticsItem[] = qrCodes?.map(qr => {
+    const biz = qr.business_profiles as unknown as { business_name: string } | null
+    const entry = perQR[qr.id]
+    return {
+      qr_code: qr.qr_code,
+      qr_name: qr.name,
+      business_name: biz?.business_name || null,
+      category: qr.category || null,
+      qr_type: qr.qr_type || null,
+      total_scans: qr.total_scans || 0,
+      unique_scans: entry?.uniqueUsers.size || 0,
+      last_scanned: qr.last_scanned_at,
+      os_breakdown: entry?.os || {},
+      browser_breakdown: entry?.browser || {},
+      peak_times: entry?.peakTimes || { morning: 0, afternoon: 0, evening: 0, night: 0 }
+    }
+  }) || []
 
   const totalScans = analytics.reduce((sum, qr) => sum + qr.total_scans, 0)
 
-  // 4. Daily scan trend from qr_code_analytics
+  // 5. Daily scan trend from qr_code_analytics
   let dailyScans: DailyScan[] = []
 
-  if (qrIds.length > 0) {
-    const { data: dailyData } = await supabase
-      .from('qr_code_analytics')
-      .select('date, total_scans, qr_code_id')
-      .in('qr_code_id', qrIds)
-      .gte('date', startDate.toISOString().split('T')[0])
-      .order('date', { ascending: true })
+  const { data: dailyData } = await supabase
+    .from('qr_code_analytics')
+    .select('date, total_scans, qr_code_id')
+    .in('qr_code_id', qrIds)
+    .gte('date', startDate.toISOString().split('T')[0])
+    .order('date', { ascending: true })
 
-    const scansByDate = new Map<string, number>()
-    dailyData?.forEach(day => {
-      const existing = scansByDate.get(day.date) || 0
-      scansByDate.set(day.date, existing + day.total_scans)
-    })
+  const scansByDate = new Map<string, number>()
+  dailyData?.forEach(day => {
+    const existing = scansByDate.get(day.date) || 0
+    scansByDate.set(day.date, existing + day.total_scans)
+  })
 
-    dailyScans = Array.from(scansByDate.entries()).map(([date, scans]) => ({
-      date,
-      scans
-    }))
+  dailyScans = Array.from(scansByDate.entries()).map(([date, scans]) => ({
+    date,
+    scans
+  }))
+
+  return {
+    analytics, dailyScans, totalScans,
+    globalOsBreakdown: globalOs,
+    globalBrowserBreakdown: globalBrowser,
+    globalPeakTimes,
+    topRegions
   }
-
-  return { analytics, dailyScans, totalScans }
 }
