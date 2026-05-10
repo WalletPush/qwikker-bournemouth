@@ -612,22 +612,22 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         </Button>
       </div>
 
-      {/* Tabs — horizontally scrollable pills, never truncated */}
-      <div className="overflow-x-auto -mx-4 px-4 scrollbar-hidden">
-        <div className="flex gap-2 w-max">
-          {tabs.map((tab) => (
+      {/* Tabs — 2-row grid for clean, full-width labels */}
+      <div className="bg-slate-800/40 rounded-xl p-2 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          {tabs.slice(0, 3).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 ${
+              className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-center ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black shadow-lg shadow-[#00d083]/20'
-                  : 'bg-slate-800/60 text-slate-300 hover:text-slate-100 hover:bg-slate-700/60 border border-slate-700/50'
+                  ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black shadow-md shadow-[#00d083]/20'
+                  : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700/50'
               }`}
             >
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
                   activeTab === tab.id ? 'bg-black/20' : 'bg-slate-600'
                 }`}>
                   {tab.count}
@@ -636,6 +636,30 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             </button>
           ))}
         </div>
+        {tabs.length > 3 && (
+          <div className={`grid gap-2 ${tabs.length - 3 === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {tabs.slice(3).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-center ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black shadow-md shadow-[#00d083]/20'
+                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-700/50'
+                }`}
+              >
+                {tab.label}
+                {tab.count !== null && tab.count > 0 && (
+                  <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                    activeTab === tab.id ? 'bg-black/20' : 'bg-slate-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tab Content */}
