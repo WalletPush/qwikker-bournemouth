@@ -328,20 +328,21 @@ export async function POST(request: NextRequest) {
         if (franchiseConfig?.resend_api_key && franchiseConfig?.resend_from_email && claim.business_email) {
           const { Resend } = await import('resend')
           const { escapeHtml } = await import('@/lib/utils/escape-html')
+          const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
           const resend = new Resend(franchiseConfig.resend_api_key)
 
           const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
           const cityDisplayName = franchiseConfig.display_name || claim.business.city
           
-          // 🔒 SECURITY: Use city-specific subdomain (franchise isolation)
           const citySubdomain = claim.business.city.toLowerCase()
           const baseUrl = `https://${citySubdomain}.qwikker.com`
           const loginUrl = `${baseUrl}/auth/login`
+          const fromEmail = `no-reply@${citySubdomain}.qwikker.com`
           
           const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
 
-          await resend.emails.send({
-            from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+          await sendWithRetry(resend, {
+            from: `${fromName} <${fromEmail}>`,
             to: claim.business_email,
             subject: `Your QWIKKER listing is approved`,
             html: `

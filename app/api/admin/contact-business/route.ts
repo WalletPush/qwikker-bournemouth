@@ -34,19 +34,20 @@ export async function POST(request: NextRequest) {
 
     // Send email
     const { Resend } = await import('resend')
+    const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
     const resend = new Resend(franchiseConfig.resend_api_key)
 
     const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
     const cityDisplayName = franchiseConfig.display_name || city.charAt(0).toUpperCase() + city.slice(1)
+    const fromEmail = `no-reply@${city.toLowerCase()}.qwikker.com`
     const subject = `Regarding your QWIKKER claim: ${businessName}`
     
-    // Build the full email message
     const fullMessage = `Hi ${userName},\n\nThank you for claiming ${businessName} on QWIKKER.\n\n${customMessage}\n\nBest regards,\nThe ${cityDisplayName} Team`
 
-    await resend.emails.send({
-      from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+    await sendWithRetry(resend, {
+      from: `${fromName} <${fromEmail}>`,
       to: email,
-      replyTo: franchiseConfig.resend_from_email,
+      replyTo: `hello@${city.toLowerCase()}.qwikker.com`,
       subject: subject,
       html: `
         <!DOCTYPE html>

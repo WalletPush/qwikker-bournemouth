@@ -923,3 +923,104 @@ export async function downgradeToFreeListing(params: { businessId: string }) {
     }
   }
 }
+
+/**
+ * Pause a business listing - hides from Discover and AI chat
+ * Stripe subscription remains active (business keeps paying)
+ * This is an admin moderation action, not a billing change
+ */
+export async function pauseBusinessListing(businessId: string): Promise<{ success: boolean; error?: string; message?: string }> {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    const { data: business, error: fetchError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_name, visibility, status')
+      .eq('id', businessId)
+      .single()
+
+    if (fetchError || !business) {
+      return { success: false, error: 'Business profile not found' }
+    }
+
+    if (business.visibility === 'hidden') {
+      return { success: false, error: 'Listing is already paused' }
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({
+        visibility: 'hidden',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    if (updateError) {
+      console.error('❌ Pause listing failed:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    console.log('✅ Listing paused:', business.business_name)
+    return {
+      success: true,
+      message: `${business.business_name} listing paused — hidden from Discover and AI chat`
+    }
+  } catch (error: any) {
+    console.error('❌ pauseBusinessListing error:', error)
+    return { success: false, error: error?.message || 'Unknown error occurred' }
+  }
+}
+
+/**
+ * Restore (unpause) a business listing
+ * Visibility is restored based on current subscription tier:
+ * - Paid/trial → ai_enabled (visible in Discover + AI chat)
+ * - Free → discover_only (visible in Discover only)
+ */
+export async function restoreBusinessListing(businessId: string): Promise<{ success: boolean; error?: string; message?: string }> {
+  const supabaseAdmin = createAdminClient()
+
+  try {
+    const { data: business, error: fetchError } = await supabaseAdmin
+      .from('business_profiles')
+      .select('business_name, visibility, status, plan, business_tier')
+      .eq('id', businessId)
+      .single()
+
+    if (fetchError || !business) {
+      return { success: false, error: 'Business profile not found' }
+    }
+
+    if (business.visibility !== 'hidden') {
+      return { success: false, error: 'Listing is not currently paused' }
+    }
+
+    // Determine correct visibility based on tier
+    const paidTiers = ['free_trial', 'starter', 'featured', 'spotlight', 'qwikker_picks']
+    const paidStatuses = ['claimed_paid', 'claimed_trial']
+    const isPaid = paidTiers.includes(business.business_tier) || paidStatuses.includes(business.status)
+    const restoredVisibility = isPaid ? 'ai_enabled' : 'discover_only'
+
+    const { error: updateError } = await supabaseAdmin
+      .from('business_profiles')
+      .update({
+        visibility: restoredVisibility,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    if (updateError) {
+      console.error('❌ Restore listing failed:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    console.log('✅ Listing restored:', business.business_name, '→', restoredVisibility)
+    return {
+      success: true,
+      message: `${business.business_name} listing restored — now ${isPaid ? 'visible in Discover + AI chat' : 'visible in Discover'}`
+    }
+  } catch (error: any) {
+    console.error('❌ restoreBusinessListing error:', error)
+    return { success: false, error: error?.message || 'Unknown error occurred' }
+  }
+}

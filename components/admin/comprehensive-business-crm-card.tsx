@@ -22,6 +22,7 @@ import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
 import { PlaceholderSelector } from './placeholder-selector'
+import { pauseBusinessListing, restoreBusinessListing } from '@/lib/actions/admin-crm-actions'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface ComprehensiveBusinessCRMCardProps {
@@ -154,6 +155,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [messageSubject, setMessageSubject] = useState('')
   const [messageBody, setMessageBody] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
+
+  // Listing pause/restore state
+  const [isListingActionLoading, setIsListingActionLoading] = useState(false)
 
   // Rating verification state
   const [ratingLookup, setRatingLookup] = useState<{
@@ -2837,25 +2841,74 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <div>
                         <div className="text-white font-medium">Listing Status</div>
                         <div className="text-slate-400 text-sm">
-                          {/* ✅ FIXED: Check for expired trial FIRST */}
-                          {business.trial_status === 'expired' ? 'Trial expired - not visible to users' :
-                           business.status === 'approved' ? 'Currently live and visible to users' : 
-                           business.status === 'pending_review' ? 'Awaiting approval' :
-                           business.status === 'rejected' ? 'Rejected - not visible' :
-                           'Incomplete profile'}
+                          {business.visibility === 'hidden'
+                            ? '⏸️ Paused — hidden from Discover and AI chat'
+                            : business.trial_status === 'expired'
+                            ? 'Trial expired - not visible to users'
+                            : business.status === 'approved'
+                            ? `Currently live and visible to users${business.visibility === 'ai_enabled' ? ' (Discover + AI)' : ' (Discover only)'}`
+                            : business.status === 'pending_review'
+                            ? 'Awaiting approval'
+                            : business.status === 'rejected'
+                            ? 'Rejected - not visible'
+                            : 'Incomplete profile'}
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        {business.status === 'approved' && (
+                        {business.visibility === 'hidden' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-green-500 text-green-400 hover:bg-green-500/20"
+                            disabled={isListingActionLoading}
+                            onClick={async () => {
+                              if (!confirm(`Restore ${business.business_name}? This will make them visible again based on their current tier.`)) return
+                              setIsListingActionLoading(true)
+                              try {
+                                const result = await restoreBusinessListing(business.id)
+                                if (result.success) {
+                                  alert(result.message)
+                                  window.location.reload()
+                                } else {
+                                  alert(`Error: ${result.error}`)
+                                }
+                              } catch (err) {
+                                alert('Unexpected error restoring listing')
+                              } finally {
+                                setIsListingActionLoading(false)
+                              }
+                            }}
+                          >
+                            {isListingActionLoading ? 'Restoring...' : 'Restore Listing'}
+                          </Button>
+                        ) : business.status === 'approved' && (
                           <Button
                             size="sm"
                             variant="outline"
                             className="border-red-500 text-red-400 hover:bg-red-500/20"
+                            disabled={isListingActionLoading}
+                            onClick={async () => {
+                              if (!confirm(`Pause ${business.business_name}?\n\nThis will hide them from Discover and AI chat.\nTheir Stripe subscription will NOT be affected — they continue paying.`)) return
+                              setIsListingActionLoading(true)
+                              try {
+                                const result = await pauseBusinessListing(business.id)
+                                if (result.success) {
+                                  alert(result.message)
+                                  window.location.reload()
+                                } else {
+                                  alert(`Error: ${result.error}`)
+                                }
+                              } catch (err) {
+                                alert('Unexpected error pausing listing')
+                              } finally {
+                                setIsListingActionLoading(false)
+                              }
+                            }}
                           >
-                            Pause Listing
+                            {isListingActionLoading ? 'Pausing...' : 'Pause Listing'}
                           </Button>
                         )}
-                        {business.status === 'rejected' && (
+                        {business.status === 'rejected' && business.visibility !== 'hidden' && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -2866,6 +2919,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                         )}
                       </div>
                     </div>
+
+                    {business.visibility === 'hidden' && sub?.status === 'active' && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p className="text-amber-300 text-sm font-medium">Stripe subscription still active</p>
+                        <p className="text-amber-400/70 text-xs mt-1">
+                          This business is still being billed. The listing is paused but their subscription has not been cancelled.
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

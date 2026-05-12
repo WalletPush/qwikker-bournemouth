@@ -61,13 +61,15 @@ export async function POST(request: NextRequest) {
 
     // Send email
     const { Resend } = await import('resend')
+    const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
     const resend = new Resend(franchiseConfig.resend_api_key)
 
     const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
     const cityDisplayName = franchiseConfig.display_name || claim.city
+    const fromEmail = `no-reply@${(claim.city || 'bournemouth').toLowerCase()}.qwikker.com`
 
-    await resend.emails.send({
-      from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+    await sendWithRetry(resend, {
+      from: `${fromName} <${fromEmail}>`,
       to: email,
       subject: `Additional Verification Required: ${businessName}`,
       html: `

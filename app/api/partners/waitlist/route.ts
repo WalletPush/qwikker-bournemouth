@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email/email-service'
 import { createPartnerWaitlistEmail } from '@/lib/email/templates/partner-emails'
+import { Resend } from 'resend'
+import { sendWithRetry } from '@/lib/email/send-franchise-email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,12 +58,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send confirmation email (non-blocking)
-    sendEmail({
-      to: normalizedEmail,
-      template: createPartnerWaitlistEmail({ full_name, city_name }),
-      tags: [{ name: 'type', value: 'partner-waitlist' }]
-    }).catch(err => console.error('Failed to send waitlist confirmation email:', err))
+    // Send confirmation email with retry
+    try {
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (resendApiKey) {
+        const resendClient = new Resend(resendApiKey)
+        const template = createPartnerWaitlistEmail({ full_name, city_name })
+        const fromAddress = process.env.EMAIL_FROM || 'QWIKKER <no-reply@qwikker.com>'
+
+        const result = await sendWithRetry(resendClient, {
+          from: fromAddress,
+          to: normalizedEmail,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          tags: [
+            { name: 'service', value: 'qwikker' },
+            { name: 'type', value: 'partner-waitlist' },
+          ]
+        })
+
+        if (result.error) {
+          console.error('❌ Waitlist email failed:', result.error)
+        } else {
+          console.log(`✅ Waitlist email sent to ${normalizedEmail} for ${city_name}`)
+        }
+      } else {
+        console.error('❌ RESEND_API_KEY not set — waitlist email not sent')
+      }
+    } catch (err) {
+      console.error('Failed to send waitlist confirmation email:', err)
+    }
 
     // Send Slack notification (non-blocking)
     const webhookUrl = process.env.HQ_SLACK_WEBHOOK_URL || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL

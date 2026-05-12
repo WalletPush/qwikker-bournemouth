@@ -147,6 +147,7 @@ export async function DELETE(request: NextRequest) {
 
         if (franchiseConfig?.resend_api_key && franchiseConfig?.resend_from_email) {
           const { Resend } = await import('resend')
+          const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
           const franchiseResend = new Resend(franchiseConfig.resend_api_key)
 
           const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
@@ -154,9 +155,10 @@ export async function DELETE(request: NextRequest) {
           const citySubdomain = business.city.toLowerCase()
           const signupUrl = `https://${citySubdomain}.qwikker.com/onboarding`
           const firstName = business.first_name || 'there'
+          const fromEmail = `no-reply@${citySubdomain}.qwikker.com`
 
-          franchiseResend.emails.send({
-            from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+          sendWithRetry(franchiseResend, {
+            from: `${fromName} <${fromEmail}>`,
             to: business.email,
             replyTo: franchiseConfig.resend_from_email,
             subject: `Your Qwikker listing for ${business.business_name} has been removed`,

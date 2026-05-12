@@ -424,17 +424,18 @@ export async function POST(request: NextRequest) {
       if (franchiseConfig?.resend_api_key && franchiseConfig?.resend_from_email) {
         const { Resend } = await import('resend')
         const { escapeHtml } = await import('@/lib/utils/escape-html')
+        const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
         const resend = new Resend(franchiseConfig.resend_api_key)
 
         const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
         const cityDisplayName = franchiseConfig.display_name || business.city
         const foundingMemberOffer = franchiseConfig.founding_member_enabled
-        const baseUrl = `https://${business.city.toLowerCase()}.qwikker.com`
+        const fromEmail = `no-reply@${business.city.toLowerCase()}.qwikker.com`
         
         const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
 
-        await resend.emails.send({
-          from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+        await sendWithRetry(resend, {
+          from: `${fromName} <${fromEmail}>`,
           to: email,
           subject: `Claim submitted: ${business.business_name}`,
           html: `
@@ -510,7 +511,7 @@ export async function POST(request: NextRequest) {
                 <!-- Footer -->
                 <div style="padding: 30px; border-top: 1px solid #e5e7eb;">
                   <p style="color: #a3a3a3; font-size: 13px; margin: 0;">
-                    Questions? Reply to this email or contact us at <a href="mailto:${escapeHtml(franchiseConfig.resend_from_email)}" style="color: #00d083; text-decoration: none;">${escapeHtml(franchiseConfig.resend_from_email)}</a>
+                    Questions? Reply to this email or contact us at <a href="mailto:hello@${business.city.toLowerCase()}.qwikker.com" style="color: #00d083; text-decoration: none;">hello@${business.city.toLowerCase()}.qwikker.com</a>
                   </p>
                   <p style="color: #a3a3a3; font-size: 13px; margin: 8px 0 0 0;">
                     QWIKKER ${escapeHtml(cityDisplayName)}

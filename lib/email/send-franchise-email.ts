@@ -80,6 +80,52 @@ export function getFranchiseSupportEmail(city: string): string {
   return `hello@${city.toLowerCase()}.qwikker.com`
 }
 
+/**
+ * Retry wrapper for Resend API calls.
+ * Vercel serverless cold starts can cause DNS resolution failures,
+ * which surface as "Unable to fetch data. The request could not be resolved."
+ */
+export async function sendWithRetry(
+  resendInstance: Resend,
+  payload: Parameters<Resend['emails']['send']>[0],
+  maxRetries = 3
+): Promise<{ data: { id: string } | null; error: { message: string; name: string } | null }> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await resendInstance.emails.send(payload)
+
+      if (result.error) {
+        const isRetryable = result.error.name === 'application_error' &&
+          result.error.message.includes('Unable to fetch data')
+
+        if (isRetryable && attempt < maxRetries) {
+          const delay = attempt * 1000
+          console.warn(`⚠️ Resend attempt ${attempt}/${maxRetries} failed (DNS/network), retrying in ${delay}ms...`)
+          await new Promise(r => setTimeout(r, delay))
+          continue
+        }
+
+        return result
+      }
+
+      if (attempt > 1) {
+        console.log(`✅ Resend succeeded on attempt ${attempt}/${maxRetries}`)
+      }
+      return result
+    } catch (err) {
+      if (attempt < maxRetries) {
+        const delay = attempt * 1000
+        console.warn(`⚠️ Resend attempt ${attempt}/${maxRetries} threw, retrying in ${delay}ms...`, err)
+        await new Promise(r => setTimeout(r, delay))
+        continue
+      }
+      throw err
+    }
+  }
+
+  return { data: null, error: { name: 'retry_exhausted', message: 'All retry attempts failed' } }
+}
+
 export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promise<{
   success: boolean
   messageId?: string
@@ -98,7 +144,6 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
 
   try {
     if (franchiseConfig) {
-      // Use franchise-specific Resend instance
       const cityResend = new Resend(franchiseConfig.resend_api_key)
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
       const fromEmail = getFranchiseFromEmail(city)
@@ -108,7 +153,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
       console.log(`📧 [${city}] From: ${fromName} <${fromEmail}>`)
       console.log(`📧 [${city}] Subject: ${template.subject}`)
 
-      const result = await cityResend.emails.send({
+      const result = await sendWithRetry(cityResend, {
         from: `${fromName} <${fromEmail}>`,
         to: Array.isArray(to) ? to : [to],
         replyTo: replyToEmail,
@@ -135,7 +180,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
 
     console.log(`📧 [${city}] Falling back to global Resend for: ${Array.isArray(to) ? to.join(', ') : to}`)
 
-    const result = await globalResend.emails.send({
+    const result = await sendWithRetry(globalResend, {
       from: EMAIL_CONFIG.from,
       to: Array.isArray(to) ? to : [to],
       replyTo: replyTo || EMAIL_CONFIG.replyTo,

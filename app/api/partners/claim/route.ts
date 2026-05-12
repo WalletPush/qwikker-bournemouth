@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email/email-service'
 import { createPartnerClaimEmail } from '@/lib/email/templates/partner-emails'
+import { Resend } from 'resend'
+import { sendWithRetry } from '@/lib/email/send-franchise-email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,12 +100,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send confirmation email (non-blocking)
-    sendEmail({
-      to: email.toLowerCase().trim(),
-      template: createPartnerClaimEmail({ full_name, city_name }),
-      tags: [{ name: 'type', value: 'partner-claim' }]
-    }).catch(err => console.error('Failed to send claim confirmation email:', err))
+    // Send confirmation email with retry
+    // Uses HQ Resend key (not franchise-specific — this is a global partner claim)
+    try {
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (resendApiKey) {
+        const resendClient = new Resend(resendApiKey)
+        const template = createPartnerClaimEmail({ full_name, city_name })
+        const fromAddress = process.env.EMAIL_FROM || 'QWIKKER <no-reply@qwikker.com>'
+
+        const result = await sendWithRetry(resendClient, {
+          from: fromAddress,
+          to: email.toLowerCase().trim(),
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          tags: [
+            { name: 'service', value: 'qwikker' },
+            { name: 'type', value: 'partner-claim' },
+          ]
+        })
+
+        if (result.error) {
+          console.error('❌ Partner claim email failed:', result.error)
+        } else {
+          console.log(`✅ Partner claim email sent to ${email} for ${city_name}`)
+        }
+      } else {
+        console.error('❌ RESEND_API_KEY not set — partner claim email not sent')
+      }
+    } catch (err) {
+      console.error('Failed to send claim confirmation email:', err)
+    }
 
     // Send Slack notification (non-blocking)
     sendPartnerSlackNotification({

@@ -101,16 +101,17 @@ export async function POST(request: NextRequest) {
     try {
       const { Resend } = await import('resend')
       const { escapeHtml } = await import('@/lib/utils/escape-html')
+      const { sendWithRetry } = await import('@/lib/email/send-franchise-email')
       const resend = new Resend(franchiseConfig.resend_api_key)
 
       const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
       const cityDisplayName = franchiseConfig.display_name || business.city
-      const baseUrl = `https://${business.city.toLowerCase()}.qwikker.com`
+      const fromEmail = `no-reply@${business.city.toLowerCase()}.qwikker.com`
       
       const logoUrl = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/dsh32kke7/image/upload/f_png,q_auto,w_320/v1768348190/Qwikker_Logo_web_lbql19.svg'
 
-      const resendResponse = await resend.emails.send({
-        from: `${fromName} <${franchiseConfig.resend_from_email}>`,
+      const resendResponse = await sendWithRetry(resend, {
+        from: `${fromName} <${fromEmail}>`,
         to: email,
         subject: `Verify your QWIKKER claim: ${verificationCode}`,
         html: `
@@ -176,10 +177,8 @@ export async function POST(request: NextRequest) {
         `
       })
 
-      console.log('📧 Resend API Response:', JSON.stringify(resendResponse, null, 2))
-      
       if (resendResponse.error) {
-        console.error('🚨 Resend returned an error:', resendResponse.error)
+        console.error('🚨 Resend error after retries:', resendResponse.error)
         return NextResponse.json({ 
           success: false, 
           error: `Email service error: ${resendResponse.error.message || 'Unknown error'}` 

@@ -146,6 +146,9 @@ export interface BusinessCRMData {
   updated_at?: string | null
   business_offers?: any[] | null
   
+  // Visibility control
+  visibility?: 'discover_only' | 'ai_enabled' | 'hidden' | null
+
   // GHL sync tracking
   last_ghl_sync: string | null
   ghl_contact_id: string | null
