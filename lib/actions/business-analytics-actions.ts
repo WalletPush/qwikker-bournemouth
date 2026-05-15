@@ -36,6 +36,7 @@ export interface BusinessAnalytics {
   // Vibes
   totalVibes: number
   positiveVibePercent: number | null
+  vibeBreakdown: { loved_it: number; it_was_good: number; not_for_me: number }
 
   // QR Scans
   totalQRScans: number
@@ -256,8 +257,13 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
       .eq('business_id', businessId)
 
     const totalVibes = vibeRows?.length || 0
+    const vibeBreakdown = {
+      loved_it: vibeRows?.filter(v => v.vibe_rating === 'loved_it').length || 0,
+      it_was_good: vibeRows?.filter(v => v.vibe_rating === 'it_was_good').length || 0,
+      not_for_me: vibeRows?.filter(v => v.vibe_rating === 'not_for_me').length || 0,
+    }
     const positiveVibePercent = totalVibes >= 5
-      ? Math.round(((vibeRows?.filter(v => v.vibe_rating === 'loved_it' || v.vibe_rating === 'it_was_good').length || 0) / totalVibes) * 100)
+      ? Math.round(((vibeBreakdown.loved_it + vibeBreakdown.it_was_good) / totalVibes) * 100)
       : null
 
     // 6. QR SCANS (via qr_codes linked to this business)
@@ -451,6 +457,7 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
       loyaltyRedemptions,
       totalVibes,
       positiveVibePercent,
+      vibeBreakdown,
       totalQRScans,
       uniqueQRScanners,
       qrScanTrend,
@@ -485,6 +492,7 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
       loyaltyRedemptions: null,
       totalVibes: 0,
       positiveVibePercent: null,
+      vibeBreakdown: { loved_it: 0, it_was_good: 0, not_for_me: 0 },
       totalQRScans: 0,
       uniqueQRScanners: 0,
       qrScanTrend: 0,

@@ -191,9 +191,27 @@ function BreakdownBar({ label, value, total, color }: { label: string; value: nu
   )
 }
 
-function TrendBadge({ value, periodDays }: { value: number; periodDays: number }) {
-  const isPositive = value >= 0
+function TrendBadge({ value, periodDays, currentValue }: { value: number; periodDays: number; currentValue?: number }) {
   const periodLabel = periodDays <= 30 ? 'last month' : `previous ${periodDays} days`
+
+  // No previous data but has current activity = "New"
+  if (value === 0 && currentValue && currentValue > 0) {
+    return (
+      <p className="text-xs flex items-center gap-1 text-blue-400">
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        New — no data {periodLabel}
+      </p>
+    )
+  }
+
+  // No data at all
+  if (value === 0 && (!currentValue || currentValue === 0)) {
+    return null
+  }
+
+  const isPositive = value >= 0
   return (
     <p className={`text-xs flex items-center gap-1 ${isPositive ? 'text-[#00d083]' : 'text-red-400'}`}>
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,7 +222,7 @@ function TrendBadge({ value, periodDays }: { value: number; periodDays: number }
   )
 }
 
-function StatCard({ title, value, subtitle, trend, periodDays = 30 }: { title: string; value: string; subtitle?: string; trend?: number; periodDays?: number }) {
+function StatCard({ title, value, subtitle, trend, periodDays = 30, numericValue }: { title: string; value: string; subtitle?: string; trend?: number; periodDays?: number; numericValue?: number }) {
   return (
     <Card className="bg-slate-800/50 border-slate-700">
       <CardHeader className="pb-3">
@@ -212,7 +230,7 @@ function StatCard({ title, value, subtitle, trend, periodDays = 30 }: { title: s
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-white">{value}</div>
-        {trend !== undefined && <TrendBadge value={trend} periodDays={periodDays} />}
+        {trend !== undefined && <TrendBadge value={trend} periodDays={periodDays} currentValue={numericValue} />}
         {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
       </CardContent>
     </Card>
@@ -322,6 +340,7 @@ export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: An
           value={analytics.totalProfileViews.toLocaleString()}
           trend={analytics.viewTrend}
           periodDays={periodDays}
+          numericValue={analytics.totalProfileViews}
           subtitle={`${analytics.uniqueViewers} unique viewers`}
         />
         <StatCard
@@ -329,6 +348,7 @@ export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: An
           value={analytics.totalOfferClaims.toLocaleString()}
           trend={analytics.claimTrend}
           periodDays={periodDays}
+          numericValue={analytics.totalOfferClaims}
           subtitle={`${analytics.activeOffers} active offers`}
         />
         <StatCard
@@ -336,6 +356,7 @@ export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: An
           value={analytics.totalQRScans.toLocaleString()}
           trend={analytics.qrScanTrend}
           periodDays={periodDays}
+          numericValue={analytics.totalQRScans}
           subtitle={`${analytics.uniqueQRScanners} unique ${analytics.uniqueQRScanners === 1 ? 'person' : 'people'}`}
         />
         <StatCard
@@ -343,13 +364,34 @@ export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: An
           value={analytics.totalSaves.toLocaleString()}
           trend={analytics.saveTrend}
           periodDays={periodDays}
+          numericValue={analytics.totalSaves}
           subtitle="Users who saved your listing"
         />
-        <StatCard
-          title="Vibes"
-          value={analytics.totalVibes.toLocaleString()}
-          subtitle={analytics.positiveVibePercent !== null ? `${analytics.positiveVibePercent}% positive` : 'Not enough data yet'}
-        />
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-400">Vibes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{analytics.totalVibes.toLocaleString()}</div>
+            {analytics.totalVibes > 0 && analytics.totalVibes < 5 && analytics.vibeBreakdown ? (
+              <div className="flex items-center gap-2 mt-1">
+                {analytics.vibeBreakdown.loved_it > 0 && (
+                  <span className="text-xs">❤️ {analytics.vibeBreakdown.loved_it}</span>
+                )}
+                {analytics.vibeBreakdown.it_was_good > 0 && (
+                  <span className="text-xs">👍 {analytics.vibeBreakdown.it_was_good}</span>
+                )}
+                {analytics.vibeBreakdown.not_for_me > 0 && (
+                  <span className="text-xs">👎 {analytics.vibeBreakdown.not_for_me}</span>
+                )}
+              </div>
+            ) : analytics.positiveVibePercent !== null ? (
+              <p className="text-xs text-[#00d083] mt-1">{analytics.positiveVibePercent}% positive</p>
+            ) : (
+              <p className="text-xs text-slate-400 mt-1">No vibes yet</p>
+            )}
+          </CardContent>
+        </Card>
         {analytics.bookingClicks > 0 && (
           <StatCard
             title="Booking Clicks"
@@ -568,17 +610,18 @@ export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: An
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white">Viewer Breakdown</CardTitle>
-              <p className="text-xs text-slate-400">Last {periodDays} days</p>
+              <CardTitle className="text-white">Engagement Summary</CardTitle>
+              <p className="text-xs text-slate-400">How people interact with your listing — last {periodDays} days</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <BreakdownBar label="Registered users" value={analytics.registeredViewers} total={analytics.totalProfileViews} color="bg-[#00d083]" />
-                <BreakdownBar label="Anonymous viewers" value={analytics.anonymousViewers} total={analytics.totalProfileViews} color="bg-slate-500" />
-                <BreakdownBar label="Unique viewers" value={analytics.uniqueViewers} total={analytics.totalProfileViews} color="bg-blue-500" />
+                <BreakdownBar label="Profile views" value={analytics.totalProfileViews} total={Math.max(analytics.totalProfileViews, 1)} color="bg-blue-500" />
+                <BreakdownBar label="Offer claims" value={analytics.totalOfferClaims} total={Math.max(analytics.totalProfileViews, 1)} color="bg-[#00d083]" />
+                <BreakdownBar label="Saves" value={analytics.totalSaves} total={Math.max(analytics.totalProfileViews, 1)} color="bg-purple-500" />
+                <BreakdownBar label="QR scans" value={analytics.totalQRScans} total={Math.max(analytics.totalProfileViews, 1)} color="bg-amber-500" />
               </div>
               {analytics.totalProfileViews === 0 && (
-                <p className="text-center text-slate-500 text-sm mt-6">No profile views recorded yet</p>
+                <p className="text-center text-slate-500 text-sm mt-6">No engagement recorded yet</p>
               )}
             </CardContent>
           </Card>

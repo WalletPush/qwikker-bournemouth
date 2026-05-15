@@ -741,6 +741,7 @@ export async function updateBusinessTier(params: {
     // 4. Update business_profiles (plan AND business_tier AND features)
     const tierForDB = selectedTier === 'trial' ? 'free_trial' : 
                       selectedTier === 'spotlight' ? 'qwikker_picks' : 
+                      selectedTier === 'starter' ? 'recommended' :
                       selectedTier
 
     // Look up franchise default trial tier for dynamic plan assignment
@@ -866,7 +867,7 @@ export async function downgradeToFreeListing(params: { businessId: string }) {
       .from('business_profiles')
       .update({
         plan: 'free',
-        business_tier: 'claimed_free',
+        business_tier: 'free_tier',
         features: {
           social_wizard: false,
           loyalty_cards: false,

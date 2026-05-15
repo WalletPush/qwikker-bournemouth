@@ -4,7 +4,7 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## Current Status (Updated May 10, 2026)
+## Current Status (Updated May 15, 2026)
 
 - **Tier 0:** 22/22 complete. All P0/P1 critical bugs fixed (April 2026). 0.14 (marketing pages) DONE. Remaining: 0.22 (pre-launch env vars — Stripe live keys in progress).
 - **Pricing & Tier Audit (May 5):** All business-facing pricing cards, onboarding modals, support pages, and trial upsells now use canonical `getTierFeatures()` source of truth. Prices updated to £19.99/£49.99/£129. DB migration rewrites all existing city pricing_cards. Training scripts EP1-EP6 committed.
@@ -16,6 +16,8 @@
 - **Claim Trial Flow:** 3 critical fixes applied (April 20). **⚠️ Must test full claim-to-trial flow before recording business walkthrough video.**
 - **Stripe:** Live account activated (April 29). Connect Client ID available. Redirect URI done (canonical city subdomain). **Security hardening DONE (May 5):** auth on all 4 business payment routes + admin Connect route, HMAC-signed OAuth state. Remaining: webhook endpoint + env vars in Vercel for live mode.
 - **QR Code System:** Consolidation plan created (April 24). 5 parallel systems identified, 7-step plan to unify. Full plan: `/Users/qwikker/.cursor/plans/qr_code_system_consolidation_53ea0981.plan.md`. Core fixes done (May 8): scan tracking working, deep linking fixed, logo visibility fixed, business dropdown fixed, analytics live on business dashboard. **NEXT: BV-16 QR Scan Auto-Push** — auto-deliver wallet push notification with current offer when user scans a Spotlight business QR code.
+- **BV-3 Blurred Analytics (May 15):** DONE. Tiered analytics with BlurredSection overlays. AI Discovery metrics (chat mentions + discovery queries). Dynamic 30/60/90-day toggle. Engagement Summary replaced useless Viewer Breakdown. Vibe breakdown shows individual ratings when < 5 vibes. "New" trend badge when no prior data exists. All hardcoded "this month"/"30 days" labels fixed. **NEXT: BV-14 Weekly Digest Emails** — all data infrastructure is in place via `getBusinessAnalytics()`.
+- **Bug fixes (May 15):** Offer claim modal on business page was showing blank blur (missing `appendChild`). Replaced "Pass Updated" modal with proper "Offer Claimed" modal. Save button failing silently (`item_name` column doesn't exist). Admin tier change to Starter failing (`'starter'` not mapped to DB value `'recommended'`). Free downgrade writing invalid `'claimed_free'` instead of `'free_tier'`.
 - **AI Chat Eligibility Leak Fix (May 10):** CRITICAL fix — expired businesses were appearing in AI chat results via a direct DB lookup bypass in the chat route's "tell me about X" detail mode. Fixed 4 locations that queried `business_profiles` directly instead of `business_profiles_chat_eligible` view. Also fixed admin dashboard filter logic that failed to catch expired paid subscriptions and trials with missing end dates.
 - **Admin Dashboard Expired Filter Fix (May 10):** Live Listings and Expired Trials tabs now correctly handle 3 scenarios: (1) trial with expired end date, (2) trial with NULL end date (broken data), (3) paid subscription with lapsed `current_period_end`. Previously only caught scenario 1.
 - **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
@@ -201,7 +203,7 @@ Strategic audit of what would make Qwikker irresistible to local businesses. Fin
 |---|---------|-------------|----------------|
 | BV-1 | **ROI Calculator on Analytics** | Show estimated revenue from claims/visits: "23 claims x ~£15 avg = £345 revenue. Plan cost: £59. ROI: 5.8x" | Single most persuasive metric. Turns abstract subscription into concrete profit centre. |
 | BV-2 | **Weekly Performance Email to Businesses** | Automated summary: views, claims, saves, AI mentions, ranking vs category. Sent every Monday. | #1 retention driver. Keeps businesses aware of the platform when they're not logging in. |
-| BV-3 | **Blurred Analytics for Free Tier** | Show numbers exist ("47 views, 8 saves this week") but gate details behind upgrade. LinkedIn/Spotify playbook. | Currently free tier sees nothing → no evidence that upgrading helps. This creates FOMO. |
+| BV-3 | **Blurred Analytics for Free Tier** ✅ DONE | Tiered analytics (free/basic/advanced/full) with BlurredSection overlays. AI Discovery metrics, 30/60/90-day toggle, Engagement Summary, vibe breakdown. | Currently free tier sees nothing → no evidence that upgrading helps. This creates FOMO. |
 | BV-4 | **QR Code Generator + Scan Tracking** | Self-service branded QR codes (link to Qwikker profile). Downloadable table tents/stickers. Track scans per location. | Physical-to-digital bridge. Table tent "Scan to unlock our Secret Menu" drives pass installs AND gives businesses tangible assets from Qwikker. |
 
 **Priority 2 — High impact, higher effort:**
@@ -974,6 +976,30 @@ JSONB `vibe_tags` column on `business_profiles` stores `{ selected: string[], cu
 9. **AI chat:** Ask the AI about a business with vibe tags (e.g. "somewhere dog friendly"). Response should reference the tag. Check console/context — tags should appear in AVAILABLE BUSINESSES block.
 10. **Admin CRM:** Open a business CRM card for a business with vibe tags. Read-only pills should display in Overview tab.
 11. **Regression:** Verify all other action item links still work (business name, hours, description, tagline, address, logo, photo, featured items, offers, secret menu, files).
+
+### BV-3 Blurred Analytics for Free Tier (DONE — May 15, 2026)
+
+**What was built:**
+1. **Tiered analytics system** (`subscription-helpers.ts`): New `analyticsLevel` property (free/basic/advanced/full) computed from subscription tier. Exposed via `/api/user/feature-access`.
+2. **BlurredSection component** (`analytics-page-client.tsx`): Reusable overlay that blurs content and shows upgrade nudge. Applied per-section based on analytics level.
+3. **AI Discovery metrics** (`business-analytics-actions.ts`): Queries `chat_messages` for AI responses mentioning the business (via slug matching). Extracts discovery queries (first user message per session). Shows "What People Asked" with counts.
+4. **Dynamic period toggle**: 30/60/90-day selector. All labels, subtitles, and trend comparisons update dynamically.
+5. **Smart trend badges**: Shows "New — no data last month" (blue) when current > 0 but previous = 0. Hides badge entirely when no data at all.
+6. **Engagement Summary**: Replaced useless "Viewer Breakdown" (registered/anonymous — meaningless since all users have wallet passes) with profile views, claims, saves, QR scans as relative bars.
+7. **Vibe breakdown**: Shows individual vibe ratings (loved_it/it_was_good/not_for_me) when < 5 vibes. Switches to percentage view at 5+.
+8. **Sidebar unlock**: Analytics page always accessible, gating at section level not page level.
+9. **Atlas tracking fix** (`AtlasMode.tsx`): `atlas_search_performed` events now log returned business IDs for future per-business discovery query tracking.
+
+**Bug fixes included:**
+- Offer claim modal on business page: `modal` div was never appended to `modalOverlay` (blank blur screen)
+- Offer claim modal content: replaced "Pass Updated" with proper "Offer Claimed" modal with View Claimed Offers / Add to Wallet / Dismiss buttons
+- Save button: `user_saved_items` insert was sending non-existent `item_name` column (every save silently failed)
+- Admin tier management: `'starter'` not mapped to DB value `'recommended'` (CHECK constraint violation)
+- Admin free downgrade: writing invalid `'claimed_free'` instead of `'free_tier'` (CHECK constraint violation)
+
+**Files changed:** `analytics-page-client.tsx`, `business-analytics-actions.ts`, `subscription-helpers.ts`, `feature-access/route.ts`, `dashboard-layout.tsx`, `improved-dashboard-home.tsx`, `user-business-detail-page.tsx`, `user-saved-actions.ts`, `admin-crm-actions.ts`, `AtlasMode.tsx`
+
+**Next:** BV-14 Weekly Digest Emails — `getBusinessAnalytics()` already returns all data needed. Wire up Vercel Cron + Resend template.
 
 ## Key Rules
 
