@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ElegantModal } from '@/components/ui/elegant-modal'
+import { Button } from '@/components/ui/button'
+import { getBusinessAnalytics } from '@/lib/actions/business-analytics-actions'
 import type { BusinessAnalytics } from '@/lib/actions/business-analytics-actions'
+import type { AnalyticsLevel } from '@/lib/utils/subscription-helpers'
 
 interface AnalyticsPageClientProps {
   profile: any
@@ -11,6 +14,42 @@ interface AnalyticsPageClientProps {
 }
 
 const CHART_HEIGHT = 180
+
+// --- Blur overlay for premium sections ---
+function BlurredSection({
+  locked,
+  upgradeMessage,
+  children,
+}: {
+  locked: boolean
+  upgradeMessage: string
+  children: React.ReactNode
+}) {
+  if (!locked) return <>{children}</>
+
+  return (
+    <div className="relative">
+      <div className="blur-[6px] select-none pointer-events-none">
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="text-center bg-slate-900/70 backdrop-blur-sm rounded-xl px-6 py-4 border border-slate-700/50 max-w-xs">
+          <div className="w-10 h-10 mx-auto mb-2 bg-slate-700/80 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <p className="text-sm text-slate-300 mb-3">{upgradeMessage}</p>
+          <Button asChild size="sm" className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold">
+            <Link href="/dashboard/settings">Upgrade Plan</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Charts and sub-components ---
 
 function DailyChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
   const maxVal = Math.max(...data.map(d => d.views + d.claims), 1)
@@ -84,7 +123,6 @@ function QRScanAreaChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
     )
   }
 
-  // Build SVG area chart path
   const width = 100
   const height = 100
   const points = data.map((day, i) => {
@@ -112,9 +150,8 @@ function QRScanAreaChart({ data }: { data: BusinessAnalytics['dailyData'] }) {
             <circle key={i} cx={p.x} cy={p.y} r="1.2" fill="#a855f7" className="opacity-80" />
           ))}
         </svg>
-        {/* Hover overlay with tooltips */}
         <div className="absolute inset-0 flex">
-          {data.map((day, i) => {
+          {data.map((day) => {
             const label = new Date(day.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
             return (
               <div key={day.date} className="flex-1 group relative">
@@ -154,19 +191,20 @@ function BreakdownBar({ label, value, total, color }: { label: string; value: nu
   )
 }
 
-function TrendBadge({ value }: { value: number }) {
+function TrendBadge({ value, periodDays }: { value: number; periodDays: number }) {
   const isPositive = value >= 0
+  const periodLabel = periodDays <= 30 ? 'last month' : `previous ${periodDays} days`
   return (
     <p className={`text-xs flex items-center gap-1 ${isPositive ? 'text-[#00d083]' : 'text-red-400'}`}>
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isPositive ? "M7 17l9.2-9.2M17 17V7H7" : "M17 7l-9.2 9.2M7 7v10h10"} />
       </svg>
-      {isPositive ? '+' : ''}{value.toFixed(1)}% from last month
+      {isPositive ? '+' : ''}{value.toFixed(1)}% vs {periodLabel}
     </p>
   )
 }
 
-function StatCard({ title, value, subtitle, trend }: { title: string; value: string; subtitle?: string; trend?: number }) {
+function StatCard({ title, value, subtitle, trend, periodDays = 30 }: { title: string; value: string; subtitle?: string; trend?: number; periodDays?: number }) {
   return (
     <Card className="bg-slate-800/50 border-slate-700">
       <CardHeader className="pb-3">
@@ -174,21 +212,40 @@ function StatCard({ title, value, subtitle, trend }: { title: string; value: str
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-white">{value}</div>
-        {trend !== undefined && <TrendBadge value={trend} />}
+        {trend !== undefined && <TrendBadge value={trend} periodDays={periodDays} />}
         {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
       </CardContent>
     </Card>
   )
 }
 
-export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientProps) {
-  const [showModal, setShowModal] = useState(true)
-  const [hasAnalyticsAccess, setHasAnalyticsAccess] = useState(false)
+// --- Main component ---
+
+const PERIOD_OPTIONS = [
+  { label: '30 days', value: 30 },
+  { label: '60 days', value: 60 },
+  { label: '90 days', value: 90 },
+] as const
+
+export function AnalyticsPageClient({ profile, analytics: initialAnalytics }: AnalyticsPageClientProps) {
+  const [analyticsLevel, setAnalyticsLevel] = useState<AnalyticsLevel>('free')
   const [loading, setLoading] = useState(true)
+  const [periodDays, setPeriodDays] = useState(30)
+  const [analytics, setAnalytics] = useState<BusinessAnalytics>(initialAnalytics)
+  const [isPending, startTransition] = useTransition()
   
   useEffect(() => {
     checkAnalyticsAccess()
   }, [profile])
+
+  const handlePeriodChange = (days: number) => {
+    if (days === periodDays || !profile?.id) return
+    setPeriodDays(days)
+    startTransition(async () => {
+      const data = await getBusinessAnalytics(profile.id, days)
+      setAnalytics(data)
+    })
+  }
 
   const checkAnalyticsAccess = async () => {
     if (!profile?.id) {
@@ -201,13 +258,22 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
       
       if (response.ok) {
         const data = await response.json()
-        setHasAnalyticsAccess(data.hasAccess)
+        if (data.hasAccess) {
+          setAnalyticsLevel('full')
+        } else {
+          setAnalyticsLevel(data.analyticsLevel || 'free')
+        }
       } else {
-        setHasAnalyticsAccess(profile?.plan === 'spotlight' || profile?.plan === 'pro')
+        // Fallback based on plan
+        const plan = profile?.plan
+        if (plan === 'spotlight' || plan === 'pro') setAnalyticsLevel('full')
+        else if (plan === 'featured') setAnalyticsLevel('advanced')
+        else if (plan === 'starter') setAnalyticsLevel('basic')
+        else setAnalyticsLevel('free')
       }
     } catch (error) {
       console.error('Error checking analytics access:', error)
-      setHasAnalyticsAccess(profile?.plan === 'spotlight' || profile?.plan === 'pro')
+      setAnalyticsLevel('free')
     } finally {
       setLoading(false)
     }
@@ -220,84 +286,63 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
       </div>
     )
   }
+
+  const isAdvanced = analyticsLevel === 'advanced' || analyticsLevel === 'full'
+  const isFull = analyticsLevel === 'full'
+
   return (
     <div className="space-y-6">
-      {!hasAnalyticsAccess && (
-        <ElegantModal
-          isOpen={showModal}
-          onClose={() => { window.location.href = '/dashboard' }}
-          title="Analytics Dashboard"
-          description="Get deep insights into your business performance with detailed analytics and reporting."
-          type="info"
-          size="md"
-          actions={[
-            {
-              label: 'Upgrade to Spotlight',
-              onClick: () => { window.location.href = '/dashboard/settings' },
-              variant: 'default',
-              className: 'bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold'
-            }
-          ]}
-        >
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <h4 className="font-medium text-blue-400 mb-3">Unlock Advanced Analytics</h4>
-              <div className="space-y-2 text-sm text-slate-300">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Profile views, saves, and engagement tracking</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Offer performance and claim trends</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>Loyalty program insights</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full"></div>
-                  <span>30-day performance trends</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-slate-400 text-center">
-              Available on Spotlight plan. Data is anonymized and privacy-friendly.
-            </p>
-          </div>
-        </ElegantModal>
-      )}
-
-      <div className={!hasAnalyticsAccess && showModal ? "blur-[8px] select-none pointer-events-none" : ""}>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Analytics</h1>
-          <p className="text-gray-400">Last 30 days of performance data</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-1">Analytics</h1>
+          <p className="text-gray-400">Last {periodDays} days of performance data</p>
         </div>
+        <div className="flex items-center gap-1 bg-slate-800/50 border border-slate-700 rounded-lg p-1">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => handlePeriodChange(opt.value)}
+              disabled={isPending}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                periodDays === opt.value
+                  ? 'bg-[#00d083] text-black'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              } ${isPending ? 'opacity-50' : ''}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Key Metrics */}
+      {/* === HEADLINE STATS — always visible === */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           title="Profile Views"
           value={analytics.totalProfileViews.toLocaleString()}
           trend={analytics.viewTrend}
+          periodDays={periodDays}
           subtitle={`${analytics.uniqueViewers} unique viewers`}
         />
         <StatCard
           title="Offer Claims"
           value={analytics.totalOfferClaims.toLocaleString()}
           trend={analytics.claimTrend}
+          periodDays={periodDays}
           subtitle={`${analytics.activeOffers} active offers`}
         />
         <StatCard
           title="QR Scans"
           value={analytics.totalQRScans.toLocaleString()}
           trend={analytics.qrScanTrend}
+          periodDays={periodDays}
           subtitle={`${analytics.uniqueQRScanners} unique ${analytics.uniqueQRScanners === 1 ? 'person' : 'people'}`}
         />
         <StatCard
           title="Saves"
           value={analytics.totalSaves.toLocaleString()}
           trend={analytics.saveTrend}
+          periodDays={periodDays}
           subtitle="Users who saved your listing"
         />
         <StatCard
@@ -309,141 +354,282 @@ export function AnalyticsPageClient({ profile, analytics }: AnalyticsPageClientP
           <StatCard
             title="Booking Clicks"
             value={analytics.bookingClicks.toLocaleString()}
-            subtitle="Tapped Book Now in last 30 days"
+            subtitle={`Tapped Book Now in last ${periodDays} days`}
           />
         )}
       </div>
 
-      {/* Loyalty Stats (only if business has loyalty) */}
-      {analytics.loyaltyMembers !== null && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <StatCard
-            title="Loyalty Members"
-            value={analytics.loyaltyMembers.toLocaleString()}
-            subtitle="Active program members"
-          />
-          <StatCard
-            title="Stamps Earned"
-            value={(analytics.loyaltyStampEarns || 0).toLocaleString()}
-            subtitle="Verified in-store visits this month"
-          />
-          <StatCard
-            title="Rewards Redeemed"
-            value={(analytics.loyaltyRedemptions || 0).toLocaleString()}
-            subtitle="Rewards claimed this month"
-          />
-        </div>
-      )}
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Performance Trends</CardTitle>
-            <p className="text-xs text-slate-400">Last 30 days — profile views and offer claims</p>
-          </CardHeader>
-          <CardContent>
-            {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0) ? (
-              <DailyChart data={analytics.dailyData} />
-            ) : (
-              <div className="h-64 flex items-center justify-center">
-                <div className="text-center">
-                  <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <p className="text-gray-400 text-sm">No activity yet this month</p>
-                  <p className="text-gray-500 text-xs mt-1">Data will appear as customers interact with your listing</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Top Performing Offers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {analytics.topOffers.length > 0 ? (
-              <div className="space-y-4">
-                {analytics.topOffers.map((offer, index) => (
-                  <div key={offer.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 bg-[#00d083]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-[#00d083] font-bold">#{index + 1}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-medium text-white truncate">{offer.offerName}</h4>
-                        <p className="text-sm text-gray-400">{offer.claims} claims this month</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p className="text-gray-400 text-sm">No offer claims yet</p>
-                <p className="text-gray-500 text-xs mt-1">Create offers to start tracking performance</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* QR Scan Trend — Mountain Chart */}
-      <Card className="bg-slate-800/50 border-slate-700 mb-8">
-        <CardHeader>
-          <CardTitle className="text-white">QR Scan Trend</CardTitle>
-          <p className="text-xs text-slate-400">Last 30 days — scans from your linked QR codes</p>
-        </CardHeader>
-        <CardContent>
-          <QRScanAreaChart data={analytics.dailyData} />
-        </CardContent>
-      </Card>
-
-      {/* Viewer & Scan Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Viewer Breakdown</CardTitle>
-            <p className="text-xs text-slate-400">Last 30 days</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <BreakdownBar label="Registered users" value={analytics.registeredViewers} total={analytics.totalProfileViews} color="bg-[#00d083]" />
-              <BreakdownBar label="Anonymous viewers" value={analytics.anonymousViewers} total={analytics.totalProfileViews} color="bg-slate-500" />
-              <BreakdownBar label="Unique viewers" value={analytics.uniqueViewers} total={analytics.totalProfileViews} color="bg-blue-500" />
-            </div>
-            {analytics.totalProfileViews === 0 && (
-              <p className="text-center text-slate-500 text-sm mt-6">No profile views recorded yet</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {analytics.totalQRScans > 0 && (
+      {/* === PERFORMANCE TRENDS + TOP OFFERS — Featured+ === */}
+      <BlurredSection
+        locked={!isAdvanced}
+        upgradeMessage="Upgrade to Featured or Spotlight to see performance trends and offer rankings"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white">QR Scan Activity</CardTitle>
-              <p className="text-xs text-slate-400">When people scan your codes — last 30 days</p>
+              <CardTitle className="text-white">Performance Trends</CardTitle>
+              <p className="text-xs text-slate-400">Last {periodDays} days — profile views and offer claims</p>
+            </CardHeader>
+            <CardContent>
+              {analytics.dailyData.length > 0 && analytics.dailyData.some(d => d.views > 0 || d.claims > 0) ? (
+                <DailyChart data={analytics.dailyData} />
+              ) : (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-center">
+                    <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p className="text-gray-400 text-sm">No activity in this period</p>
+                    <p className="text-gray-500 text-xs mt-1">Data will appear as customers interact with your listing</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Top Performing Offers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analytics.topOffers.length > 0 ? (
+                <div className="space-y-4">
+                  {analytics.topOffers.map((offer, index) => (
+                    <div key={offer.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 bg-[#00d083]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <span className="text-[#00d083] font-bold">#{index + 1}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-white truncate">{offer.offerName}</h4>
+                          <p className="text-sm text-gray-400">{offer.claims} claims</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg className="w-12 h-12 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <p className="text-gray-400 text-sm">No offer claims yet</p>
+                  <p className="text-gray-500 text-xs mt-1">Create offers to start tracking performance</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </BlurredSection>
+
+      {/* === PEAK DAYS + FIRST-TIME vs RETURNING — Featured+ === */}
+      <BlurredSection
+        locked={!isAdvanced}
+        upgradeMessage="Upgrade to see when visitors come and how many are returning"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Peak Days</CardTitle>
+              <p className="text-xs text-slate-400">When people visit your listing</p>
+            </CardHeader>
+            <CardContent>
+              {analytics.peakDays.length > 0 && analytics.peakDays.some(d => d.views > 0) ? (
+                <div className="space-y-3">
+                  {analytics.peakDays.map((day) => {
+                    const maxViews = Math.max(...analytics.peakDays.map(d => d.views), 1)
+                    const pct = (day.views / maxViews) * 100
+                    return (
+                      <div key={day.day} className="flex items-center gap-3">
+                        <span className="text-sm text-slate-400 w-24 flex-shrink-0">{day.day.slice(0, 3)}</span>
+                        <div className="flex-1 h-6 bg-slate-700/30 rounded overflow-hidden">
+                          <div className="h-full bg-[#00d083]/50 rounded transition-all" style={{ width: `${Math.max(pct, day.views > 0 ? 3 : 0)}%` }} />
+                        </div>
+                        <span className="text-sm text-white font-medium w-8 text-right">{day.views}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-center text-slate-500 text-sm py-6">No visit data yet</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Visitor Type</CardTitle>
+              <p className="text-xs text-slate-400">First-time vs returning visitors</p>
+            </CardHeader>
+            <CardContent>
+              {(analytics.firstTimeVisitors > 0 || analytics.returningVisitors > 0) ? (
+                <div className="space-y-4">
+                  <BreakdownBar label="First-time visitors" value={analytics.firstTimeVisitors} total={analytics.firstTimeVisitors + analytics.returningVisitors} color="bg-blue-500" />
+                  <BreakdownBar label="Returning visitors" value={analytics.returningVisitors} total={analytics.firstTimeVisitors + analytics.returningVisitors} color="bg-[#00d083]" />
+                  <div className="mt-4 p-3 bg-slate-700/20 rounded-lg">
+                    <p className="text-xs text-slate-400">
+                      <span className="text-white font-medium">{analytics.repeatVisitors}</span> people visited more than once
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-slate-500 text-sm py-6">No visitor data yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </BlurredSection>
+
+      {/* === AI DISCOVERY INSIGHTS — Spotlight only === */}
+      <BlurredSection
+        locked={!isFull}
+        upgradeMessage="Upgrade to Spotlight to see how people discover you through AI"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                AI Discovery
+              </CardTitle>
+              <p className="text-xs text-slate-400">How the AI concierge is recommending you</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-400">{analytics.aiMentions}</p>
+                  <p className="text-xs text-slate-400">AI recommendations</p>
+                </div>
+                <div className="text-center p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-400">{analytics.atlasDirections}</p>
+                  <p className="text-xs text-slate-400">Directions via Atlas</p>
+                </div>
+              </div>
+              {analytics.aiMentions === 0 && analytics.atlasDirections === 0 && (
+                <p className="text-xs text-slate-500 text-center">AI recommendation data will appear as people chat with the concierge.</p>
+              )}
+              {analytics.aiMentions > 0 && (
+                <p className="text-xs text-slate-400 text-center mt-2">
+                  Your business was recommended in {analytics.aiMentions} AI conversation{analytics.aiMentions !== 1 ? 's' : ''} in the last {periodDays} days
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50" style={{ maxHeight: '420px', display: 'flex', flexDirection: 'column' }}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                What People Asked
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                {analytics.aiDiscoveryQueries.length > 0
+                  ? `${analytics.aiDiscoveryQueries.reduce((sum, q) => sum + q.count, 0)} unique conversations — last ${periodDays} days`
+                  : 'Queries that led the AI to recommend you'}
+              </p>
+            </CardHeader>
+            <div className="px-6 pb-6 overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#475569 transparent' }}>
+              {analytics.aiDiscoveryQueries.length > 0 ? (
+                <div className="space-y-1.5">
+                  {analytics.aiDiscoveryQueries.map((q, i) => (
+                    <div key={i} className="flex items-start justify-between gap-3 p-2 bg-slate-700/20 rounded-lg">
+                      <span className="text-sm text-slate-300 leading-snug">&ldquo;{q.query}&rdquo;</span>
+                      <span className="text-xs text-purple-400 font-medium flex-shrink-0 mt-0.5">{q.count}x</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 text-center py-4">Discovery query data will appear as people chat with the AI.</p>
+              )}
+            </div>
+          </Card>
+        </div>
+      </BlurredSection>
+
+      {/* === QR SCAN TREND + ACTIVITY — Featured+ === */}
+      <BlurredSection
+        locked={!isAdvanced}
+        upgradeMessage="Upgrade to Featured or Spotlight to see QR scan trends and timing"
+      >
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
+          <CardHeader>
+            <CardTitle className="text-white">QR Scan Trend</CardTitle>
+            <p className="text-xs text-slate-400">Last {periodDays} days — scans from your linked QR codes</p>
+          </CardHeader>
+          <CardContent>
+            <QRScanAreaChart data={analytics.dailyData} />
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Viewer Breakdown</CardTitle>
+              <p className="text-xs text-slate-400">Last {periodDays} days</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <BreakdownBar label="Morning (6am–12pm)" value={analytics.qrScansByTime.morning} total={analytics.totalQRScans} color="bg-amber-400" />
-                <BreakdownBar label="Afternoon (12–5pm)" value={analytics.qrScansByTime.afternoon} total={analytics.totalQRScans} color="bg-orange-500" />
-                <BreakdownBar label="Evening (5–10pm)" value={analytics.qrScansByTime.evening} total={analytics.totalQRScans} color="bg-purple-500" />
-                <BreakdownBar label="Night (10pm–6am)" value={analytics.qrScansByTime.night} total={analytics.totalQRScans} color="bg-indigo-500" />
+                <BreakdownBar label="Registered users" value={analytics.registeredViewers} total={analytics.totalProfileViews} color="bg-[#00d083]" />
+                <BreakdownBar label="Anonymous viewers" value={analytics.anonymousViewers} total={analytics.totalProfileViews} color="bg-slate-500" />
+                <BreakdownBar label="Unique viewers" value={analytics.uniqueViewers} total={analytics.totalProfileViews} color="bg-blue-500" />
               </div>
-              <p className="text-center text-slate-500 text-xs mt-4">
-                {analytics.uniqueQRScanners} unique {analytics.uniqueQRScanners === 1 ? 'person' : 'people'} scanned your codes
-              </p>
+              {analytics.totalProfileViews === 0 && (
+                <p className="text-center text-slate-500 text-sm mt-6">No profile views recorded yet</p>
+              )}
             </CardContent>
           </Card>
-        )}
-      </div>
-      </div>
+
+          {analytics.totalQRScans > 0 && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+              <CardTitle className="text-white">QR Scan Activity</CardTitle>
+              <p className="text-xs text-slate-400">When people scan your codes — last {periodDays} days</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <BreakdownBar label="Morning (6am-12pm)" value={analytics.qrScansByTime.morning} total={analytics.totalQRScans} color="bg-amber-400" />
+                  <BreakdownBar label="Afternoon (12-5pm)" value={analytics.qrScansByTime.afternoon} total={analytics.totalQRScans} color="bg-orange-500" />
+                  <BreakdownBar label="Evening (5-10pm)" value={analytics.qrScansByTime.evening} total={analytics.totalQRScans} color="bg-purple-500" />
+                  <BreakdownBar label="Night (10pm-6am)" value={analytics.qrScansByTime.night} total={analytics.totalQRScans} color="bg-indigo-500" />
+                </div>
+                <p className="text-center text-slate-500 text-xs mt-4">
+                  {analytics.uniqueQRScanners} unique {analytics.uniqueQRScanners === 1 ? 'person' : 'people'} scanned your codes
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </BlurredSection>
+
+      {/* === LOYALTY STATS — only if business has loyalty === */}
+      {analytics.loyaltyMembers !== null && (
+        <BlurredSection
+          locked={!isAdvanced}
+          upgradeMessage="Upgrade to see loyalty program insights"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard
+              title="Loyalty Members"
+              value={analytics.loyaltyMembers.toLocaleString()}
+              subtitle="Active program members"
+            />
+            <StatCard
+              title="Stamps Earned"
+              value={(analytics.loyaltyStampEarns || 0).toLocaleString()}
+              subtitle={`Verified in-store visits — last ${periodDays} days`}
+            />
+            <StatCard
+              title="Rewards Redeemed"
+              value={(analytics.loyaltyRedemptions || 0).toLocaleString()}
+              subtitle={`Rewards claimed — last ${periodDays} days`}
+            />
+          </div>
+        </BlurredSection>
+      )}
     </div>
   )
 }

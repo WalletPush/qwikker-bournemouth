@@ -86,7 +86,6 @@ export async function saveItem(
         wallet_pass_id: walletPassId,
         item_type: itemType,
         item_id: itemId,
-        item_name: itemName
       })
 
     if (error) {

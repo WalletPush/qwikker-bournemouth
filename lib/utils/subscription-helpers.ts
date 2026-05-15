@@ -6,15 +6,33 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
+export type AnalyticsLevel = 'free' | 'basic' | 'advanced' | 'full'
+
 export interface BusinessTierInfo {
   tier: 'free' | 'starter' | 'featured' | 'spotlight'
   displayName: string
   hasAnalyticsAccess: boolean
+  analyticsLevel: AnalyticsLevel
   hasAdvancedQR: boolean
   hasPushNotifications: boolean
   maxOffers: number
   isInTrial: boolean
   trialEndsAt?: string
+}
+
+function tierToAnalyticsLevel(tierName: string, hasAdminOverride: boolean): AnalyticsLevel {
+  if (hasAdminOverride) return 'full'
+  switch (tierName) {
+    case 'spotlight':
+    case 'pro':
+      return 'full'
+    case 'featured':
+      return 'advanced'
+    case 'starter':
+      return 'basic'
+    default:
+      return 'free'
+  }
 }
 
 /**
@@ -62,6 +80,7 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
           tier: 'starter' as const,
           displayName: 'Trial Expired',
           hasAnalyticsAccess: false,
+          analyticsLevel: 'basic' as AnalyticsLevel,
           hasAdvancedQR: false,
           hasPushNotifications: false,
           maxOffers: 3,
@@ -88,7 +107,8 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
         tier: tier.tier_name as any,
         displayName: tier.tier_display_name,
         hasAnalyticsAccess: hasAnalytics,
-        hasAdvancedQR: hasAnalytics, // Same as analytics
+        analyticsLevel: tierToAnalyticsLevel(tier.tier_name, profileFeatures.analytics === true),
+        hasAdvancedQR: hasAnalytics,
         hasPushNotifications: hasPushNotifs,
         maxOffers: tierFeatures.max_offers || 1,
         isInTrial: subscription.is_in_free_trial || false,
@@ -113,6 +133,7 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
         tier: profile.plan || 'starter',
         displayName: getTierDisplayName(profile.plan || 'starter'),
         hasAnalyticsAccess: hasAnalytics,
+        analyticsLevel: tierToAnalyticsLevel(profile.plan || 'starter', profileFeatures.analytics === true),
         hasAdvancedQR: hasAnalytics,
         hasPushNotifications: hasPushNotifs,
         maxOffers: getMaxOffers(profile.plan || 'starter'),
@@ -126,6 +147,7 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
       tier: 'starter',
       displayName: 'Starter',
       hasAnalyticsAccess: false,
+      analyticsLevel: 'basic' as AnalyticsLevel,
       hasAdvancedQR: false,
       hasPushNotifications: false,
       maxOffers: 3,
@@ -140,6 +162,7 @@ export async function getBusinessTierInfo(businessId: string): Promise<BusinessT
       tier: 'starter',
       displayName: 'Starter',
       hasAnalyticsAccess: false,
+      analyticsLevel: 'basic' as AnalyticsLevel,
       hasAdvancedQR: false,
       hasPushNotifications: false,
       maxOffers: 3,

@@ -43,6 +43,15 @@ export interface BusinessAnalytics {
   qrScanTrend: number
   qrScansByTime: { morning: number; afternoon: number; evening: number; night: number }
 
+  // Premium metrics (Spotlight)
+  repeatVisitors: number
+  firstTimeVisitors: number
+  returningVisitors: number
+  peakDays: Array<{ day: string; views: number }>
+  atlasDirections: number
+  aiMentions: number
+  aiDiscoveryQueries: Array<{ query: string; count: number }>
+
   // Time-based data for charts
   dailyData: Array<{
     date: string
@@ -139,12 +148,16 @@ export async function getBusinessActivityData(businessId: string): Promise<{
   }
 }
 
-export async function getBusinessAnalytics(businessId: string): Promise<BusinessAnalytics> {
+export async function getBusinessAnalytics(businessId: string, periodDays: number = 30): Promise<BusinessAnalytics> {
   try {
     const supabase = createServiceRoleClient()
     const now = new Date()
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+    const periodAgo = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000)
+    const previousPeriodAgo = new Date(now.getTime() - periodDays * 2 * 24 * 60 * 60 * 1000)
+
+    // Aliases for backward compat within the function
+    const thirtyDaysAgo = periodAgo
+    const sixtyDaysAgo = previousPeriodAgo
 
     // 1. PROFILE VIEW ANALYTICS (page views only — excludes booking_click events)
     const [
@@ -285,12 +298,120 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       })
     }
 
-    // 7. DAILY DATA (last 30 days)
+    // 7. PREMIUM METRICS — repeat visitors, peak days, atlas data
+    const repeatVisitorRows = views?.reduce((acc, v) => {
+      const key = v.wallet_pass_id || v.user_id
+      if (key) acc[key] = (acc[key] || 0) + 1
+      return acc
+    }, {} as Record<string, number>) || {}
+    const repeatVisitors = Object.values(repeatVisitorRows).filter(c => c > 1).length
+    const firstTimeVisitors = views?.filter(v => v.is_first_visit === true).length || 0
+    const returningVisitors = views?.filter(v => v.is_first_visit === false).length || 0
+
+    // Peak days: day-of-week aggregation from visits
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const dayCounts: Record<string, number> = {}
+    dayNames.forEach(d => { dayCounts[d] = 0 })
+    views?.forEach(v => {
+      const dayName = dayNames[new Date(v.visit_date).getDay()]
+      dayCounts[dayName]++
+    })
+    const peakDays = dayNames.map(day => ({ day, views: dayCounts[day] }))
+
+    // Atlas directions + AI chat mentions
+    let atlasDirections = 0
+    let aiMentions = 0
+    let aiDiscoveryQueries: Array<{ query: string; count: number }> = []
+
+    try {
+      // Atlas directions clicked for this business
+      const { count: directionsCount } = await supabase
+        .from('atlas_analytics').select('*', { count: 'exact', head: true })
+        .eq('business_id', businessId).eq('event_type', 'atlas_directions_clicked')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+      atlasDirections = directionsCount || 0
+
+      // AI chat mentions: count messages where AI recommended this business
+      // Business links in AI responses use pattern: /user/business/{slug}
+      const { data: businessProfile } = await supabase
+        .from('business_profiles')
+        .select('business_name, city')
+        .eq('id', businessId)
+        .single()
+
+      if (businessProfile?.business_name) {
+        const slugify = (name: string) => name.toLowerCase()
+          .replace(/['']/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+
+        const slug = slugify(businessProfile.business_name)
+        const slugVariant = businessProfile.business_name.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+
+        
+
+        // Fetch AI messages in period (role is 'ai' in chat_messages table)
+        const { data: allAssistantMsgs } = await supabase
+          .from('chat_messages')
+          .select('id, session_id, created_at, content')
+          .eq('role', 'ai')
+          .gte('created_at', thirtyDaysAgo.toISOString())
+
+        const mentionRows = (allAssistantMsgs || []).filter(msg => {
+          const c = msg.content || ''
+          return c.includes(`/user/business/${slug}`) ||
+                 (slugVariant !== slug && c.includes(`/user/business/${slugVariant}`))
+        })
+
+        
+
+        aiMentions = mentionRows?.length || 0
+
+        // Get discovery queries: one per session, using the first user message
+        // (the original intent that led the AI to recommend this business)
+        if (mentionRows.length > 0) {
+          const sessionIds = [...new Set(mentionRows.map(r => r.session_id))]
+          const { data: allSessionMsgs } = await supabase
+            .from('chat_messages')
+            .select('content, session_id, role, created_at')
+            .in('session_id', sessionIds)
+            .order('created_at', { ascending: true })
+
+          if (allSessionMsgs && allSessionMsgs.length > 0) {
+            // One query per session: the first user message is the discovery intent
+            const sessionFirstQuery: Record<string, string> = {}
+            for (const msg of allSessionMsgs) {
+              if (msg.role === 'user' && !sessionFirstQuery[msg.session_id]) {
+                const text = msg.content.trim()
+                if (text.length > 5) sessionFirstQuery[msg.session_id] = text
+              }
+            }
+
+            const queryCounts: Record<string, number> = {}
+            Object.values(sessionFirstQuery).forEach(q => {
+              const normalized = q.toLowerCase().slice(0, 150)
+              queryCounts[normalized] = (queryCounts[normalized] || 0) + 1
+            })
+
+            aiDiscoveryQueries = Object.entries(queryCounts)
+              .map(([query, count]) => ({ query, count }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 20)
+          }
+        }
+      }
+    } catch (chatError) {
+      console.warn('AI mention analytics failed (non-critical):', chatError)
+    }
+
+    // 8. DAILY DATA (last 30 days)
     // Supabase returns timestamptz as "2026-01-27 02:07:50.473+00" (space, not T)
     const toDateKey = (ts: string) => new Date(ts).toISOString().split('T')[0]
 
     const dailyBuckets: Record<string, { views: number; claims: number; scans: number }> = {}
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < periodDays; i++) {
       const dateKey = new Date(now.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       dailyBuckets[dateKey] = { views: 0, claims: 0, scans: 0 }
     }
@@ -334,6 +455,13 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       uniqueQRScanners,
       qrScanTrend,
       qrScansByTime,
+      repeatVisitors,
+      firstTimeVisitors,
+      returningVisitors,
+      peakDays,
+      atlasDirections,
+      aiMentions,
+      aiDiscoveryQueries,
       dailyData,
     }
 
@@ -361,6 +489,13 @@ export async function getBusinessAnalytics(businessId: string): Promise<Business
       uniqueQRScanners: 0,
       qrScanTrend: 0,
       qrScansByTime: { morning: 0, afternoon: 0, evening: 0, night: 0 },
+      repeatVisitors: 0,
+      firstTimeVisitors: 0,
+      returningVisitors: 0,
+      peakDays: [],
+      atlasDirections: 0,
+      aiMentions: 0,
+      aiDiscoveryQueries: [],
       dailyData: [],
     }
   }

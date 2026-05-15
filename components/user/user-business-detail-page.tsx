@@ -262,37 +262,83 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Pass Updated!</h3>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-2">Your wallet pass has been updated with this offer.</p>
-        <p class="text-sm text-slate-400 mb-6">Check your mobile wallet to view the updated pass.</p>
-        <button id="modal-close" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
-          Got it!
-        </button>
+        <p class="text-slate-300 text-sm mb-6">What would you like to do next?</p>
+        
+        <div class="space-y-3">
+          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            View Claimed Offers
+          </button>
+          
+          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add to Wallet
+          </button>
+          
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3 mb-2">
+            <p class="text-amber-200 text-sm font-semibold text-center mb-1">Important: 12-Hour Expiry</p>
+            <p class="text-amber-100 text-xs text-center">Once added to your wallet, this offer will automatically expire after 12 hours</p>
+          </div>
+          
+          <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
+            Dismiss
+          </button>
+        </div>
       </div>
     `
     
+    modalOverlay.appendChild(modal)
     document.body.appendChild(modalOverlay)
     
     // Animate in
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       modalOverlay.style.opacity = '1'
       modal.style.transform = 'scale(1)'
-    })
+    }, 50)
     
-    // Close handler
     const closeModal = () => {
       modalOverlay.style.opacity = '0'
       modal.style.transform = 'scale(0.95)'
       setTimeout(() => {
-        document.body.removeChild(modalOverlay)
-        
-        // UI is already updated via state
+        if (document.body.contains(modalOverlay)) {
+          document.body.removeChild(modalOverlay)
+        }
       }, 300)
     }
     
-    modal.querySelector('#modal-close')?.addEventListener('click', closeModal)
+    modal.querySelector('#view-claimed')?.addEventListener('click', () => {
+      closeModal()
+      window.location.href = getNavUrl('/user/offers') + (walletPassId ? '&' : '?') + 'filter=claimed'
+    })
+    
+    modal.querySelector('#add-to-wallet')?.addEventListener('click', async () => {
+      closeModal()
+      try {
+        const response = await fetch('/api/walletpass/update-main-pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userWalletPassId: walletPassId,
+            currentOffer: offerTitle,
+            offerDetails: { businessName, offerId }
+          })
+        })
+        if (response.ok) {
+          console.log('✅ Offer added to wallet pass')
+        }
+      } catch (err) {
+        console.error('Failed to add to wallet:', err)
+      }
+    })
+    
+    modal.querySelector('#modal-dismiss')?.addEventListener('click', closeModal)
     modalOverlay.addEventListener('click', (e) => {
       if (e.target === modalOverlay) closeModal()
     })

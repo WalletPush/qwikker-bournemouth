@@ -1906,6 +1906,7 @@ export function AtlasMode({
           eventType: 'atlas_search_performed',
           query,
           resultsCount: filteredResults.length,
+          businessId: filteredResults[0]?.id,
           performanceMode: performanceMode.enabled
         })
       } else {

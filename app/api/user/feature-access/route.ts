@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       hasAccess,
+      analyticsLevel: tierInfo.analyticsLevel,
       tierInfo: {
         tier: tierInfo.tier,
         displayName: tierInfo.displayName,

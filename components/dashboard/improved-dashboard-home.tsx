@@ -1522,7 +1522,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
       {/* Additional Dashboard Cards - ALL THE MISSING ONES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* Analytics Overview (Locked) */}
+        {/* Analytics Overview — always visible, links to full analytics */}
         <Card className="bg-slate-800/50 border-slate-700 relative overflow-hidden">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -1532,7 +1532,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               Analytics Overview
             </CardTitle>
           </CardHeader>
-          <CardContent className={!isFeatureUnlocked('analytics') ? "blur-[8px] select-none pointer-events-none" : ""}>
+          <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-[#00d083]">{analyticsData.totalProfileViews}</p>
@@ -1548,25 +1548,12 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               </div>
             </div>
             <Button asChild size="sm" variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
-              <Link href="/dashboard/analytics">View Analytics</Link>
+              <Link href="/dashboard/analytics">See Detailed Analytics</Link>
             </Button>
+            {!isFeatureUnlocked('analytics') && (
+              <p className="text-xs text-slate-500 text-center mt-2">Upgrade to unlock AI insights and detailed breakdowns</p>
+            )}
           </CardContent>
-          {/* Only show lock overlay if analytics is not unlocked */}
-          {!isFeatureUnlocked('analytics') && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-20">
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 bg-slate-700 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <p className="font-semibold text-white mb-2">Unlock Analytics</p>
-                <Button asChild size="sm" variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
-                  <Link href="/dashboard/settings">Upgrade Plan</Link>
-                </Button>
-              </div>
-            </div>
-          )}
         </Card>
 
         {/* Push Notifications (Locked) */}
