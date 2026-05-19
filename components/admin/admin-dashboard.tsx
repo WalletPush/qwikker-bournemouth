@@ -219,6 +219,23 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     return () => clearInterval(interval)
   }, [])
 
+  // "Recently Imported" filter for unclaimed listings (auto-set via import tool postMessage)
+  const [showRecentImports, setShowRecentImports] = useState(false)
+
+  // Listen for navigation messages from import tool iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'navigate' && event.data?.tab === 'unclaimed-listings') {
+        setActiveTab('unclaimed')
+        if (event.data?.filter === 'recent') {
+          setShowRecentImports(true)
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
   const [processingClaim, setProcessingClaim] = useState<string | null>(null)
 
   const toggleExpandClaim = (claimId: string) => {
@@ -556,9 +573,13 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const pendingBusinesses = filterBusinesses(allPendingBusinesses)
   const liveBusinesses = filterBusinesses(allLiveBusinesses)
   const unclaimedBusinesses = filterBusinesses(
-    showOnlyAiEligible 
-      ? allUnclaimedBusinesses.filter(b => b.admin_chat_fallback_approved === true) 
-      : allUnclaimedBusinesses
+    showRecentImports
+      ? [...allUnclaimedBusinesses].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      : showOnlyAiEligible
+        ? allUnclaimedBusinesses.filter(b => b.admin_chat_fallback_approved === true)
+        : allUnclaimedBusinesses
   )
   const incompleteBusinesses = filterBusinesses(allIncompleteBusinesses)
   const rejectedBusinesses = filterBusinesses(allRejectedBusinesses)
@@ -2170,10 +2191,19 @@ Qwikker Admin Team`
                             )
                           })()}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Button
                             variant="outline"
-                            onClick={() => setShowOnlyAiEligible(!showOnlyAiEligible)}
+                            onClick={() => { setShowRecentImports(!showRecentImports); if (!showRecentImports) setShowOnlyAiEligible(false) }}
+                            className={`bg-transparent border-slate-600 hover:bg-slate-800/40 text-sm ${
+                              showRecentImports ? 'border-blue-500/50 text-blue-300' : 'text-slate-300'
+                            }`}
+                          >
+                            {showRecentImports ? '✓ Newest First' : 'Newest First'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => { setShowOnlyAiEligible(!showOnlyAiEligible); if (!showOnlyAiEligible) setShowRecentImports(false) }}
                             className={`bg-transparent border-slate-600 hover:bg-slate-800/40 text-sm ${
                               showOnlyAiEligible ? 'border-purple-500/50 text-purple-300' : 'text-slate-300'
                             }`}

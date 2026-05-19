@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ImportProgressModal } from '@/components/admin/import-progress-modal'
+import { ImportMapPreview } from '@/components/admin/import-map-preview'
 import { ONBOARDING_CATEGORY_OPTIONS, type SystemCategory, SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
 
@@ -38,7 +39,6 @@ const GRID_RADIUS_FEW = 5000
 
 interface AdminImportClientProps {
   city: string
-  currencyCode: string
   countryName: string
   displayName: string
   importMaxRadiusM: number
@@ -65,7 +65,7 @@ interface BusinessResult {
   photoName: string | null
 }
 
-export default function AdminImportClient({ city: defaultCity, currencyCode, countryName, displayName, importMaxRadiusM }: AdminImportClientProps) {
+export default function AdminImportClient({ city: defaultCity, countryName, displayName, importMaxRadiusM }: AdminImportClientProps) {
   const [city, setCity] = useState(defaultCity)
   // Default location is just the city name - country is automatically appended by backend
   const [location, setLocation] = useState(displayName)
@@ -79,10 +79,6 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   const [isImporting, setIsImporting] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [searchError, setSearchError] = useState('')
-  const [costData, setCostData] = useState<{
-    preview: { description: string }
-    import: { description: string }
-  } | null>(null)
   const [searchMeta, setSearchMeta] = useState<{
     center: { lat: number; lng: number }
     resolvedLocation: string
@@ -92,8 +88,9 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
     requestsMade: number
   } | null>(null)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
-  const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews'>('rating')
+  const [sortBy, setSortBy] = useState<'rating' | 'distance' | 'reviews' | 'best'>('best')
   const [searchFilter, setSearchFilter] = useState('') // Filter for preview results
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false)
   
   // ✅ NEW: Text search for specific businesses
   const [searchMode, setSearchMode] = useState<'radius' | 'text'>('radius')
@@ -155,6 +152,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
   const [importedData, setImportedData] = useState<BusinessResult[]>([])
   // Ref so the SSE loop can synchronously check finalization without stale closure issues
   const hasFinalized = useRef(false)
+  const previewRef = useRef<HTMLDivElement>(null)
 
   // Helper: Extract cuisine tags from Google types
   const getCuisineTags = (googleTypes?: string[]): string[] => {
@@ -230,12 +228,16 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
       }
 
       setResults(data.results || [])
-      setCostData(data.costs || null)
       setSearchMeta(data.search || null)
       setSelectedResults([])
       setShowPreview(true)
 
       console.log(`✅ Found ${data.totalFound} businesses`)
+
+      // Auto-scroll to preview results
+      setTimeout(() => {
+        previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to search businesses'
@@ -247,44 +249,6 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
     }
   }
 
-  // ✅ NEW: Text search for specific business
-  const handleTextSearch = async () => {
-    setIsSearching(true)
-    setSearchError('')
-    
-    try {
-      const response = await fetch('/api/admin/import-businesses/text-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          textQuery,
-          location: `${displayName}, ${countryName}`
-        })
-      })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        setSearchError(data.error || 'Search failed')
-        setResults([])
-        return
-      }
-
-      setResults(data.results || [])
-      setCostData(data.costs || null)
-      setSelectedResults([])
-      setShowPreview(true)
-
-      console.log(`✅ Found ${data.totalFound} businesses matching "${textQuery}"`)
-
-    } catch (error: any) {
-      console.error('Text search error:', error)
-      setSearchError(error.message || 'Failed to search businesses')
-      setResults([])
-    } finally {
-      setIsSearching(false)
-    }
-  }
 
   const handleImport = async () => {
     if (selectedResults.length === 0) return
@@ -426,11 +390,6 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
     }
   }
 
-  const handleStopImport = () => {
-    // TODO: Implement actual cancellation via API
-    setIsImportCancelled(true)
-    setIsImporting(false)
-  }
 
   const handleCloseProgressModal = () => {
     setShowProgressModal(false)
@@ -774,7 +733,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
 
       {/* Results Preview */}
       {showPreview && results.length > 0 && (
-        <Card>
+        <Card ref={previewRef}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -782,6 +741,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 <CardDescription>
                   {(() => {
                     const filteredCount = results.filter(result => {
+                      if (showSelectedOnly && !selectedResults.includes(result.placeId)) return false
                       if (!searchFilter.trim()) return true
                       const query = searchFilter.toLowerCase()
                       return (
@@ -790,7 +750,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                         result.category.toLowerCase().includes(query)
                       )
                     }).length
-                    return searchFilter.trim()
+                    return (searchFilter.trim() || showSelectedOnly)
                       ? `Showing ${filteredCount} of ${results.length} businesses`
                       : `Found ${results.length} businesses matching your criteria`
                   })()}
@@ -807,6 +767,15 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Map Preview */}
+            <ImportMapPreview
+              results={results}
+              selectedResults={selectedResults}
+              searchCenter={searchMeta?.center ?? null}
+              searchRadiusMeters={radius[0]}
+              onToggleSelection={toggleSelection}
+            />
+
             {/* Sort and Filter Controls */}
             <div className="space-y-3">
               {/* Search Filter */}
@@ -826,10 +795,11 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 <div className="flex items-center gap-2 flex-1">
                   <Label htmlFor="sortBy" className="text-sm whitespace-nowrap">Sort by:</Label>
                   <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                    <SelectTrigger className="w-[160px]">
+                    <SelectTrigger className="w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="best">Best Overall</SelectItem>
                       <SelectItem value="rating">Highest Rating</SelectItem>
                       <SelectItem value="reviews">Most Reviews</SelectItem>
                       <SelectItem value="distance">Nearest First</SelectItem>
@@ -837,17 +807,31 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="skipDuplicates"
-                    checked={skipDuplicates}
-                    onChange={(e) => setSkipDuplicates(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="skipDuplicates" className="text-sm cursor-pointer">
-                    Skip duplicates
-                  </Label>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="showSelectedOnly"
+                      checked={showSelectedOnly}
+                      onChange={(e) => setShowSelectedOnly(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="showSelectedOnly" className="text-sm cursor-pointer">
+                      Selected only
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="skipDuplicates"
+                      checked={skipDuplicates}
+                      onChange={(e) => setSkipDuplicates(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="skipDuplicates" className="text-sm cursor-pointer">
+                      Skip duplicates
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -861,8 +845,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                 </p>
                 <ul className="text-blue-700 dark:text-blue-300 space-y-0.5 list-disc list-inside">
                   <li>Businesses added as <strong>unclaimed</strong> (visible in Discover only)</li>
-                  <li><strong>NOT visible in AI chat</strong> (even after claiming as Free Listing)</li>
-                  <li>Only paid plans (Starter/Featured/Spotlight) or Free Trial unlock AI visibility</li>
+                  <li><strong>NOT visible in AI chat</strong> until marked as AI Eligible in Unclaimed Listings</li>
                   <li>Owners can claim & upgrade via QR code or claim page</li>
                   <li>Placeholder images used until real photos uploaded</li>
                 </ul>
@@ -904,7 +887,7 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
               {results
                 .slice() // Create a copy to avoid mutating state
                 .filter(result => {
-                  // ✅ NEW: Filter by search query
+                  if (showSelectedOnly && !selectedResults.includes(result.placeId)) return false
                   if (!searchFilter.trim()) return true
                   const query = searchFilter.toLowerCase()
                   return (
@@ -914,6 +897,13 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
                   )
                 })
                 .sort((a, b) => {
+                  if (sortBy === 'best') {
+                    // Weighted score: rating matters most but review count breaks ties
+                    // Normalize reviews with log scale so 500 reviews doesn't dominate over 50
+                    const scoreA = a.rating * 2 + Math.log10(Math.max(a.reviewCount, 1))
+                    const scoreB = b.rating * 2 + Math.log10(Math.max(b.reviewCount, 1))
+                    return scoreB - scoreA
+                  }
                   if (sortBy === 'rating') return b.rating - a.rating
                   if (sortBy === 'reviews') return b.reviewCount - a.reviewCount
                   if (sortBy === 'distance') return a.distance - b.distance
@@ -1028,7 +1018,6 @@ export default function AdminImportClient({ city: defaultCity, currencyCode, cou
         isOpen={showProgressModal}
         onClose={handleCloseProgressModal}
         progress={importProgress}
-        onStop={handleStopImport}
         isComplete={isImportComplete}
         isCancelled={isImportCancelled}
         importedData={importedData}

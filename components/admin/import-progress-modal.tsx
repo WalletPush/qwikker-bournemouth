@@ -38,7 +38,6 @@ interface ImportProgressModalProps {
   isOpen: boolean
   onClose: () => void
   progress: ImportProgress | null
-  onStop: () => void
   isComplete: boolean
   isCancelled: boolean
   importedData?: ExportableBusiness[]
@@ -50,7 +49,6 @@ export function ImportProgressModal({
   isOpen,
   onClose,
   progress,
-  onStop,
   isComplete,
   isCancelled,
   importedData = [],
@@ -59,6 +57,7 @@ export function ImportProgressModal({
 }: ImportProgressModalProps) {
   const [hasExported, setHasExported] = useState(false)
   const [showCloseWarning, setShowCloseWarning] = useState(false)
+  const [showNavigateWarning, setShowNavigateWarning] = useState(false)
   const [copiedSummary, setCopiedSummary] = useState(false)
 
   // Reset export state when a new import starts
@@ -141,10 +140,22 @@ export function ImportProgressModal({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isComplete ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  Import Complete
-                </>
+                progress && progress.imported === 0 && progress.failed > 0 ? (
+                  <>
+                    <XCircle className="w-5 h-5 text-red-500" />
+                    Import Failed
+                  </>
+                ) : progress && progress.imported > 0 && progress.failed > 0 ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-yellow-500" />
+                    Import Partially Complete
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    Import Complete
+                  </>
+                )
               ) : isCancelled ? (
                 <>
                   <StopCircle className="w-5 h-5 text-orange-500" />
@@ -338,16 +349,33 @@ export function ImportProgressModal({
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2">
+            <div className="space-y-2">
               {!isComplete && !isCancelled ? (
-                <Button onClick={onStop} variant="destructive" size="lg">
-                  <StopCircle className="w-4 h-4 mr-2" />
-                  Stop Import
-                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Import in progress — please wait for completion
+                </p>
               ) : (
-                <Button onClick={handleClose} size="lg" className="w-full">
-                  Close
-                </Button>
+                <div className="flex items-center gap-2">
+                  {progress && progress.imported > 0 && (
+                    <Button
+                      onClick={() => {
+                        if (canExport && !hasExported) {
+                          setShowNavigateWarning(true)
+                          return
+                        }
+                        window.parent.postMessage({ type: 'navigate', tab: 'unclaimed-listings', filter: 'recent' }, '*')
+                        onClose()
+                      }}
+                      size="lg"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      View Unclaimed Listings
+                    </Button>
+                  )}
+                  <Button onClick={handleClose} variant="outline" size="lg" className="flex-1">
+                    Close
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -369,6 +397,33 @@ export function ImportProgressModal({
             </Button>
             <Button variant="destructive" onClick={handleConfirmClose}>
               Close without exporting
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Navigate-without-export confirmation */}
+      <Dialog open={showNavigateWarning} onOpenChange={setShowNavigateWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export not downloaded</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You haven&apos;t downloaded the CSV/JSON export yet. Once you navigate away the export will no longer be available. Continue anyway?
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowNavigateWarning(false)}>
+              Go back & export
+            </Button>
+            <Button
+              onClick={() => {
+                setShowNavigateWarning(false)
+                window.parent.postMessage({ type: 'navigate', tab: 'unclaimed-listings', filter: 'recent' }, '*')
+                onClose()
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Continue without exporting
             </Button>
           </div>
         </DialogContent>

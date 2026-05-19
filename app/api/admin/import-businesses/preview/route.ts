@@ -212,18 +212,40 @@ export async function POST(request: NextRequest) {
     if (radiusMeters <= gridThreshold) {
       searchPoints = [{ lat: latNum, lng: lngNum, cellRadius: radiusMeters }]
     } else {
-      searchPoints = generateSearchGrid(latNum, lngNum, radiusMeters, GRID_CELL_SPACING, GRID_CELL_RADIUS)
+      // Adaptive spacing: scale so MAX_GRID_POINTS covers the full radius
+      // With a grid diameter of sqrt(MAX_GRID_POINTS) ≈ 5, we want spacing = 2*radius / sqrt(MAX_GRID_POINTS)
+      const gridDiameter = Math.floor(Math.sqrt(MAX_GRID_POINTS))
+      const adaptiveSpacing = Math.max(GRID_CELL_SPACING, Math.ceil((2 * radiusMeters) / (gridDiameter + 1)))
+      // Each cell searches a radius that covers the gap between points (with some overlap)
+      const adaptiveCellRadius = Math.min(Math.ceil(adaptiveSpacing * 0.75), 50000)
+
+      console.log(`📐 Adaptive grid: radius=${radiusMeters}m, spacing=${adaptiveSpacing}m, cellRadius=${adaptiveCellRadius}m`)
+
+      searchPoints = generateSearchGrid(latNum, lngNum, radiusMeters, adaptiveSpacing, adaptiveCellRadius)
       if (searchPoints.length > MAX_GRID_POINTS) {
-        searchPoints = searchPoints.slice(0, MAX_GRID_POINTS)
+        // Evenly sample from the full set rather than taking the first N
+        const step = searchPoints.length / MAX_GRID_POINTS
+        const sampled: typeof searchPoints = [searchPoints[0]] // Always keep center
+        for (let i = 1; i < MAX_GRID_POINTS; i++) {
+          const idx = Math.min(Math.round(i * step), searchPoints.length - 1)
+          sampled.push(searchPoints[idx])
+        }
+        searchPoints = sampled
       }
     }
 
     // Check estimated requests against guardrail
     const estimatedRequests = searchPoints.length * typesToSearch.length
     if (estimatedRequests > MAX_REQUESTS_PER_PREVIEW) {
-      const reducedPoints = Math.floor(MAX_REQUESTS_PER_PREVIEW / typesToSearch.length)
-      searchPoints = searchPoints.slice(0, Math.max(1, reducedPoints))
-      console.warn(`⚠️ Reduced grid from ${searchPoints.length} to ${reducedPoints} points (would exceed ${MAX_REQUESTS_PER_PREVIEW} request limit)`)
+      const targetPoints = Math.floor(MAX_REQUESTS_PER_PREVIEW / typesToSearch.length)
+      const step = searchPoints.length / targetPoints
+      const reduced: typeof searchPoints = [searchPoints[0]]
+      for (let i = 1; i < targetPoints; i++) {
+        const idx = Math.min(Math.round(i * step), searchPoints.length - 1)
+        reduced.push(searchPoints[idx])
+      }
+      searchPoints = reduced
+      console.warn(`⚠️ Reduced grid to ${searchPoints.length} points (would exceed ${MAX_REQUESTS_PER_PREVIEW} request limit)`)
     }
 
     const actualEstimatedRequests = searchPoints.length * typesToSearch.length
@@ -236,9 +258,17 @@ export async function POST(request: NextRequest) {
     let requestsMade = 0
     const seenPlaceIds = new Set<string>()
 
+    // Ensure geographic coverage: search at least this many points before allowing early stop
+    const minPointsBeforeEarlyStop = Math.min(searchPoints.length, Math.max(5, Math.ceil(searchPoints.length * 0.6)))
+    // Scale target to user's maxResults (never stop before we'd have enough to fill their request)
+    const effectiveTarget = Math.max(TARGET_VALID_UNIQUES, maxResults * 2)
+
+    console.log(`🎯 Early stop config: minPoints=${minPointsBeforeEarlyStop}, target=${effectiveTarget}`)
+
     for (let pointIdx = 0; pointIdx < searchPoints.length; pointIdx++) {
-      if (seenPlaceIds.size >= TARGET_VALID_UNIQUES) {
-        console.log(`✅ Global early stop: ${seenPlaceIds.size} unique results >= ${TARGET_VALID_UNIQUES} target`)
+      // Only allow global early stop AFTER minimum points have been searched
+      if (pointIdx >= minPointsBeforeEarlyStop && seenPlaceIds.size >= effectiveTarget) {
+        console.log(`✅ Global early stop: ${seenPlaceIds.size} unique results >= ${effectiveTarget} target (after ${pointIdx} points)`)
         break
       }
 
@@ -247,7 +277,8 @@ export async function POST(request: NextRequest) {
       let pointSkipped = false
 
       for (let typeIdx = 0; typeIdx < typesToSearch.length; typeIdx++) {
-        if (seenPlaceIds.size >= TARGET_VALID_UNIQUES) break
+        // Within a point, allow early stop only after minimum points requirement is met
+        if (pointIdx >= minPointsBeforeEarlyStop && seenPlaceIds.size >= effectiveTarget) break
 
         const type = typesToSearch[typeIdx]
 
@@ -287,14 +318,9 @@ export async function POST(request: NextRequest) {
           console.log(`📊 Point ${pointIdx + 1}/${searchPoints.length}, type ${type}: ${searchData.places.length} results (${seenPlaceIds.size} unique total)`)
         } else {
           consecutiveEmpty++
-          // Sparse-area skip: if first type returns 0 and cell radius is small, skip this point
-          if (typeIdx === 0 && point.cellRadius <= GRID_CELL_RADIUS) {
-            console.log(`⏭️ Point ${pointIdx + 1}: first type returned 0, skipping sparse area`)
-            pointSkipped = true
-            break
-          }
+          // Sparse-area skip: only skip if 3+ consecutive types return nothing
           if (consecutiveEmpty >= 3) {
-            console.log(`⏭️ Point ${pointIdx + 1}: 3 consecutive empty types, skipping remaining`)
+            console.log(`⏭️ Point ${pointIdx + 1}: 3 consecutive empty types, skipping remaining types for this point`)
             pointSkipped = true
             break
           }
