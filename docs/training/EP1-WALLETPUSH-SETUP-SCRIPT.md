@@ -223,5 +223,5 @@
 - **Logo**: Use as-is. Do not modify.
 - **Icon**: Use as-is. Do not modify.
 - **Strip image**: Your city. 1125 x 432 px.
-- **Background colour**: Your choice (keep it dark).
-- **Pass name**: "Qwikker {City}"
+- **Background colour**: Your choice (keep it dark or light).
+- **Pass name**: "Qwikker {City}" Do not modify.

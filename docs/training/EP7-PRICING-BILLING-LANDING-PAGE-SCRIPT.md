@@ -249,17 +249,17 @@
 
 *Voiceover:*
 
-> That's Episode 7 done. Your franchise can now accept payments, businesses know what each tier costs, and your landing page looks the part. In the next episode, we'll test everything — we'll go through the join flow, mock a business onboarding, and make sure it all works before you start importing real businesses.
+> That's Episode 7 done. Your franchise can now accept payments, businesses know what each tier costs, and your landing page looks the part. In the next episode, we'll use the Import Tool to pull real businesses from Google Places into your city — giving you a solid base of quality listings from day one.
 
 ---
 
 ## [NEXT EPISODE TEASER — 11:30-11:45]
 
-*Show: "Next: Episode 8 — Test Your City" slide*
+*Show: "Next: Episode 8 — The Import Tool" slide*
 
 *Voiceover:*
 
-> Next up: Episode 8 — Test Your City. We'll walk through the user join flow, claim a business, and verify everything works end-to-end before you go live with real businesses.
+> Next up: Episode 8 — The Import Tool. We'll use Google Places to pull real, verified businesses into your city and build your first batch of quality listings.
 
 ---
 
