@@ -387,12 +387,16 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   const isStep4Valid = () => {
     if (!config) return false
     
-    const hasWalletPushApiKey = config.walletpush_api_key && 
-                                config.walletpush_api_key.trim() !== '' && 
-                                !config.walletpush_api_key.includes('••••')
+    // A previously-saved key comes back masked (••••) for security; the
+    // has_walletpush_api_key flag tells us one is already stored, so accept
+    // either a freshly-typed key OR an existing saved one.
+    const hasWalletPushApiKey = !!config.has_walletpush_api_key ||
+                                !!(config.walletpush_api_key &&
+                                   config.walletpush_api_key.trim() !== '' &&
+                                   !config.walletpush_api_key.includes('••••'))
     
-    const hasWalletPushTemplateId = config.walletpush_template_id && 
-                                    config.walletpush_template_id.trim() !== ''
+    const hasWalletPushTemplateId = !!(config.walletpush_template_id && 
+                                    config.walletpush_template_id.trim() !== '')
     
     return hasWalletPushApiKey && hasWalletPushTemplateId
   }

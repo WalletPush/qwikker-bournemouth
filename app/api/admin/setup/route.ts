@@ -256,6 +256,7 @@ export async function POST(request: NextRequest) {
     if (config.resend_from_email !== undefined && config.resend_from_email !== '') updates.resend_from_email = config.resend_from_email
     if (config.resend_from_name !== undefined && config.resend_from_name !== '') updates.resend_from_name = config.resend_from_name
     if (config.walletpush_template_id !== undefined && config.walletpush_template_id !== '') updates.walletpush_template_id = config.walletpush_template_id
+    if (config.walletpush_dashboard_url !== undefined && config.walletpush_dashboard_url !== '') updates.walletpush_dashboard_url = config.walletpush_dashboard_url
     if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)
