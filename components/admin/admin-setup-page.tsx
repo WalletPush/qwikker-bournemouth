@@ -128,6 +128,9 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [activeStep, setActiveStep] = useState(1)
+  // Per-section save status (keyed by section name) so each section can be saved
+  // and show its own feedback independently of the full-wizard save.
+  const [sectionStatus, setSectionStatus] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({})
   
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -303,6 +306,44 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
       console.error('❌ Save error:', error)
       setSaveStatus('error')
       setMessage(`❌ Error saving configuration: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  // Save ONLY the listed fields for a single section. Because only these fields
+  // are sent, saving one section can never overwrite another section's data.
+  // Server-side, masked secrets (••••) and empty strings are ignored, so e.g.
+  // editing the URL never clobbers the stored API key with its mask.
+  const saveSection = async (
+    section: string,
+    fieldKeys: (keyof FranchiseConfig)[]
+  ) => {
+    if (!config) return
+
+    setSectionStatus(prev => ({ ...prev, [section]: 'saving' }))
+
+    try {
+      const sectionConfig: Record<string, any> = {}
+      fieldKeys.forEach(key => {
+        const value = config[key]
+        if (value !== '' && value !== null && value !== undefined) {
+          sectionConfig[key] = value
+        }
+      })
+
+      const response = await fetch('/api/admin/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city, config: sectionConfig, activate: false })
+      })
+
+      if (response.ok) {
+        setSectionStatus(prev => ({ ...prev, [section]: 'saved' }))
+        setTimeout(() => setSectionStatus(prev => ({ ...prev, [section]: 'idle' })), 3000)
+      } else {
+        setSectionStatus(prev => ({ ...prev, [section]: 'error' }))
+      }
+    } catch {
+      setSectionStatus(prev => ({ ...prev, [section]: 'error' }))
     }
   }
 
@@ -1449,6 +1490,23 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                       <p className="text-slate-500 text-xs mt-2">
                         The base URL of your WalletPush instance. Used for the &quot;Open WalletPush&quot; button and all API calls.
                       </p>
+                    </div>
+
+                    {/* Section-scoped save: only sends WalletPush fields, never touches other sections */}
+                    <div className="flex items-center gap-3 pt-1">
+                      <Button
+                        onClick={() => saveSection('walletpush', ['walletpush_api_key', 'walletpush_template_id', 'walletpush_dashboard_url'])}
+                        disabled={sectionStatus.walletpush === 'saving'}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {sectionStatus.walletpush === 'saving' ? 'Saving…' : 'Save WalletPush settings'}
+                      </Button>
+                      {sectionStatus.walletpush === 'saved' && (
+                        <span className="text-sm text-green-400 font-medium">✓ Saved</span>
+                      )}
+                      {sectionStatus.walletpush === 'error' && (
+                        <span className="text-sm text-red-400 font-medium">✗ Couldn&apos;t save — please try again</span>
+                      )}
                     </div>
 
                   </div>
