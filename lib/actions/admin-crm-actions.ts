@@ -62,6 +62,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
       const { data: allMenus, error: menusError } = await supabaseAdmin
         .from('menus')
         .select('*')
+        .in('business_id', businessIds)
 
       if (allMenus && allMenus.length > 0) {
         console.log(`📄 Fetched ${allMenus.length} total menus from database`)
