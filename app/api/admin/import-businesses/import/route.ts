@@ -542,8 +542,8 @@ export async function POST(request: NextRequest) {
             // Use addressComponents to get locality/sublocality, fallback to city
             const townName = (() => {
               if (place.addressComponents) {
-                const locality = place.addressComponents.find((c: any) => 
-                  c.types.includes('locality') || c.types.includes('sublocality')
+                const locality = place.addressComponents.find((c: any) =>
+                  c.types?.includes('locality') || c.types?.includes('sublocality')
                 )
                 if (locality?.longText) {
                   return locality.longText

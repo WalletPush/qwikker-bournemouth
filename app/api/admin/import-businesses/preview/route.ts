@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
       // Country validation: check resolved country matches franchise
       const addressComponents = result.address_components || []
-      const resolvedCountry = addressComponents.find((c: { types: string[] }) => c.types.includes('country'))
+      const resolvedCountry = addressComponents.find((c: { types?: string[] }) => c.types?.includes('country'))
       if (resolvedCountry && franchiseConfig.country_code) {
         const resolvedCode = resolvedCountry.short_name?.toUpperCase()
         const expectedCode = franchiseConfig.country_code.toUpperCase()
