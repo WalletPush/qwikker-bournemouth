@@ -68,6 +68,10 @@ export default function CreateFranchisePage() {
     'CH': 'Europe/Zurich',
     'AT': 'Europe/Vienna',
     'LU': 'Europe/Luxembourg',
+    // Southern Europe
+    'GR': 'Europe/Athens',
+    'CY': 'Asia/Nicosia',
+    'MT': 'Europe/Malta',
     // Northern Europe
     'SE': 'Europe/Stockholm',
     'NO': 'Europe/Oslo',
@@ -275,6 +279,13 @@ export default function CreateFranchisePage() {
                   <option value="LU">🇱🇺 Luxembourg</option>
                 </optgroup>
                 
+                {/* Southern Europe */}
+                <optgroup label="☀️ Southern Europe">
+                  <option value="GR">🇬🇷 Greece</option>
+                  <option value="CY">🇨🇾 Cyprus</option>
+                  <option value="MT">🇲🇹 Malta</option>
+                </optgroup>
+                
                 {/* Northern Europe */}
                 <optgroup label="❄️ Northern Europe">
                   <option value="SE">🇸🇪 Sweden</option>
@@ -369,6 +380,7 @@ export default function CreateFranchisePage() {
                   <option value="Europe/Amsterdam">Europe/Amsterdam (GMT+1)</option>
                   <option value="Europe/Brussels">Europe/Brussels (GMT+1)</option>
                   <option value="Europe/Luxembourg">Europe/Luxembourg (GMT+1)</option>
+                  <option value="Europe/Malta">Europe/Malta (GMT+1)</option>
                   <option value="Europe/Zurich">Europe/Zurich (GMT+1)</option>
                   <option value="Europe/Vienna">Europe/Vienna (GMT+1)</option>
                   <option value="Europe/Stockholm">Europe/Stockholm (GMT+1)</option>
@@ -387,6 +399,7 @@ export default function CreateFranchisePage() {
                   <option value="Europe/Vilnius">Europe/Vilnius (GMT+2)</option>
                   <option value="Europe/Bucharest">Europe/Bucharest (GMT+2)</option>
                   <option value="Europe/Athens">Europe/Athens (GMT+2)</option>
+                  <option value="Asia/Nicosia">Asia/Nicosia (GMT+2)</option>
                   <option value="Europe/Istanbul">Europe/Istanbul (GMT+3)</option>
                 </optgroup>
                 
