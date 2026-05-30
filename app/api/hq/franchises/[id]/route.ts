@@ -27,22 +27,16 @@ export async function GET(
     }
 
     // Fetch franchise admins
-    console.log('🔍 [HQ API] Fetching admins for city:', franchise.city)
+    // NOTE: never select password_hash here - it must not be logged or returned to the client
     const { data: admins, error: adminsError } = await supabase
       .from('city_admins')
-      .select('*')
+      .select('id, city, username, email, full_name, is_active, last_login, password_changed_at, created_at, updated_at')
       .eq('city', franchise.city)
-    
-    console.log('🔍 [HQ API] Admins query result:', { 
-      count: admins?.length || 0, 
-      error: adminsError?.message,
-      city: franchise.city 
-    })
-    
+
     if (adminsError) {
       console.error('❌ Error fetching admins:', adminsError)
     } else {
-      console.log('✅ Admins fetched:', admins)
+      console.log('✅ Admins fetched:', { count: admins?.length || 0, city: franchise.city })
     }
 
     // Fetch business count
@@ -115,7 +109,7 @@ export async function GET(
       .from('hq_audit_logs')
       .select('*')
       .eq('city', franchise.city)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(10)
     
     if (auditError) {
