@@ -206,7 +206,11 @@ export async function POST(request: NextRequest) {
       'EG': 'Egypt',
       'ZA': 'South Africa',
       'KE': 'Kenya',
-      'NG': 'Nigeria'
+      'NG': 'Nigeria',
+      'MA': 'Morocco',
+      'TZ': 'Tanzania',
+      'GH': 'Ghana',
+      'ZW': 'Zimbabwe'
     }
     
     const countryCode = country || 'GB'

@@ -115,7 +115,10 @@ export default function CreateFranchisePage() {
     'EG': 'Africa/Cairo',
     'KE': 'Africa/Nairobi',
     'NG': 'Africa/Lagos',
-    'MA': 'Africa/Casablanca'
+    'MA': 'Africa/Casablanca',
+    'TZ': 'Africa/Dar_es_Salaam',
+    'ZW': 'Africa/Harare',
+    'GH': 'Africa/Accra'
   }
 
   // Auto-generate subdomain from city name
@@ -336,6 +339,9 @@ export default function CreateFranchisePage() {
                   <option value="KE">🇰🇪 Kenya</option>
                   <option value="NG">🇳🇬 Nigeria</option>
                   <option value="MA">🇲🇦 Morocco</option>
+                  <option value="TZ">🇹🇿 Tanzania</option>
+                  <option value="GH">🇬🇭 Ghana</option>
+                  <option value="ZW">🇿🇼 Zimbabwe</option>
                 </optgroup>
               </select>
             </div>
