@@ -393,7 +393,7 @@ export function HQContactCentreClient() {
                         : 'bg-slate-800 border border-slate-700 text-white'
                     }`}>
                       {msg.messageType !== 'status_change' && (
-                        <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
                       )}
                       {msg.messageType === 'status_change' && <p>{msg.body}</p>}
 

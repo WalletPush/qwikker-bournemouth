@@ -953,7 +953,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
                     {req.status}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-300 whitespace-pre-wrap">{req.message}</p>
+                <p className="text-xs text-slate-300 whitespace-pre-wrap break-words">{req.message}</p>
                 <div className="flex items-center gap-2 pt-1">
                   {req.status === 'open' && (
                     <Button
@@ -1269,7 +1269,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
 
                   {/* Message body */}
                   {msg.messageType !== 'status_change' && (
-                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
                   )}
                   {msg.messageType === 'status_change' && (
                     <p>{msg.body}</p>

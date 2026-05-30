@@ -696,7 +696,7 @@ export function ContactCentreClient() {
 
                   {/* Regular or task body */}
                   {msg.messageType !== 'status_change' && (
-                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{msg.body}</p>
+                    <p className="text-sm text-slate-200 whitespace-pre-wrap break-words">{msg.body}</p>
                   )}
 
                   {/* Bug Summary Card (for messages with bug metadata) */}
