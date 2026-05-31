@@ -4,7 +4,7 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## Current Status (Updated May 15, 2026)
+## Current Status (Updated May 31, 2026)
 
 - **Tier 0:** 22/22 complete. All P0/P1 critical bugs fixed (April 2026). 0.14 (marketing pages) DONE. Remaining: 0.22 (pre-launch env vars — Stripe live keys in progress).
 - **Pricing & Tier Audit (May 5):** All business-facing pricing cards, onboarding modals, support pages, and trial upsells now use canonical `getTierFeatures()` source of truth. Prices updated to £19.99/£49.99/£129. DB migration rewrites all existing city pricing_cards. Training scripts EP1-EP6 committed.
@@ -22,6 +22,7 @@
 - **AI Chat Eligibility Leak Fix (May 10):** CRITICAL fix — expired businesses were appearing in AI chat results via a direct DB lookup bypass in the chat route's "tell me about X" detail mode. Fixed 4 locations that queried `business_profiles` directly instead of `business_profiles_chat_eligible` view. Also fixed admin dashboard filter logic that failed to catch expired paid subscriptions and trials with missing end dates.
 - **Admin Dashboard Expired Filter Fix (May 10):** Live Listings and Expired Trials tabs now correctly handle 3 scenarios: (1) trial with expired end date, (2) trial with NULL end date (broken data), (3) paid subscription with lapsed `current_period_end`. Previously only caught scenario 1.
 - **New features (April 24-29):** City Partner Claims system (`/partners`), AI Management dashboard (usage tracking, KB health, config), AI usage logging (`ai_usage_logs` table), "Never recommend external platforms" AI rule, OpusReach Intake Pack.
+- **Landing Page Sponsors V2 (May 31):** DONE. Clickable headline sponsor (added `sponsor_url`) with hover lift, up to 2 tier-2 sponsors ("In partnership with" row, sized between headline and supporters), and clickable supporter logos with per-logo website URLs. Editor gained URL fields for all and a load guard that disables Save when config fails to load. **CRITICAL FIX:** landing-page POST now MERGES into existing `landing_page_config` instead of replacing the whole JSON — a partial/empty editor state was wiping stored sponsors/supporters (Bournemouth's config was flattened this way; data backward-compatible, logos still in Cloudinary). Also hardened the config GET against `business_subscriptions` returning a single object (was throwing 500). Files: `app/api/admin/landing-page/route.ts`, `components/admin/landing-page-editor.tsx`, `components/marketing/city-landing-page.tsx`. Existing cities only need to add URLs to existing logos — no re-uploads.
 
 ## Bournemouth Launch Strategy (Target: October 2026)
 
