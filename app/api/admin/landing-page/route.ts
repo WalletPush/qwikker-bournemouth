@@ -14,12 +14,21 @@ const landingPageConfigSchema = z.object({
   sponsor_name: z.string().max(100).nullable().optional(),
   sponsor_tagline: z.string().max(200).nullable().optional(),
   sponsor_logo_url: z.string().url().nullable().optional(),
+  sponsor_url: z.string().url().nullable().optional(),
+
+  // Up to 2 secondary ("tier 2") sponsors shown below the headline sponsor
+  tier2_sponsors: z.array(z.object({
+    name: z.string().max(100),
+    logo_url: z.string().url(),
+    url: z.string().url().nullable().optional(),
+  })).max(2).nullable().optional(),
 
   supporters_enabled: z.boolean().optional(),
   supporters_heading: z.string().max(100).nullable().optional(),
   supporter_logos: z.array(z.object({
     name: z.string().max(100),
     logo_url: z.string().url(),
+    url: z.string().url().nullable().optional(),
   })).nullable().optional(),
 
   show_founding_counter: z.boolean().optional(),
@@ -77,9 +86,11 @@ export async function GET(request: NextRequest) {
 
     const now = new Date()
     const activeBusinesses = (businessesResult.data || []).filter(biz => {
-      const subs = (biz as Record<string, unknown>).business_subscriptions as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null; status: string }> | null
-      if (!subs || subs.length === 0) return true
+      // business_subscriptions can come back as an array OR a single object depending on the join
+      const rawSubs = (biz as Record<string, unknown>).business_subscriptions
+      const subs = (Array.isArray(rawSubs) ? rawSubs : rawSubs ? [rawSubs] : []) as Array<{ is_in_free_trial: boolean; free_trial_end_date: string | null; status: string }>
       const sub = subs[0]
+      if (!sub) return true
       if (sub.status === 'cancelled') return false
       if (!sub.is_in_free_trial) return true
       if (sub.free_trial_end_date) {
@@ -145,10 +156,28 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient()
 
+    // Read the current config first so we MERGE rather than replace. This prevents a
+    // partial/empty editor state from wiping stored data (sponsor names, logos, supporter
+    // logos, featured IDs). Each top-level key the editor sends overwrites just that key;
+    // keys it doesn't send are preserved.
+    const { data: existingRow, error: fetchError } = await supabaseAdmin
+      .from('franchise_crm_configs')
+      .select('landing_page_config')
+      .eq('city', city)
+      .single()
+
+    if (fetchError) {
+      console.error('Landing page config fetch-before-save error:', fetchError)
+      return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    }
+
+    const existingConfig = (existingRow?.landing_page_config as Record<string, unknown>) || {}
+    const mergedConfig = { ...existingConfig, ...parsed.data }
+
     const { error } = await supabaseAdmin
       .from('franchise_crm_configs')
       .update({
-        landing_page_config: parsed.data,
+        landing_page_config: mergedConfig,
         updated_at: new Date().toISOString(),
       })
       .eq('city', city)

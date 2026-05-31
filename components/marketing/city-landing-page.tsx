@@ -8,6 +8,13 @@ import { ArrowRight, Sparkles, Gift, Menu, Stamp, ChevronDown } from 'lucide-rea
 interface SupporterLogo {
   name: string
   logo_url: string
+  url?: string | null
+}
+
+interface Tier2Sponsor {
+  name: string
+  logo_url: string
+  url?: string | null
 }
 
 interface LandingPageConfig {
@@ -18,6 +25,8 @@ interface LandingPageConfig {
   sponsor_name?: string | null
   sponsor_tagline?: string | null
   sponsor_logo_url?: string | null
+  sponsor_url?: string | null
+  tier2_sponsors?: Tier2Sponsor[] | null
   supporters_enabled?: boolean
   supporters_heading?: string | null
   supporter_logos?: SupporterLogo[] | null
@@ -44,6 +53,24 @@ interface CityLandingPageProps {
   featuredBusinesses?: FeaturedBusiness[]
   passHolderCount?: number
   trialEnabled?: boolean
+}
+
+// Wraps logos/content in an external link when a URL is provided, otherwise renders inline.
+// When it's a link, it gets a pointer cursor and a subtle hover lift so it reads as clickable.
+function ClickableLogo({ url, className, children }: { url?: string | null; className?: string; children: React.ReactNode }) {
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${className ?? 'inline-flex'} cursor-pointer transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-100`}
+      >
+        {children}
+      </a>
+    )
+  }
+  return <div className={className}>{children}</div>
 }
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
@@ -80,7 +107,8 @@ export function CityLandingPage({
   const heroSubtitle = landingConfig.hero_subtitle || null
   const heroImageUrl = landingConfig.hero_image_url || '/qwikkerhero.png'
   const showFoundingCounter = landingConfig.show_founding_counter && foundingMemberSpotsLeft > 0
-  const showSponsor = landingConfig.sponsor_enabled && (landingConfig.sponsor_name || landingConfig.sponsor_logo_url)
+  const tier2Sponsors = (landingConfig.tier2_sponsors || []).filter(s => s.logo_url)
+  const showSponsor = landingConfig.sponsor_enabled && (landingConfig.sponsor_name || landingConfig.sponsor_logo_url || tier2Sponsors.length > 0)
   const showSupporters = landingConfig.supporters_enabled && (landingConfig.supporter_logos || []).length > 0
   const showFeatured = landingConfig.show_featured_businesses && featuredBusinesses.length > 0
   const showPassCount = landingConfig.show_pass_count && passHolderCount > 0
@@ -414,6 +442,57 @@ export function CityLandingPage({
         </div>
       </section>
 
+      {/* Sponsors Section */}
+      {showSponsor && (
+        <section className="border-t border-white/5 py-14 px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto flex flex-col items-center gap-8">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#00d083]/80 font-semibold">
+              Qwikker {displayName} is sponsored by
+            </p>
+
+            {/* Headline sponsor */}
+            <ClickableLogo url={landingConfig.sponsor_url} className="group flex flex-col items-center gap-4">
+              {landingConfig.sponsor_logo_url && (
+                <img
+                  src={landingConfig.sponsor_logo_url}
+                  alt={landingConfig.sponsor_name || 'Sponsor'}
+                  className="h-16 sm:h-20 w-auto max-w-[280px] object-contain transition-transform duration-200 ease-out group-hover:scale-105"
+                />
+              )}
+              <div className="text-center">
+                {landingConfig.sponsor_name && (
+                  <p className="text-base sm:text-lg font-semibold text-white">
+                    {landingConfig.sponsor_name}
+                  </p>
+                )}
+                {landingConfig.sponsor_tagline && (
+                  <p className="text-sm text-white/50 mt-1">{landingConfig.sponsor_tagline}</p>
+                )}
+              </div>
+            </ClickableLogo>
+
+            {/* Tier 2 sponsors */}
+            {tier2Sponsors.length > 0 && (
+              <div className="w-full flex flex-col items-center gap-4 pt-2">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">In partnership with</p>
+                <div className="flex items-center justify-center gap-10 sm:gap-14 flex-wrap">
+                  {tier2Sponsors.map((sponsor, i) => (
+                    <ClickableLogo key={i} url={sponsor.url}>
+                      <img
+                        src={sponsor.logo_url}
+                        alt={sponsor.name}
+                        title={sponsor.name}
+                        className="h-11 sm:h-12 w-auto max-w-[180px] object-contain opacity-80 hover:opacity-100 transition-opacity duration-300"
+                      />
+                    </ClickableLogo>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Supporters Section */}
       {showSupporters && (
         <section className="py-12 px-4 sm:px-6 border-t border-white/5">
@@ -423,43 +502,19 @@ export function CityLandingPage({
             </p>
             <div className="flex items-center justify-center gap-8 md:gap-10 flex-wrap">
               {(landingConfig.supporter_logos || []).map((supporter, i) => (
-                <img
-                  key={i}
-                  src={supporter.logo_url}
-                  alt={supporter.name}
-                  title={supporter.name}
-                  style={{ height: '80px', maxWidth: '200px', width: 'auto' }}
-                  className="object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
-                />
+                <ClickableLogo key={i} url={supporter.url}>
+                  <img
+                    src={supporter.logo_url}
+                    alt={supporter.name}
+                    title={supporter.name}
+                    style={{ height: '80px', maxWidth: '200px', width: 'auto' }}
+                    className="object-contain opacity-40 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-300"
+                  />
+                </ClickableLogo>
               ))}
             </div>
           </div>
         </section>
-      )}
-
-      {/* Sponsor Banner */}
-      {showSponsor && (
-        <div className="border-t border-white/5 py-8 px-4 sm:px-6">
-          <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
-            <div className="text-center">
-              {landingConfig.sponsor_name && (
-                <p className="text-sm text-white/60">
-                  Qwikker {displayName} is sponsored by {landingConfig.sponsor_name}
-                </p>
-              )}
-              {landingConfig.sponsor_tagline && (
-                <p className="text-xs text-white/40 mt-0.5">{landingConfig.sponsor_tagline}</p>
-              )}
-            </div>
-            {landingConfig.sponsor_logo_url && (
-              <img
-                src={landingConfig.sponsor_logo_url}
-                alt={landingConfig.sponsor_name || 'Sponsor'}
-                className="h-10 w-auto"
-              />
-            )}
-          </div>
-        </div>
       )}
 
       {/* Footer */}

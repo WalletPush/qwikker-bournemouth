@@ -30,6 +30,13 @@ function Toggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
 interface SupporterLogo {
   name: string
   logo_url: string
+  url?: string | null
+}
+
+interface Tier2Sponsor {
+  name: string
+  logo_url: string
+  url?: string | null
 }
 
 interface LandingPageConfig {
@@ -40,6 +47,8 @@ interface LandingPageConfig {
   sponsor_name?: string | null
   sponsor_tagline?: string | null
   sponsor_logo_url?: string | null
+  sponsor_url?: string | null
+  tier2_sponsors?: Tier2Sponsor[] | null
   supporters_enabled?: boolean
   supporters_heading?: string | null
   supporter_logos?: SupporterLogo[] | null
@@ -83,15 +92,19 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
   const [config, setConfig] = useState<LandingPageConfig>({})
   const [businesses, setBusinesses] = useState<BusinessOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [uploadingHero, setUploadingHero] = useState(false)
   const [uploadingSponsor, setUploadingSponsor] = useState(false)
+  const [uploadingTier2, setUploadingTier2] = useState(false)
   const [uploadingSupporterLogo, setUploadingSupporterLogo] = useState(false)
   const [newSupporterName, setNewSupporterName] = useState('')
+  const [newTier2Name, setNewTier2Name] = useState('')
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const heroFileRef = useRef<HTMLInputElement>(null)
   const sponsorFileRef = useRef<HTMLInputElement>(null)
+  const tier2FileRef = useRef<HTMLInputElement>(null)
   const supporterFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -102,9 +115,14 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
         if (configData.success) {
           setConfig(configData.config || {})
           setBusinesses(configData.businesses || [])
+          setLoadFailed(false)
+        } else {
+          // Don't let an unloaded editor overwrite good data on save
+          setLoadFailed(true)
         }
       } catch {
         console.error('Failed to load landing page config')
+        setLoadFailed(true)
       } finally {
         setIsLoading(false)
       }
@@ -136,6 +154,40 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
     setUploadingSponsor(false)
   }
 
+  async function handleTier2LogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !newTier2Name.trim()) return
+
+    const nameToAdd = newTier2Name.trim()
+    setUploadingTier2(true)
+    const url = await uploadImageToCloudinary(file, `qwikker/sponsors/${city}`)
+    if (url) {
+      setConfig(prev => ({
+        ...prev,
+        tier2_sponsors: [...(prev.tier2_sponsors || []), { name: nameToAdd, logo_url: url, url: null }],
+      }))
+      setNewTier2Name('')
+    }
+    setUploadingTier2(false)
+    if (tier2FileRef.current) tier2FileRef.current.value = ''
+  }
+
+  function removeTier2Sponsor(index: number) {
+    setConfig(prev => ({
+      ...prev,
+      tier2_sponsors: (prev.tier2_sponsors || []).filter((_, i) => i !== index),
+    }))
+  }
+
+  function updateTier2Url(index: number, value: string) {
+    setConfig(prev => ({
+      ...prev,
+      tier2_sponsors: (prev.tier2_sponsors || []).map((s, i) =>
+        i === index ? { ...s, url: value || null } : s
+      ),
+    }))
+  }
+
   async function handleSupporterLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !newSupporterName.trim()) return
@@ -146,7 +198,7 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
     if (url) {
       setConfig(prev => ({
         ...prev,
-        supporter_logos: [...(prev.supporter_logos || []), { name: nameToAdd, logo_url: url }],
+        supporter_logos: [...(prev.supporter_logos || []), { name: nameToAdd, logo_url: url, url: null }],
       }))
       setNewSupporterName('')
     }
@@ -159,6 +211,15 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
     setConfig(prev => ({
       ...prev,
       supporter_logos: current.filter((_, i) => i !== index),
+    }))
+  }
+
+  function updateSupporterUrl(index: number, value: string) {
+    setConfig(prev => ({
+      ...prev,
+      supporter_logos: (prev.supporter_logos || []).map((s, i) =>
+        i === index ? { ...s, url: value || null } : s
+      ),
     }))
   }
 
@@ -334,6 +395,18 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               </div>
 
               <div className="space-y-2">
+                <Label className="text-slate-300">Website URL</Label>
+                <p className="text-xs text-slate-500">Makes the sponsor banner clickable. Include https://</p>
+                <Input
+                  type="url"
+                  value={config.sponsor_url || ''}
+                  onChange={(e) => setConfig(prev => ({ ...prev, sponsor_url: e.target.value || null }))}
+                  placeholder="https://www.sponsor.com"
+                  className="bg-slate-900 border-slate-600 text-white focus:border-[#00d083]"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-slate-300">Sponsor Logo</Label>
                 <p className="text-xs text-slate-500">Recommended: transparent PNG, max 200px wide</p>
 
@@ -396,6 +469,85 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
                   </div>
                 </div>
               )}
+
+              {/* Tier 2 sponsors */}
+              <div className="space-y-3 border-t border-slate-700/60 pt-5">
+                <div>
+                  <Label className="text-slate-300">Tier 2 Sponsors</Label>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Add up to 2 secondary sponsors. Shown below the headline sponsor, smaller than the main logo but larger than supporters.
+                  </p>
+                </div>
+
+                {/* Existing tier 2 sponsors */}
+                {(config.tier2_sponsors || []).length > 0 && (
+                  <div className="space-y-3">
+                    {(config.tier2_sponsors || []).map((sponsor, idx) => (
+                      <div
+                        key={idx}
+                        className="relative flex flex-col gap-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={sponsor.logo_url}
+                            alt={sponsor.name}
+                            className="h-8 w-auto max-w-[100px] object-contain"
+                          />
+                          <span className="text-xs text-slate-400 truncate flex-1">{sponsor.name}</span>
+                          <button
+                            onClick={() => removeTier2Sponsor(idx)}
+                            className="flex-shrink-0 p-0.5 bg-red-500/80 rounded-full text-white hover:bg-red-500"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <Input
+                          type="url"
+                          value={sponsor.url || ''}
+                          onChange={(e) => updateTier2Url(idx, e.target.value)}
+                          placeholder="https://www.sponsor.com (optional)"
+                          className="bg-slate-900 border-slate-600 text-white text-sm focus:border-[#00d083]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new tier 2 sponsor */}
+                {(config.tier2_sponsors || []).length < 2 && (
+                  <div className="space-y-3 bg-slate-900/30 border border-slate-700/50 rounded-lg p-4">
+                    <p className="text-xs text-slate-400 font-medium">Add a tier 2 sponsor</p>
+                    <Input
+                      value={newTier2Name}
+                      onChange={(e) => setNewTier2Name(e.target.value)}
+                      placeholder="Sponsor name"
+                      maxLength={100}
+                      className="bg-slate-900 border-slate-600 text-white focus:border-[#00d083]"
+                    />
+                    <input
+                      ref={tier2FileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleTier2LogoUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => tier2FileRef.current?.click()}
+                      disabled={uploadingTier2 || !newTier2Name.trim()}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    >
+                      {uploadingTier2 ? 'Uploading...' : 'Upload Logo'}
+                    </Button>
+                    {!newTier2Name.trim() && (
+                      <p className="text-xs text-slate-500">Enter a name first, then upload the logo</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </CardContent>
@@ -443,26 +595,36 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               {(config.supporter_logos || []).length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-slate-300">Logos ({(config.supporter_logos || []).length})</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <p className="text-xs text-slate-500">Add a website URL to make each logo clickable on the landing page.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(config.supporter_logos || []).map((supporter, idx) => (
                       <div
                         key={idx}
-                        className="relative flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700"
+                        className="relative flex flex-col gap-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700"
                       >
-                        <img
-                          src={supporter.logo_url}
-                          alt={supporter.name}
-                          className="h-8 w-auto max-w-[80px] object-contain"
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={supporter.logo_url}
+                            alt={supporter.name}
+                            className="h-8 w-auto max-w-[80px] object-contain"
+                          />
+                          <span className="text-xs text-slate-400 truncate flex-1">{supporter.name}</span>
+                          <button
+                            onClick={() => removeSupporterLogo(idx)}
+                            className="flex-shrink-0 p-0.5 bg-red-500/80 rounded-full text-white hover:bg-red-500"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <Input
+                          type="url"
+                          value={supporter.url || ''}
+                          onChange={(e) => updateSupporterUrl(idx, e.target.value)}
+                          placeholder="https://www.example.com (optional)"
+                          className="bg-slate-900 border-slate-600 text-white text-sm focus:border-[#00d083]"
                         />
-                        <span className="text-xs text-slate-400 truncate flex-1">{supporter.name}</span>
-                        <button
-                          onClick={() => removeSupporterLogo(idx)}
-                          className="flex-shrink-0 p-0.5 bg-red-500/80 rounded-full text-white hover:bg-red-500"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -661,6 +823,13 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
       </Card>
 
       {/* Save */}
+      {loadFailed && (
+        <div className="text-sm px-4 py-3 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          We couldn&apos;t load your saved configuration. Saving is disabled to avoid overwriting your existing
+          sponsors and supporters. Please refresh the page and try again.
+        </div>
+      )}
+
       {saveMessage && (
         <div className={`text-sm px-4 py-3 rounded-lg ${
           saveMessage.type === 'success'
@@ -673,7 +842,7 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
 
       <Button
         onClick={handleSave}
-        disabled={isSaving || uploadingHero || uploadingSponsor || uploadingSupporterLogo}
+        disabled={loadFailed || isSaving || uploadingHero || uploadingSponsor || uploadingTier2 || uploadingSupporterLogo}
         className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white font-semibold"
       >
         {isSaving ? 'Saving...' : 'Save Landing Page Configuration'}
