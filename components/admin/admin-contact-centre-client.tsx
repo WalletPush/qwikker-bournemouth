@@ -149,8 +149,10 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
   const [bugReportLinkedThreadId, setBugReportLinkedThreadId] = useState('')
   const [submittingBugReport, setSubmittingBugReport] = useState(false)
 
-  // ─── View mode (business threads vs user requests) ───────────
-  const [viewMode, setViewMode] = useState<'business' | 'user_requests'>('business')
+  // ─── View mode (business threads vs user requests vs HQ threads) ───────────
+  const [viewMode, setViewMode] = useState<'business' | 'user_requests' | 'hq'>('business')
+  // Confirmation shown after a message/bug report is sent to HQ
+  const [hqNotice, setHqNotice] = useState<string | null>(null)
   const [userRequests, setUserRequests] = useState<Array<{
     id: string; wallet_pass_id: string; city: string; subject: string
     category: string; message: string; status: string
@@ -170,8 +172,10 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
 
   // ─── Fetch threads ────────────────────────────────────────────
   const fetchThreads = useCallback(async () => {
+    // User Requests has its own fetch; this handles business threads + HQ threads
+    if (viewMode === 'user_requests') return
     try {
-      const params = new URLSearchParams({ type: 'business_admin' })
+      const params = new URLSearchParams({ type: viewMode === 'hq' ? 'admin_hq' : 'business_admin' })
       if (statusFilter) params.set('status', statusFilter)
       if (searchQuery) params.set('search', searchQuery)
       if (categoryFilter) params.set('category', categoryFilter)
@@ -186,7 +190,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
     } finally {
       setLoadingThreads(false)
     }
-  }, [statusFilter, searchQuery, categoryFilter, priorityFilter, unreadFilter])
+  }, [viewMode, statusFilter, searchQuery, categoryFilter, priorityFilter, unreadFilter])
 
   useEffect(() => {
     fetchThreads()
@@ -379,7 +383,17 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
       }
 
       // Refresh the thread detail to pick up metadata changes
-      if (activeThreadId) openThread(activeThreadId)
+      if (activeThreadId) {
+        openThread(activeThreadId)
+      } else {
+        // Generic "Message HQ" (not tied to an open business thread) -- surface it in the HQ tab
+        setHqNotice(data.alreadyEscalated
+          ? 'This was already sent to HQ. See the conversation in the HQ tab below.'
+          : 'Message sent to HQ. Track the conversation any time in the HQ tab below.')
+        setThreads([])
+        setLoadingThreads(true)
+        setViewMode('hq')
+      }
     } catch (err) {
       console.error('Error escalating to HQ:', err)
     } finally {
@@ -431,7 +445,11 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
 
       resetBugReportForm()
       setShowBugReportForm(false)
-      fetchThreads()
+      setHqNotice('Bug report sent to HQ. Track it any time in the HQ tab below.')
+      setActiveThreadId(null)
+      setThreads([])
+      setLoadingThreads(true)
+      setViewMode('hq')
     } catch (err) {
       console.error('Error submitting bug report to HQ:', err)
     } finally {
@@ -450,21 +468,21 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
             {threads.filter(t => t.unreadCount > 0).length} unread
           </Badge>
         </div>
-        {/* View toggle: Business Threads / User Requests */}
+        {/* View toggle: Business Threads / User Requests / HQ */}
         <div className="flex rounded-lg bg-slate-800 p-0.5">
           <button
-            onClick={() => setViewMode('business')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            onClick={() => { setViewMode('business'); setActiveThreadId(null); setThreads([]); setLoadingThreads(true) }}
+            className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
               viewMode === 'business'
                 ? 'bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Business Threads
+            Business
           </button>
           <button
-            onClick={() => setViewMode('user_requests')}
-            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            onClick={() => { setViewMode('user_requests'); setActiveThreadId(null) }}
+            className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
               viewMode === 'user_requests'
                 ? 'bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-white'
@@ -472,8 +490,18 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
           >
             User Requests
           </button>
+          <button
+            onClick={() => { setViewMode('hq'); setHqNotice(null); setActiveThreadId(null); setThreads([]); setLoadingThreads(true) }}
+            className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
+              viewMode === 'hq'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            HQ
+          </button>
         </div>
-        {viewMode === 'business' && (
+        {viewMode !== 'user_requests' && (
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -492,6 +520,14 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
             Message HQ
           </Button>
         </div>
+        )}
+        {/* Confirmation after sending to HQ */}
+        {hqNotice && (
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#00d083]/10 border border-[#00d083]/30">
+            <span className="text-[#00d083] text-sm leading-none mt-0.5">✓</span>
+            <p className="text-xs text-[#00d083] flex-1">{hqNotice}</p>
+            <button onClick={() => setHqNotice(null)} className="text-[#00d083]/60 hover:text-[#00d083] text-xs leading-none">✕</button>
+          </div>
         )}
       </div>
 
@@ -750,8 +786,8 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
               className="bg-slate-800 border-slate-700 text-white text-xs"
             />
 
-            {/* Link to business thread */}
-            {threads.length > 0 && (
+            {/* Link to business thread (only relevant when viewing business threads) */}
+            {viewMode === 'business' && threads.length > 0 && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                   Link to Business Thread (optional)
@@ -802,10 +838,10 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
           </div>
         )}
 
-        {/* Search + filters + thread list (business threads only) */}
-        {!showBugReportForm && !showEscalateForm && viewMode === 'business' && (<>
+        {/* Search + filters + thread list (business threads + HQ threads) */}
+        {!showBugReportForm && !showEscalateForm && viewMode !== 'user_requests' && (<>
         <Input
-          placeholder="Search by business name..."
+          placeholder={viewMode === 'hq' ? 'Search your HQ messages...' : 'Search by business name...'}
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
@@ -883,7 +919,11 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
         ) : threads.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-slate-400 text-sm">No threads found</p>
-            <p className="text-slate-500 text-xs mt-1">Messages from businesses will appear here</p>
+            <p className="text-slate-500 text-xs mt-1">
+              {viewMode === 'hq'
+                ? 'Your messages and bug reports to HQ will appear here'
+                : 'Messages from businesses will appear here'}
+            </p>
           </div>
         ) : (
           threads.map(thread => (
@@ -898,7 +938,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-white text-sm truncate">
-                      {thread.businessName}
+                      {viewMode === 'hq' ? 'Qwikker HQ' : thread.businessName}
                     </span>
                     {thread.unreadCount > 0 && (
                       <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
@@ -1019,7 +1059,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white">
-                    {threadDetail?.business?.business_name || 'Loading...'}
+                    {threadDetail?.business?.business_name || (viewMode === 'hq' ? 'Qwikker HQ' : 'Loading...')}
                   </h3>
                   {threadDetail && (
                     <Badge className={`text-[10px] py-0 ${getStatusColor(threadDetail.status)}`}>
@@ -1035,6 +1075,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
 
             {/* Thread actions */}
             <div className="flex items-center gap-2">
+              {viewMode !== 'hq' && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1043,6 +1084,7 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
               >
                 + Task
               </Button>
+              )}
               {threadDetail?.status === 'open' ? (
                 <Button
                   size="sm"
@@ -1071,26 +1113,28 @@ export function AdminContactCentreClient({ city }: AdminContactCentreProps) {
                 Close
               </Button>
 
-              {/* Escalate to HQ button (per-thread) */}
-              {threadDetail?.metadata?.hqThreadId ? (
-                <a
-                  href={`/admin?tab=contact-centre`}
-                  className="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
-                >
-                  Escalated to HQ
-                </a>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEscalateSubject(threadDetail?.subject || '')
-                    setShowEscalateForm(!showEscalateForm)
-                  }}
-                  className="text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-                >
-                  Escalate to HQ
-                </Button>
+              {/* Escalate to HQ button (per-thread, business threads only) */}
+              {viewMode !== 'hq' && (
+                threadDetail?.metadata?.hqThreadId ? (
+                  <a
+                    href={`/admin?tab=contact-centre`}
+                    className="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+                  >
+                    Escalated to HQ
+                  </a>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEscalateSubject(threadDetail?.subject || '')
+                      setShowEscalateForm(!showEscalateForm)
+                    }}
+                    className="text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                  >
+                    Escalate to HQ
+                  </Button>
+                )
               )}
 
               {/* Dismiss thread view */}
