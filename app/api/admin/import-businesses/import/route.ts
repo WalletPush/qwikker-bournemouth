@@ -19,6 +19,9 @@ interface ImportRequest {
   systemCategory: SystemCategory // Stable enum (e.g. 'restaurant', 'cafe')
   displayCategory: string // User-facing label (e.g. 'Restaurant', 'Cafe / Coffee Shop')
   skipDuplicates?: boolean // Skip already imported businesses
+  // Place IDs that came from an explicit by-name search. The admin deliberately searched
+  // for these, so the category gate is skipped at import (denylist + closed checks still run).
+  bypassCategoryPlaceIds?: string[]
 }
 
 // Track active imports (in-memory, will reset on server restart)
@@ -288,7 +291,8 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const body: ImportRequest = await request.json()
-        const { placeIds, systemCategory, displayCategory, skipDuplicates = true } = body
+        const { placeIds, systemCategory, displayCategory, skipDuplicates = true, bypassCategoryPlaceIds = [] } = body
+        const bypassCategorySet = new Set(bypassCategoryPlaceIds)
 
         // Use requestCity (from hostname), ignore body.city if provided
         const city = requestCity
@@ -455,6 +459,12 @@ export async function POST(request: NextRequest) {
             }
 
             const categoryConfig = CATEGORY_MAPPING[resolvedCategory]
+            // Name-searched businesses bypass the category gate — the admin explicitly
+            // searched for them, so we trust the intent (denylist + closed still apply).
+            const skipCategoryGate = bypassCategorySet.has(placeId)
+            if (skipCategoryGate) {
+              console.log(`🔓 Bypassing category gate for name-searched business: ${place.displayName?.text}`)
+            }
             const importValidation = validatePlace(
               {
                 name: place.displayName?.text || '',
@@ -463,7 +473,7 @@ export async function POST(request: NextRequest) {
                 businessStatus: place.businessStatus,
               },
               {
-                categoryConfig: categoryConfig || undefined,
+                categoryConfig: skipCategoryGate ? undefined : (categoryConfig || undefined),
                 excludeLodging: resolvedCategory !== 'hotel',
               }
             )

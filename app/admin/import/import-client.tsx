@@ -253,6 +253,12 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
   const handleImport = async () => {
     if (selectedResults.length === 0) return
 
+    // Results from an explicit by-name search are tagged status==='ready'. The admin
+    // deliberately searched for these, so let them bypass the import-time category gate.
+    const bypassCategoryPlaceIds = results
+      .filter(r => r.status === 'ready' && selectedResults.includes(r.placeId))
+      .map(r => r.placeId)
+
     setIsImporting(true)
     setShowProgressModal(true)
     setIsImportComplete(false)
@@ -277,7 +283,8 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
           placeIds: selectedResults,
           systemCategory: category, // Use the system category from form (e.g. 'restaurant', 'cafe')
           displayCategory: SYSTEM_CATEGORY_LABEL[category], // User-facing label (e.g. 'Restaurant', 'Cafe / Coffee Shop')
-          skipDuplicates
+          skipDuplicates,
+          bypassCategoryPlaceIds
         })
       })
 
@@ -987,11 +994,15 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
                             📸 Photo
                           </Badge>
                         )}
-                        {result.status !== 'OPERATIONAL' && (
-                          <Badge variant="destructive" className="text-xs">
-                            ⚠️ {result.status.replace('_', ' ')}
+                        {result.status === 'ready' ? (
+                          <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
+                            ✓ Ready to import
                           </Badge>
-                        )}
+                        ) : result.status !== 'OPERATIONAL' ? (
+                          <Badge variant="destructive" className="text-xs">
+                            ⚠️ {result.status.replace(/_/g, ' ')}
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                   </div>
