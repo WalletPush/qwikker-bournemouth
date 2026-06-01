@@ -134,11 +134,15 @@ export async function POST(request: NextRequest) {
           ...(marketingEmailConsent ? { email_marketing_consent_at: new Date().toISOString() } : {}),
         }
 
-        // Check if user already exists (by email - they may have a different wallet_pass_id)
+        // Identity is PER-CITY: match by email AND city so the same email installing
+        // a DIFFERENT city gets its own row (own wallet_pass_id + preferences) instead of
+        // overwriting an existing city's pass. Re-installing the same city still updates
+        // the correct existing row.
         const { data: existingUser } = await supabase
           .from('app_users')
           .select('id, wallet_pass_id')
           .eq('email', email.toLowerCase())
+          .eq('city', city.toLowerCase())
           .maybeSingle()
 
         let upsertError: any = null

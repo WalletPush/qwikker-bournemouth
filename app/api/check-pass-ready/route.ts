@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,16 +12,30 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Identity is per-city: scope the lookup to the current subdomain's city so
+    // a user who has passes in multiple cities gets THIS city's pass.
+    let city: string | null = null
+    try {
+      city = await getCityFromHostname(request.headers.get('host') || '')
+    } catch {
+      city = null
+    }
     
     const supabase = createServiceRoleClient()
     
-    // Check if user exists with wallet pass ID
-    const { data: user, error } = await supabase
+    // Check if user exists with wallet pass ID (most recent active pass for this city)
+    let query = supabase
       .from('app_users')
-      .select('id, wallet_pass_id, name, email, wallet_pass_status')
+      .select('id, wallet_pass_id, name, email, wallet_pass_status, city')
       .eq('email', email)
       .eq('wallet_pass_status', 'active')
-      .single()
+    if (city) query = query.eq('city', city.toLowerCase())
+
+    const { data: users, error } = await query
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    const user = users?.[0]
     
     if (error || !user || !user.wallet_pass_id) {
       console.log('❌ Pass not ready for:', email)

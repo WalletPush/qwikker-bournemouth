@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 /**
  * POST /api/loyalty/identify
@@ -18,12 +19,26 @@ export async function POST(request: NextRequest) {
 
     const normalised = email.trim().toLowerCase()
 
+    // Identity is per-city: scope to the current subdomain's city so a user with
+    // passes in multiple cities is matched to THIS city's pass.
+    let city: string | null = null
+    try {
+      city = await getCityFromHostname(request.headers.get('host') || '')
+    } catch {
+      city = null
+    }
+
     const supabase = createServiceRoleClient()
-    const { data: user } = await supabase
+    let query = supabase
       .from('app_users')
       .select('wallet_pass_id')
       .eq('email', normalised)
-      .single()
+    if (city) query = query.eq('city', city.toLowerCase())
+
+    const { data: users } = await query
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    const user = users?.[0]
 
     if (!user?.wallet_pass_id) {
       return NextResponse.json({ found: false })
