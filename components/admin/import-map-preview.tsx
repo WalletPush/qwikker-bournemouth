@@ -43,8 +43,36 @@ export function ImportMapPreview({
   const popupRef = useRef<MapboxPopup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
 
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  const styleUrl = process.env.NEXT_PUBLIC_MAPBOX_STYLE_URL || 'mapbox://styles/mapbox/dark-v11'
+  // Resolve the Mapbox token from the franchise config (same source Atlas uses),
+  // falling back to the build-time env var. This avoids the map silently
+  // disappearing when NEXT_PUBLIC_MAPBOX_TOKEN isn't set in the environment.
+  const [token, setToken] = useState<string | null>(null)
+  const [tokenResolved, setTokenResolved] = useState(false)
+  const [styleUrl, setStyleUrl] = useState<string>(
+    process.env.NEXT_PUBLIC_MAPBOX_STYLE_URL || 'mapbox://styles/mapbox/dark-v11'
+  )
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/tenant/config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(cfg => {
+        if (!active) return
+        const cfgToken = cfg?.ok ? cfg?.atlas?.mapboxPublicToken : null
+        const cfgStyle = cfg?.ok ? cfg?.atlas?.styleUrl : null
+        setToken(cfgToken || process.env.NEXT_PUBLIC_MAPBOX_TOKEN || null)
+        if (cfgStyle) setStyleUrl(cfgStyle)
+      })
+      .catch(() => {
+        if (active) setToken(process.env.NEXT_PUBLIC_MAPBOX_TOKEN || null)
+      })
+      .finally(() => {
+        if (active) setTokenResolved(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const buildGeoJSON = useCallback((): GeoJSON.FeatureCollection => {
     const features: GeoJSON.Feature[] = results
@@ -329,7 +357,20 @@ export function ImportMapPreview({
     }
   }, [mapLoaded, onToggleSelection])
 
-  if (!token) return null
+  // No token yet: show a placeholder instead of silently collapsing, so the map
+  // area is never invisible. While resolving, show a loading state; once resolved
+  // with no token available, show a clear message.
+  if (!token) {
+    return (
+      <div className="relative w-full h-[200px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-900/50">
+        <div className="text-sm text-slate-400 text-center px-4">
+          {tokenResolved
+            ? 'Map unavailable — no Mapbox token configured for this city.'
+            : 'Loading map…'}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
