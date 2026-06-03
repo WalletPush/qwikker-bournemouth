@@ -90,7 +90,39 @@ export async function POST(request: NextRequest) {
     // Get business name and offer name from request
     const businessName = requestBody.offerDetails?.businessName || 'Business'
     const offerName = currentOffer || 'Offer'
-    const passDisplayText = `${offerName} at ${businessName} (Expires: ${expiryFormatted})`
+
+    // The "Current Offer" field on the pass front is a single line that WalletPush
+    // auto-shrinks to fit — long strings render as tiny, unreadable text. Businesses
+    // often put a full description in the offer title, so we truncate each part at a
+    // word boundary to keep the pass readable.
+    const truncateAtWord = (input: string, maxLen: number): string => {
+      const clean = (input || '').replace(/\s+/g, ' ').trim()
+      if (clean.length <= maxLen) return clean
+      const cut = clean.slice(0, maxLen)
+      const lastSpace = cut.lastIndexOf(' ')
+      const trimmed = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut
+      return trimmed.replace(/[\s,&+\-–—]+$/, '') + '…'
+    }
+
+    // Businesses often cram a description into the offer title, e.g.
+    // "Sunset Tapas & Sangria Deal (Qwikker Exclusive) 2 Tapas + 2 Drinks for €24".
+    // If there's a parenthetical, the clean name is reliably the part BEFORE it.
+    // We deliberately do NOT strip on digits, so numeric names like
+    // "Buy 1 Get 1 Free Cocktails" or "2 for 1 Cocktails" stay intact.
+    const extractHeadline = (input: string): string => {
+      const clean = (input || '').replace(/\s+/g, ' ').trim()
+      const beforeParen = clean.split('(')[0].replace(/[\s,&+\-–—]+$/, '').trim()
+      return beforeParen.length >= 3 ? beforeParen : clean
+    }
+
+    const headline = extractHeadline(offerName)
+    // Safety nets so a pathological name/business can't blow the field up again.
+    const shortOffer = truncateAtWord(headline, 50)
+    const shortBusiness = truncateAtWord(businessName, 34)
+    // Front "Current Offer" = clean offer headline + business name (needed so generic
+    // offers like "Buy 1 Get 1 Free" still show WHERE to redeem). The expiry moves to
+    // the back (Last_Message), which keeps the front short enough to render large.
+    const passDisplayText = `${shortOffer} @ ${shortBusiness}`
     
     // Two PUT calls: update Current_Offer (pass content) + Last_Message (triggers push)
     
@@ -113,7 +145,9 @@ export async function POST(request: NextRequest) {
 
     const offerResult = await offerResponse.json()
     
-    const pushMessage = `🎉 Congratulations ${firstName}! You have redeemed: ${currentOffer || 'your offer'}!`
+    // Last_Message shows on the BACK of the pass (and fires the push). Put the
+    // expiry here so the front can stay clean while the user still sees when it ends.
+    const pushMessage = `🎉 ${firstName}, "${headline}" at ${shortBusiness} is in your wallet. ⏰ Expires ${expiryFormatted} — show this pass to redeem.`
     const messageUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.LAST_MESSAGE, walletpushDashboardUrl)
 
     const messageResponse = await fetch(messageUrl, {
