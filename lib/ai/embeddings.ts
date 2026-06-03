@@ -369,7 +369,11 @@ export async function searchCityKnowledge(
 ) {
   return searchKnowledgeBase(query, city, {
     ...options,
-    knowledgeTypes: ['event', 'news_article', 'custom_knowledge']
+    // Include 'pdf_document' so admin-uploaded city PDFs (e.g. festival/event guides,
+    // stored with business_id = null) are retrievable. Without this they fall through
+    // both searches: businessOnly excludes null business_id, and the city search
+    // previously excluded the pdf_document type.
+    knowledgeTypes: ['event', 'news_article', 'custom_knowledge', 'pdf_document']
   })
 }
 
