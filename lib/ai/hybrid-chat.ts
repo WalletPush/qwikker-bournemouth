@@ -1755,6 +1755,9 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
           `${result.title}: ${result.content}`
         ).join('\n\n')
       : ''
+
+    // 🔎 DIagnostic: show exactly which city-knowledge entries reached the prompt
+    console.log(`🏛️ CITY KNOWLEDGE → ${cityResults.results.length} entries, ${cityContext.length} chars | ${cityResults.results.map((r: any) => `"${r.title}" (${(r.content || '').length}c, biz=${r.business_id ? 'Y' : 'null'})`).join(' | ') || 'NONE'}`)
     
     // 🎯 STEP 4: Build context-aware system prompt (SIMPLE AND CLEAR)
     const stateContext = generateStateContext(state)
