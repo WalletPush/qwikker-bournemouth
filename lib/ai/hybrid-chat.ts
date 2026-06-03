@@ -687,7 +687,7 @@ ${userProfileSection ? `\n${userProfileSection}\n` : ''}
 ${userLoyaltySummary || ''}
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
-${cityContext ? `CITY & LOCAL KNOWLEDGE (verified, use this FIRST before your own knowledge):\n${cityContext}\n\nIMPORTANT: When answering questions about transport, parking, areas, or practical tips, use the CITY & LOCAL KNOWLEDGE above as your primary source. You may add general context (e.g. weather, geography) but NEVER name any specific business, attraction, venue, museum, activity centre, or commercial establishment that is not in AVAILABLE BUSINESSES above. If you don't have relevant businesses for what they're asking, say so honestly.\n` : ''}
+${cityContext ? `CITY & LOCAL KNOWLEDGE (verified — use this as your PRIMARY source and quote its facts freely):\n${cityContext}\n\nIMPORTANT:\n- You MAY state any fact, name, date, venue, festival, event, landmark, or practical detail that appears in the CITY & LOCAL KNOWLEDGE above. It is verified information for this city (covering things like local festivals/events, culture, transport, parking, areas, and tips) — answer the question directly using it. For example, if it names a festival's dates, venue or performers, you can share them.\n- Do NOT recommend or promote specific COMMERCIAL BUSINESSES (restaurants, bars, cafes, shops, etc.) that are not in AVAILABLE BUSINESSES above — only the listed businesses can be recommended.\n- Do NOT invent venues, events, dates, or facts that are not present in the CITY & LOCAL KNOWLEDGE or AVAILABLE BUSINESSES. If the information genuinely isn't there, say so honestly.\n` : ''}
 ${eventContext || ''}
 `.trim()
 }
