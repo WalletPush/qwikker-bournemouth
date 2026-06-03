@@ -367,14 +367,47 @@ export async function searchCityKnowledge(
     matchCount?: number
   } = {}
 ) {
-  return searchKnowledgeBase(query, city, {
-    ...options,
-    // Include 'pdf_document' so admin-uploaded city PDFs (e.g. festival/event guides,
-    // stored with business_id = null) are retrievable. Without this they fall through
-    // both searches: businessOnly excludes null business_id, and the city search
-    // previously excluded the pdf_document type.
-    knowledgeTypes: ['event', 'news_article', 'custom_knowledge', 'pdf_document']
-  })
+  const supabase = createServiceRoleClient()
+  const { matchThreshold = 0.4, matchCount = 6 } = options
+
+  // City-level knowledge (business_id IS NULL) is served by a DEDICATED RPC,
+  // NOT the shared `search_knowledge_base` used for business recommendations.
+  // Reason: that shared RPC inner-joins business_profiles_chat_eligible (so it can
+  // never return null-business rows) and is also consumed by the business path —
+  // mixing city rows into it would crowd out business KB slots in every city.
+  // This isolated function only ever reads `business_id IS NULL`, so it cannot
+  // affect or leak business/eligibility-gated data.
+  try {
+    const queryEmbedding = await generateEmbedding(query, city)
+    if (!queryEmbedding) {
+      throw new Error('Failed to generate query embedding')
+    }
+
+    const { data, error } = await supabase.rpc('search_city_knowledge', {
+      query_embedding: queryEmbedding,
+      target_city: city.toLowerCase(),
+      match_threshold: matchThreshold,
+      match_count: matchCount
+    })
+
+    if (error) {
+      console.error('❌ Error searching city knowledge:', error)
+      return { success: false, error: error.message, results: [] }
+    }
+
+    // Restrict to genuinely city-level knowledge types. 'pdf_document' is included so
+    // admin-uploaded city PDFs (festival/event guides) surface here.
+    const allowedTypes = ['event', 'news_article', 'custom_knowledge', 'pdf_document']
+    const results = (data || []).filter((item: { knowledge_type: string }) =>
+      allowedTypes.includes(item.knowledge_type)
+    )
+
+    console.log(`🏛️ Found ${results.length} city-knowledge matches for "${query}" in ${city}`)
+    return { success: true, results }
+  } catch (error) {
+    console.error('❌ Error in searchCityKnowledge:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error', results: [] }
+  }
 }
 
 /**
