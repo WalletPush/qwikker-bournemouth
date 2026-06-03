@@ -68,7 +68,7 @@ export async function DELETE(request: NextRequest) {
 
     // 1. Delete offers
     const { error: offersError } = await supabase
-      .from('offers')
+      .from('business_offers')
       .delete()
       .eq('business_id', businessId)
 
@@ -88,7 +88,7 @@ export async function DELETE(request: NextRequest) {
 
     // 3. Delete subscription records
     const { error: subsError } = await supabase
-      .from('subscriptions')
+      .from('business_subscriptions')
       .delete()
       .eq('business_id', businessId)
 
@@ -106,18 +106,24 @@ export async function DELETE(request: NextRequest) {
       console.error('Error deleting claim requests:', claimsError)
     }
 
-    // 5. Delete user_offer_claims (if any)
+    // 5. Delete user_offer_claims (user_offer_claims has business_id directly)
     const { error: userClaimsError } = await supabase
       .from('user_offer_claims')
       .delete()
-      .eq('offer_id', supabase
-        .from('offers')
-        .select('id')
-        .eq('business_id', businessId)
-      )
+      .eq('business_id', businessId)
 
     if (userClaimsError) {
       console.error('Error deleting user offer claims:', userClaimsError)
+    }
+
+    // 5b. Delete knowledge_base entries so the AI can't recommend a deleted business
+    const { error: kbError } = await supabase
+      .from('knowledge_base')
+      .delete()
+      .eq('business_id', businessId)
+
+    if (kbError) {
+      console.error('Error deleting knowledge base entries:', kbError)
     }
 
     // 6. Finally, delete the business profile
