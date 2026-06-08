@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
       businessName: business.business_name || 'your business',
       city,
       claimUrl: `${baseUrl}/claim?business_id=${business.id}`,
+      forBusinessUrl: `${baseUrl}/for-business`,
       supportEmail,
     })
 

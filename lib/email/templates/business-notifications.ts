@@ -139,6 +139,7 @@ export interface ClaimInvitationEmailData {
   businessName: string
   city: string
   claimUrl: string
+  forBusinessUrl: string
   supportEmail: string
 }
 
@@ -492,23 +493,98 @@ export function createClaimInvitationEmail(data: ClaimInvitationEmailData): Emai
   const cityDisplay = data.city.charAt(0).toUpperCase() + data.city.slice(1)
   const subject = `Claim your QWIKKER listing for ${data.businessName}`
 
+  // Why-claim benefits (mirrors the /for-business page copy)
+  const benefits = [
+    '<strong style="color:#fff;">Intent-first discovery</strong> &mdash; customers arrive already looking for what you offer, not casually browsing.',
+    '<strong style="color:#fff;">You control your offers</strong> &mdash; no discount wars, no coupon landfill.',
+    '<strong style="color:#fff;">Local by design</strong> &mdash; you compete locally, not with national chains or ad budgets.',
+  ]
+  const benefitRows = benefits
+    .map(
+      (b) => `
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:14px;line-height:1.6;color:#e0e0e0;vertical-align:top;">
+              <span style="color:#00d083;margin-right:8px;">&#9679;</span>${b}
+            </td>
+          </tr>`
+    )
+    .join('')
+
+  // Compact FAQ for cold outreach
+  const faqs = [
+    ['Is it free?', 'Yes &mdash; claiming your listing is completely free, with no hidden costs.'],
+    ['How long does it take?', "Under 5 minutes. Your listing is already built &mdash; you just verify ownership and tweak the details."],
+    ['How do you verify it\'s me?', 'We email a 6-digit code to your business email address to confirm you own the business.'],
+    ['What if some details are wrong?', "No problem &mdash; you can edit everything (hours, photos, description and more) once you've claimed it."],
+  ]
+  const faqRows = faqs
+    .map(
+      ([q, a]) => `
+        <div style="margin:0 0 14px;">
+          <p style="font-size:14px;font-weight:600;color:#ffffff;margin:0 0 4px;">${q}</p>
+          <p style="font-size:14px;line-height:1.6;color:#b0b0b0;margin:0;">${a}</p>
+        </div>`
+    )
+    .join('')
+
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Your listing is ready to claim.</h2>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hey ${data.businessName},</p>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Good news &mdash; <strong style="color:#fff;">${data.businessName}</strong> has been added to <strong style="color:#00d083;">QWIKKER ${cityDisplay}</strong>, the local app that helps people discover great businesses near them.</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Good news &mdash; <strong style="color:#fff;">${data.businessName}</strong> has been added to <strong style="color:#00d083;">QWIKKER ${cityDisplay}</strong>, the local app that connects nearby customers to businesses by what they're craving &mdash; not keywords or ads.</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">We've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.</p>
 
       <div style="margin:28px 0 12px;text-align:center;">
         <a href="${data.claimUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">Claim My Listing</a>
       </div>
-      <p style="font-size:13px;line-height:1.6;color:#888;margin:0 0 24px;text-align:center;">Takes under 5 minutes &mdash; no need to search, this link opens your business directly.</p>
+      <p style="font-size:13px;line-height:1.6;color:#888;margin:0 0 28px;text-align:center;">Takes under 5 minutes &mdash; no need to search, this link opens your business directly.</p>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:0 0 24px;">
+        <h3 style="margin:0 0 12px;font-size:15px;color:#ffffff;">Why local businesses use QWIKKER</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          ${benefitRows}
+        </table>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 28px;">Want the full picture? <a href="${data.forBusinessUrl}" style="color:#00d083;font-weight:600;">See how QWIKKER works for businesses &rarr;</a></p>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px 20px 6px;margin:0 0 24px;">
+        <h3 style="margin:0 0 16px;font-size:15px;color:#ffffff;">Quick questions</h3>
+        ${faqRows}
+      </div>
 
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Any questions? Just reply to this email or reach us at <a href="mailto:${data.supportEmail}" style="color:#00d083;">${data.supportEmail}</a>.</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Your listing is ready to claim.\n\nHey ${data.businessName},\n\nGood news — ${data.businessName} has been added to QWIKKER ${cityDisplay}, the local app that helps people discover great businesses near them.\n\nWe've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.\n\nClaim your listing: ${data.claimUrl}\n\n(Takes under 5 minutes — this link opens your business directly, no need to search.)\n\nAny questions? Reply to this email or reach us at ${data.supportEmail}.\n\nBest,\nThe QWIKKER Team`
+  const text = `Your listing is ready to claim.
+
+Hey ${data.businessName},
+
+Good news — ${data.businessName} has been added to QWIKKER ${cityDisplay}, the local app that connects nearby customers to businesses by what they're craving — not keywords or ads.
+
+We've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.
+
+Claim your listing: ${data.claimUrl}
+(Takes under 5 minutes — this link opens your business directly, no need to search.)
+
+Why local businesses use QWIKKER:
+• Intent-first discovery — customers arrive already looking for what you offer.
+• You control your offers — no discount wars, no coupon landfill.
+• Local by design — you compete locally, not with national chains or ad budgets.
+
+See how QWIKKER works for businesses: ${data.forBusinessUrl}
+
+Quick questions:
+• Is it free? Yes — claiming your listing is completely free, with no hidden costs.
+• How long does it take? Under 5 minutes. Your listing is already built — you just verify ownership and tweak the details.
+• How do you verify it's me? We email a 6-digit code to your business email to confirm you own the business.
+• What if some details are wrong? You can edit everything once you've claimed it.
+
+Any questions? Reply to this email or reach us at ${data.supportEmail}.
+
+Best,
+The QWIKKER Team`
 
   return { subject, html, text }
 }
