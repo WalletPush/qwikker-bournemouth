@@ -124,6 +124,17 @@ export interface ChangeRejectionEmailData {
   supportEmail: string
 }
 
+export interface CompletionReminderEmailData {
+  firstName: string
+  businessName: string
+  city: string
+  dashboardUrl: string
+  contactCentreUrl: string
+  supportEmail: string
+  missingItems: string[]
+  completionPercentage: number
+}
+
 // ---------------------------------------------------------------------------
 // Templates — all inline styles for email client compatibility
 // ---------------------------------------------------------------------------
@@ -419,6 +430,48 @@ export function createChangeRejectionEmail(data: ChangeRejectionEmailData): Emai
     </div>`, data.city)
 
   const text = `Update required: your ${itemLabel} for ${data.businessName}\n\nHi ${data.firstName},\n\nYour ${itemLabel} for ${data.businessName} wasn't approved.\n\n${data.rejectionReason ? `Feedback: ${data.rejectionReason}` : ''}\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+
+  return { subject, html, text }
+}
+
+export function createCompletionReminderEmail(data: CompletionReminderEmailData): EmailTemplate {
+  const subject = `Finish your QWIKKER listing for ${data.businessName}`
+
+  const itemsRows = data.missingItems
+    .map(
+      (item) => `
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e0e0e0;">
+              <span style="color:#f59e0b;margin-right:8px;">&#9679;</span>${item}
+            </td>
+          </tr>`
+    )
+    .join('')
+
+  const html = wrapInLayout(`
+    <div style="padding:36px 30px;">
+      <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">You're almost there.</h2>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your listing for <strong style="color:#fff;">${data.businessName}</strong> is <strong style="color:#00d083;">${data.completionPercentage}% complete</strong>. Just a few more details and you'll be ready to go live and start reaching customers in ${data.city.charAt(0).toUpperCase() + data.city.slice(1)}.</p>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;">
+        <h3 style="margin:0 0 12px;font-size:15px;color:#ffffff;">Still to complete:</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          ${itemsRows}
+        </table>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Once everything's filled in, hit <strong style="color:#fff;">Submit for Review</strong> and our team will check it over within 24 hours.</p>
+
+      <div style="margin:24px 0 8px;">
+        <a href="${data.dashboardUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">Finish My Listing</a>
+      </div>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:24px 0 16px;">Need help completing your listing? <a href="${data.contactCentreUrl}" style="color:#00d083;font-weight:600;">Reach out to us here</a> and our team will give you a hand &mdash; or email <a href="mailto:${data.supportEmail}" style="color:#00d083;">${data.supportEmail}</a>.</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
+    </div>`, data.city)
+
+  const text = `You're almost there.\n\nHi ${data.firstName},\n\nYour listing for ${data.businessName} is ${data.completionPercentage}% complete. Just a few more details and you'll be ready to go live.\n\nStill to complete:\n${data.missingItems.map((i) => `• ${i}`).join('\n')}\n\nOnce everything's filled in, hit Submit for Review and our team will check it within 24 hours.\n\nFinish your listing: ${data.dashboardUrl}\n\nNeed help completing your listing? Reach out to us here: ${data.contactCentreUrl} — or email ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }

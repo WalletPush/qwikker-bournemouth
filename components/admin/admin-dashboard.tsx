@@ -26,6 +26,7 @@ import { EventPreviewCard } from '@/components/ui/event-preview-card'
 import { AdminContactCentreClient } from './admin-contact-centre-client'
 import { AdminLoyaltyQueue } from './admin-loyalty-queue'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
+import { SendCompletionReminderModal } from '@/components/admin/send-completion-reminder-modal'
 import { BusinessCard } from '@/components/user/business-card'
 import { AdminBusinessPreview } from './admin-business-preview'
 import { PlaceholderSelector } from './placeholder-selector'
@@ -437,6 +438,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [processingMenuId, setProcessingMenuId] = useState<string | null>(null)
   
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
+  const [reminderModal, setReminderModal] = useState<{ open: boolean; business: Business | null }>({ open: false, business: null })
 
   const handleDeleteBusiness = async () => {
     if (!deleteModal.business) return
@@ -1352,7 +1354,7 @@ Qwikker Admin Team`
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-600">
                 <button
-                  onClick={() => window.open(`mailto:${business.email}?subject=Complete Your Qwikker Profile - ${business.business_name}&body=Hi ${business.first_name},\n\nYour Qwikker business profile for ${business.business_name} is ${completionPercentage}% complete.\n\nTo get your business live on Qwikker, please complete these missing items:\n${missingRequiredFields.map(field => `• ${field}`).join('\n')}\n\nLog into your dashboard to finish your profile: https://qwikkerdashboard-theta.vercel.app/dashboard\n\nBest regards,\nThe Qwikker Team`)}
+                  onClick={() => setReminderModal({ open: true, business })}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3756,6 +3758,24 @@ Qwikker Admin Team`
           businessName={deleteModal.business.business_name}
           businessId={deleteModal.business.id}
           variant="incomplete"
+        />
+      )}
+
+      {/* Send Completion Reminder Modal (preview + confirm send from city Resend) */}
+      {reminderModal.business && (
+        <SendCompletionReminderModal
+          isOpen={reminderModal.open}
+          onClose={() => setReminderModal({ open: false, business: null })}
+          business={{
+            id: reminderModal.business.id,
+            business_name: reminderModal.business.business_name,
+            email: reminderModal.business.email,
+          }}
+          onSent={(name) => {
+            setReminderModal({ open: false, business: null })
+            showSuccess('Reminder sent', `Completion reminder emailed to ${name}.`)
+          }}
+          onError={(message) => showError('Could not send reminder', message)}
         />
       )}
 
