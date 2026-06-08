@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { getSystemCategoryFromDisplayLabel } from '@/lib/constants/system-categories'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,30 +74,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Derive system_category from the new category (simplified mapping)
-    const categoryLower = category.toLowerCase()
-    let systemCategory = 'other'
-    let businessType = 'other'
-    
-    if (categoryLower.includes('restaurant') || categoryLower.includes('greek') || categoryLower.includes('italian')) {
-      systemCategory = 'restaurant'
-      businessType = 'restaurant'
-    } else if (categoryLower.includes('cafe') || categoryLower.includes('coffee')) {
-      systemCategory = 'cafe'
-      businessType = 'cafe'
-    } else if (categoryLower.includes('bar') || categoryLower.includes('pub')) {
-      systemCategory = 'bar'
-      businessType = 'bar'
-    } else if (categoryLower.includes('nightclub') || categoryLower.includes('night club')) {
-      systemCategory = 'nightclub'
-      businessType = 'nightclub'
-    } else if (categoryLower.includes('bakery')) {
-      systemCategory = 'bakery'
-      businessType = 'bakery'
-    } else if (categoryLower.includes('grocery') || categoryLower.includes('store') || categoryLower.includes('shop')) {
-      systemCategory = 'retail'
-      businessType = 'retail'
-    }
+    // Derive the canonical system_category from the admin-entered label using the
+    // single source of truth (handles all verticals incl. rental/automotive/health/
+    // tours/grocery, and safely falls back to 'other').
+    const systemCategory = getSystemCategoryFromDisplayLabel(category)
+    const businessType = systemCategory
     
     // Update ALL category-related fields so changes appear everywhere
     const { error: updateError } = await supabaseAdmin

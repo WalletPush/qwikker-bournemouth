@@ -6,6 +6,7 @@ import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -359,10 +360,14 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   // Get related data - Use real business offers from transformed data
   const businessOffers = business.offers || []
   const secretMenu = business.secretMenu || null // Real secret menus come from business data
-  
+
+  // Category-aware labels so non-food businesses (rentals, salons, retail...)
+  // never see "menu"/"dishes" copy.
+  const itemLabels = getFeaturedItemsLabels(resolveSystemCategory(business))
+
   const tabs = [
     { id: 'overview', label: 'Overview', count: null },
-    { id: 'menu', label: 'Menu', count: business.menuPreview?.length || 0 },
+    { id: 'menu', label: itemLabels.tabLabel, count: business.menuPreview?.length || 0 },
     { id: 'offers', label: 'Offers', count: businessOffers.length },
     ...(secretMenu ? [{ id: 'secret-menu', label: 'Secret Menu', count: secretMenu.items.length }] : []),
     { id: 'reviews', label: 'What People Think', count: null },
@@ -922,9 +927,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-slate-100 mb-2">Menu Coming Soon</h3>
+                      <h3 className="text-xl font-semibold text-slate-100 mb-2">{itemLabels.comingSoonTitle}</h3>
                       <p className="text-slate-400 text-sm">
-                        Menus can be added by businesses after they claim their listing.
+                        {itemLabels.comingSoonBody}
                       </p>
                     </div>
                   </div>
@@ -944,9 +949,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-slate-100 mb-2">No Menu Items Yet</h3>
+                      <h3 className="text-xl font-semibold text-slate-100 mb-2">{itemLabels.emptyTitle}</h3>
                       <p className="text-slate-400 text-sm">
-                        This business hasn't added their menu yet. Check back soon!
+                        {itemLabels.emptyBody}
                       </p>
                     </div>
                   </div>
@@ -959,8 +964,8 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
               <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-slate-100">Featured Menu Items</CardTitle>
-                  <span className="text-slate-400 text-sm">Our most popular dishes</span>
+                  <CardTitle className="text-slate-100">{itemLabels.sectionTitle}</CardTitle>
+                  <span className="text-slate-400 text-sm">{itemLabels.sectionSubtitle}</span>
                 </div>
               </CardHeader>
               <CardContent>
@@ -993,7 +998,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   
                   <div className="mt-4 flex items-center gap-3 p-3 bg-slate-700/20 rounded-lg border border-slate-700/50">
                     <p className="text-slate-400 text-sm flex-1">
-                      See the full menu, specials &amp; recommendations
+                      {itemLabels.fullListCta}
                     </p>
                     <Button asChild size="sm" className="bg-[#00d083]/15 hover:bg-[#00d083]/25 text-[#00d083] border border-[#00d083]/30 shrink-0">
                       <Link href={getNavUrl(`/user/chat?business=${business.name}`)}>

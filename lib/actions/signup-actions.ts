@@ -190,6 +190,11 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
         'Venue/Event Space': 'hotel',
         'Entertainment/Attractions': 'other',
         'Professional Services': 'service_business',
+        'Rentals (Car/Bike/Boat)': 'rental',
+        'Automotive/Garage': 'automotive',
+        'Health/Medical': 'health',
+        'Tours/Activities': 'tours_activities',
+        'Grocery/Market': 'grocery',
         'Other': 'other'
       }
       return mapping[type] || 'other'
@@ -238,7 +243,14 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
       phone: normalizePhoneNumber(formData.phone),
       business_name: isGoogleVerified ? verification.googleData!.name : formData.businessName,
       business_type: mapBusinessType(formData.businessType),
-      system_category: getSystemCategoryFromDisplayLabel(formData.businessCategory),
+      // Prefer the specific free-text category; if it can't be classified, fall back
+      // to the business-type dropdown so new verticals (rental/automotive/etc.) resolve.
+      system_category: (() => {
+        const fromCategory = getSystemCategoryFromDisplayLabel(formData.businessCategory)
+        return fromCategory !== 'other'
+          ? fromCategory
+          : getSystemCategoryFromDisplayLabel(formData.businessType)
+      })(),
       display_category: formData.businessCategory,
       business_address: isGoogleVerified ? verification.googleData!.formattedAddress : formData.businessAddress,
       business_town: isGoogleVerified ? (verification.googleData!.normalizedTown || normalizeTownFn(formData.town)) : normalizeTownFn(formData.town),

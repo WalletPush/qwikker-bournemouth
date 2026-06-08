@@ -27,6 +27,12 @@ export const SYSTEM_CATEGORIES = [
   "venue",
   "entertainment",
   "professional",
+  // Multi-vertical additions (2026): Qwikker is not just food/restaurants
+  "rental",
+  "automotive",
+  "health",
+  "tours_activities",
+  "grocery",
   "other"
 ] as const;
 
@@ -58,6 +64,11 @@ export const SYSTEM_CATEGORY_LABEL: Record<SystemCategory, string> = {
   venue: "Venue / Event Space",
   entertainment: "Entertainment / Attractions",
   professional: "Professional Services",
+  rental: "Rentals / Hire",
+  automotive: "Automotive / Garage",
+  health: "Health / Medical",
+  tours_activities: "Tours / Activities",
+  grocery: "Grocery / Market",
   other: "Other",
 };
 
@@ -92,6 +103,11 @@ export function mapGoogleTypesToSystemCategory(types: string[], primaryType?: st
     if (pt === 'lodging' || pt === 'hotel' || pt === 'motel' || pt === 'bed_and_breakfast') return 'hotel'
     if (pt === 'event_venue' || pt === 'banquet_hall' || pt === 'wedding_venue' || pt === 'conference_center') return 'venue'
     if (pt === 'tourist_attraction' || pt === 'amusement_park' || pt === 'museum' || pt === 'art_gallery' || pt === 'movie_theater') return 'entertainment'
+    if (pt === 'car_rental' || pt === 'bicycle_rental' || pt === 'boat_rental' || pt === 'motorcycle_rental') return 'rental'
+    if (pt === 'car_repair' || pt === 'car_wash' || pt === 'car_dealer' || pt === 'auto_parts_store' || pt === 'tire_shop') return 'automotive'
+    if (pt === 'pharmacy' || pt === 'drugstore' || pt === 'dentist' || pt === 'doctor' || pt === 'hospital' || pt === 'medical_clinic' || pt === 'optician' || pt === 'optometrist' || pt === 'veterinary_care') return 'health'
+    if (pt === 'travel_agency' || pt === 'tour_agency' || pt === 'tour_operator') return 'tours_activities'
+    if (pt === 'supermarket' || pt === 'grocery_store' || pt === 'grocery_or_supermarket' || pt === 'convenience_store') return 'grocery'
   }
 
   // ──────────────────────────────────────────────────
@@ -144,6 +160,22 @@ export function mapGoogleTypesToSystemCategory(types: string[], primaryType?: st
   if (t.has("lawyer") || t.has("accounting") || t.has("accountant") || 
       t.has("real_estate_agency") || t.has("insurance_agency") || t.has("consultant")) return "professional";
 
+  // Rentals & Hire
+  if (t.has("car_rental") || t.has("bicycle_rental") || t.has("boat_rental") || t.has("motorcycle_rental")) return "rental";
+
+  // Automotive
+  if (t.has("car_repair") || t.has("car_wash") || t.has("car_dealer") || t.has("auto_parts_store") || t.has("tire_shop")) return "automotive";
+
+  // Health & Medical (clinical — distinct from wellness/therapy)
+  if (t.has("pharmacy") || t.has("drugstore") || t.has("dentist") || t.has("doctor") || 
+      t.has("hospital") || t.has("medical_clinic") || t.has("optician") || t.has("optometrist") || t.has("veterinary_care")) return "health";
+
+  // Tours & Activities
+  if (t.has("travel_agency") || t.has("tour_agency") || t.has("tour_operator")) return "tours_activities";
+
+  // Grocery & Markets
+  if (t.has("supermarket") || t.has("grocery_store") || t.has("grocery_or_supermarket") || t.has("convenience_store")) return "grocery";
+
   // Fallback
   return "other";
 }
@@ -174,6 +206,21 @@ export function getSystemCategoryFromDisplayLabel(displayLabel: string): SystemC
   if (normalized.includes('tattoo') || normalized.includes('piercing')) return 'tattoo';
   if (normalized.includes('wellness') || normalized.includes('therapy') || normalized.includes('massage') || 
       normalized.includes('physio') || normalized.includes('holistic')) return 'wellness';
+  // Multi-vertical additions — placed before retail/professional so generic 'service'/'shop' don't swallow them
+  if (normalized.includes('rental') || normalized.includes('hire') || normalized.includes('rent a')) return 'rental';
+  if (normalized.includes('garage') || normalized.includes('mechanic') || normalized.includes('automotive') || 
+      normalized.includes('mot ') || normalized.includes('tyre') || normalized.includes('tire') || 
+      normalized.includes('car wash') || normalized.includes('car repair') || normalized.includes('bodyshop')) return 'automotive';
+  if (normalized.includes('pharmacy') || normalized.includes('chemist') || normalized.includes('dentist') || 
+      normalized.includes('dental') || normalized.includes('clinic') || normalized.includes('doctor') || 
+      normalized.includes('optician') || normalized.includes('optometr') || normalized.includes('medical') || 
+      normalized.includes('veterin') || normalized.includes('pharmac')) return 'health';
+  if (normalized.includes('tour') || normalized.includes('excursion') || normalized.includes('safari') || 
+      normalized.includes('diving') || normalized.includes('snorkel') || normalized.includes('watersport') || 
+      normalized.includes('boat trip') || normalized.includes('activities')) return 'tours_activities';
+  if (normalized.includes('supermarket') || normalized.includes('grocery') || normalized.includes('mini market') || 
+      normalized.includes('minimarket') || normalized.includes('convenience') || normalized.includes('deli') || 
+      normalized.includes('butcher') || normalized.includes('greengrocer')) return 'grocery';
   if (normalized.includes('clothing') || normalized.includes('fashion') || normalized.includes('gift') || normalized.includes('retail')) return 'retail';
   if (normalized.includes('fitness') || normalized.includes('gym')) return 'fitness';
   if (normalized.includes('sports') || normalized.includes('outdoor')) return 'sports';

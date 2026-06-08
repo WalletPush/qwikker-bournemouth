@@ -669,7 +669,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             {menuItems.map((item, index) => (
               <div key={index} className="bg-slate-900/50 border border-slate-600 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-white font-medium">Menu Item #{index + 1}</h4>
+                  <h4 className="text-white font-medium">Item #{index + 1}</h4>
                   {menuItems.length > 1 && (
                     <Button
                       type="button"

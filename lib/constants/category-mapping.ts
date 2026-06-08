@@ -17,7 +17,9 @@ export interface CategoryConfig {
 export const GLOBAL_DENIED_TYPES = [
   'vaporizer_store', 'vape_shop', 'smoke_shop', 'tobacco_shop',
   'liquor_store', 'gas_station', 'atm',
-  'car_repair', 'car_wash', 'funeral_home', 'cemetery',
+  // NOTE: car_repair & car_wash were removed from the denylist (2026) now that
+  // 'automotive' is a first-class system category and we want to import them.
+  'funeral_home', 'cemetery',
 ] as const
 
 // Map system_category enum -> Google Places types + validation rules
@@ -144,6 +146,31 @@ export const CATEGORY_MAPPING: Record<SystemCategory, CategoryConfig> = {
     googleTypes: ['lawyer', 'accounting', 'accountant', 'real_estate_agency', 'insurance_agency', 'consultant'],
     requiredAnyTypes: ['lawyer', 'accounting', 'accountant', 'real_estate_agency', 'insurance_agency', 'consultant'],
     displayName: SYSTEM_CATEGORY_LABEL.professional,
+  },
+  rental: {
+    googleTypes: ['car_rental', 'bicycle_rental', 'boat_rental', 'motorcycle_rental'],
+    requiredAnyTypes: ['car_rental', 'bicycle_rental', 'boat_rental', 'motorcycle_rental'],
+    displayName: SYSTEM_CATEGORY_LABEL.rental,
+  },
+  automotive: {
+    googleTypes: ['car_repair', 'car_wash', 'car_dealer', 'auto_parts_store', 'tire_shop'],
+    requiredAnyTypes: ['car_repair', 'car_wash', 'car_dealer', 'auto_parts_store', 'tire_shop'],
+    displayName: SYSTEM_CATEGORY_LABEL.automotive,
+  },
+  health: {
+    googleTypes: ['pharmacy', 'drugstore', 'dentist', 'doctor', 'hospital', 'medical_clinic', 'optician', 'optometrist', 'veterinary_care'],
+    requiredAnyTypes: ['pharmacy', 'drugstore', 'dentist', 'doctor', 'hospital', 'medical_clinic', 'optician', 'optometrist', 'veterinary_care'],
+    displayName: SYSTEM_CATEGORY_LABEL.health,
+  },
+  tours_activities: {
+    googleTypes: ['travel_agency', 'tour_agency', 'tour_operator'],
+    requiredAnyTypes: ['travel_agency', 'tour_agency', 'tour_operator'],
+    displayName: SYSTEM_CATEGORY_LABEL.tours_activities,
+  },
+  grocery: {
+    googleTypes: ['supermarket', 'grocery_store', 'grocery_or_supermarket', 'convenience_store'],
+    requiredAnyTypes: ['supermarket', 'grocery_store', 'grocery_or_supermarket', 'convenience_store'],
+    displayName: SYSTEM_CATEGORY_LABEL.grocery,
   },
   other: {
     googleTypes: [],

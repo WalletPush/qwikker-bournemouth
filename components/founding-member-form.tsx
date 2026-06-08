@@ -468,6 +468,11 @@ export function FoundingMemberForm({ referralCode }: FoundingMemberFormProps = {
                         <option value="Venue/Event Space">Venue/Event Space</option>
                         <option value="Entertainment/Attractions">Entertainment/Attractions</option>
                         <option value="Professional Services">Professional Services</option>
+                        <option value="Rentals (Car/Bike/Boat)">Rentals (Car/Bike/Boat)</option>
+                        <option value="Automotive/Garage">Automotive/Garage</option>
+                        <option value="Health/Medical">Health/Medical</option>
+                        <option value="Tours/Activities">Tours/Activities</option>
+                        <option value="Grocery/Market">Grocery/Market</option>
                         <option value="Other">Other</option>
                       </select>
                       {form.formState.errors.businessType && (

@@ -32,7 +32,8 @@ interface CategoryPlaceholder {
   overlayGradient: string
 }
 
-export const PLACEHOLDER_LIBRARY: Record<SystemCategory, CategoryPlaceholder> = {
+// Base art for the categories that already have dedicated /public/placeholders/<category>/ folders.
+const BASE_PLACEHOLDER_LIBRARY = {
   'restaurant': {
     category: 'restaurant',
     variants: [
@@ -503,6 +504,45 @@ export const PLACEHOLDER_LIBRARY: Record<SystemCategory, CategoryPlaceholder> = 
     overlayGradient: 'from-black/60 via-black/40 to-transparent'
   },
   // Add other categories as needed...
+}
+
+// New multi-vertical categories (2026).
+// TEMPORARY: these reuse an existing category's image folder + variants (via the
+// `category` field, which drives the /public/placeholders/<category>/ path) so there
+// are zero broken images. Dedicated artwork is a follow-up task — when it lands,
+// give each its own folder + variants and remove the spread below.
+export const PLACEHOLDER_LIBRARY: Record<SystemCategory, CategoryPlaceholder> = {
+  ...BASE_PLACEHOLDER_LIBRARY,
+  rental: {
+    ...BASE_PLACEHOLDER_LIBRARY.sports, // reuse sports art for now
+    icon: '🛵',
+    label: 'Rentals / Hire',
+    accentColor: 'text-orange-400',
+  },
+  automotive: {
+    ...BASE_PLACEHOLDER_LIBRARY.other, // reuse neutral art for now
+    icon: '🚗',
+    label: 'Automotive / Garage',
+    accentColor: 'text-zinc-400',
+  },
+  health: {
+    ...BASE_PLACEHOLDER_LIBRARY.wellness, // reuse wellness art for now
+    icon: '🩺',
+    label: 'Health / Medical',
+    accentColor: 'text-teal-400',
+  },
+  tours_activities: {
+    ...BASE_PLACEHOLDER_LIBRARY.entertainment, // reuse entertainment art for now
+    icon: '🧭',
+    label: 'Tours / Activities',
+    accentColor: 'text-yellow-400',
+  },
+  grocery: {
+    ...BASE_PLACEHOLDER_LIBRARY.retail, // reuse retail art for now
+    icon: '🛒',
+    label: 'Grocery / Market',
+    accentColor: 'text-green-400',
+  },
 }
 
 // Hash function for deterministic variant selection

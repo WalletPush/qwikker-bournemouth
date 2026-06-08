@@ -312,9 +312,9 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         </FeedSection>
       )}
 
-      {/* Must-Try Dishes */}
+      {/* Popular items across businesses (food, services, rentals...) */}
       {dishes.length > 0 && (
-        <FeedSection title="Must-try dishes">
+        <FeedSection title="Popular picks">
           <CardRail>
             {dishes.map(card => (
               <DishCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
