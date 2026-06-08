@@ -274,6 +274,12 @@ export async function POST(request: NextRequest) {
           owner_name: `${owner_first_name} ${owner_last_name}`,
           owner_email: owner_email,
           owner_phone: owner_phone || null,
+          // Email sender: derive up-front so the franchise can send claim/verification
+          // emails immediately. Without this, resend_from_email stays null and the
+          // `resend_api_key && resend_from_email` gate silently blocks ALL email for
+          // the city (the setup form's field is display-only and never persists it).
+          resend_from_email: `no-reply@${cleanSubdomain}.qwikker.com`,
+          resend_from_name: `QWIKKER ${franchiseDisplayName}`,
           // GHL webhook (placeholder for now, franchise admin will configure)
           ghl_webhook_url: `PLACEHOLDER_${cleanCity.toUpperCase()}_WEBHOOK_URL`,
           // Atlas configuration (optional)

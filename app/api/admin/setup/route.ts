@@ -253,7 +253,14 @@ export async function POST(request: NextRequest) {
     if (config.stripe_account_id !== undefined && config.stripe_account_id !== '') updates.stripe_account_id = config.stripe_account_id
     if (config.stripe_publishable_key !== undefined && config.stripe_publishable_key !== '') updates.stripe_publishable_key = config.stripe_publishable_key
     if (config.stripe_onboarding_completed !== undefined) updates.stripe_onboarding_completed = config.stripe_onboarding_completed
-    if (config.resend_from_email !== undefined && config.resend_from_email !== '') updates.resend_from_email = config.resend_from_email
+    // Always derive the sender email from the server-trusted city so it can never be
+    // left null. The setup form's "From Email Address" field is display-only (read-only,
+    // not bound to state), so it never sends a value — relying on the client here left
+    // newer cities (e.g. Kefalonia) with resend_from_email = null, which blocked ALL
+    // franchise email (claims, verifications) via the `resend_api_key && resend_from_email`
+    // gate. The actual send/reply-to addresses are auto-derived from the city too
+    // (see lib/email/send-franchise-email.ts), so this value is effectively a "configured" flag.
+    updates.resend_from_email = `no-reply@${city.toLowerCase()}.qwikker.com`
     if (config.resend_from_name !== undefined && config.resend_from_name !== '') updates.resend_from_name = config.resend_from_name
     if (config.walletpush_template_id !== undefined && config.walletpush_template_id !== '') updates.walletpush_template_id = config.walletpush_template_id
     if (config.walletpush_dashboard_url !== undefined && config.walletpush_dashboard_url !== '') updates.walletpush_dashboard_url = config.walletpush_dashboard_url
