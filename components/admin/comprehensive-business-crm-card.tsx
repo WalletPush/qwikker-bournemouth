@@ -23,6 +23,8 @@ import { TierManagementCard } from './tier-management-card'
 import { ExtendTrialButton } from './extend-trial-button'
 import { PlaceholderSelector } from './placeholder-selector'
 import { pauseBusinessListing, restoreBusinessListing } from '@/lib/actions/admin-crm-actions'
+import { AddEmailModal } from '@/components/admin/add-email-modal'
+import { SendClaimEmailModal } from '@/components/admin/send-claim-email-modal'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface ComprehensiveBusinessCRMCardProps {
@@ -117,6 +119,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [categoryValue, setCategoryValue] = useState(business.business_category || business.display_category || '')
   const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  // Outreach: manually-added contact email + claim-invitation flow
+  const [contactEmail, setContactEmail] = useState<string | null>(business.email ?? null)
+  const [showAddEmailModal, setShowAddEmailModal] = useState(false)
+  const [showClaimEmailModal, setShowClaimEmailModal] = useState(false)
+  const [pendingClaimAfterEmail, setPendingClaimAfterEmail] = useState(false)
   
   // ✅ CRITICAL: Extract subscription from array format ONCE at the top!
   const sub = getSubscription(business)
@@ -763,9 +770,14 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   const handleEmail = () => {
+    // No email on file → prompt to add one instead of opening an empty mailto
+    if (!contactEmail) {
+      setShowAddEmailModal(true)
+      return
+    }
     const subject = encodeURIComponent(`Qwikker Business Update - ${business.business_name}`)
     const body = encodeURIComponent(`Hi ${business.first_name || 'there'},\n\nI hope this email finds you well. I wanted to reach out regarding your Qwikker business profile for ${business.business_name}.\n\nBest regards,\nQwikker Team`)
-    window.open(`mailto:${business.email}?subject=${subject}&body=${body}`)
+    window.open(`mailto:${contactEmail}?subject=${subject}&body=${body}`)
     const now = new Date()
     contactHistory.unshift({
       id: now.getTime(),
@@ -971,9 +983,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             {/* Right: Quick Actions */}
             <div className="flex items-center gap-2 flex-shrink-0 ml-4">
               <button
-                onClick={() => window.open(`mailto:${business.email}`)}
+                onClick={() => contactEmail ? window.open(`mailto:${contactEmail}`) : setShowAddEmailModal(true)}
                 className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
-                title="Email"
+                title={contactEmail ? 'Email' : 'Add email'}
               >
                 <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1434,6 +1446,29 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               Message
             </Button>
           )}
+          {/* Outreach: invite unclaimed businesses to claim their pre-built listing */}
+          {isUnclaimed && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/20 flex items-center gap-2"
+              onClick={() => {
+                if (contactEmail) {
+                  setShowClaimEmailModal(true)
+                } else {
+                  // Need an email first — collect one, then continue to the claim invite
+                  setPendingClaimAfterEmail(true)
+                  setShowAddEmailModal(true)
+                }
+              }}
+              title={contactEmail ? 'Send a branded claim invitation' : 'Add an email, then send a claim invitation'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              Send Claim Email
+            </Button>
+          )}
         </div>
         
         <div className="text-sm text-slate-400">
@@ -1668,9 +1703,32 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <CardTitle className="text-white text-sm">Contact Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-slate-400 text-sm">Email:</span>
-                        <span className="text-white text-sm">{business.email}</span>
+                        {contactEmail ? (
+                          <span className="text-white text-sm text-right break-all inline-flex items-center gap-1.5">
+                            {contactEmail}
+                            <button
+                              onClick={() => setShowAddEmailModal(true)}
+                              title="Edit email"
+                              className="text-slate-500 hover:text-blue-400 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setShowAddEmailModal(true)}
+                            className="text-blue-400 hover:text-blue-300 text-sm font-medium inline-flex items-center gap-1 transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add email
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Phone:</span>
@@ -3296,6 +3354,43 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         onConfirm={handleDeleteBusiness}
         businessName={business.business_name}
         businessId={business.id}
+      />
+
+      {/* Add / edit contact email (used by quick actions + claim outreach) */}
+      <AddEmailModal
+        isOpen={showAddEmailModal}
+        onClose={() => {
+          setShowAddEmailModal(false)
+          setPendingClaimAfterEmail(false)
+        }}
+        business={{
+          id: business.id,
+          business_name: business.business_name || 'this business',
+          website_url: business.website_url,
+        }}
+        initialEmail={contactEmail || ''}
+        onSaved={(email) => {
+          setContactEmail(email)
+          router.refresh()
+          // If the admin was mid-way through sending a claim invite, continue
+          if (pendingClaimAfterEmail) {
+            setPendingClaimAfterEmail(false)
+            setShowClaimEmailModal(true)
+          }
+        }}
+      />
+
+      {/* Branded "claim your listing" outreach email (preview + approve before send) */}
+      <SendClaimEmailModal
+        isOpen={showClaimEmailModal}
+        onClose={() => setShowClaimEmailModal(false)}
+        business={{
+          id: business.id,
+          business_name: business.business_name || 'this business',
+          email: contactEmail,
+        }}
+        onSent={(name) => alert(`✅ Claim invitation sent to ${name}`)}
+        onError={(message) => alert(`❌ ${message}`)}
       />
     </>
   )

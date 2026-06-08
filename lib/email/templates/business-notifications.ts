@@ -135,6 +135,13 @@ export interface CompletionReminderEmailData {
   completionPercentage: number
 }
 
+export interface ClaimInvitationEmailData {
+  businessName: string
+  city: string
+  claimUrl: string
+  supportEmail: string
+}
+
 // ---------------------------------------------------------------------------
 // Templates — all inline styles for email client compatibility
 // ---------------------------------------------------------------------------
@@ -472,6 +479,36 @@ export function createCompletionReminderEmail(data: CompletionReminderEmailData)
     </div>`, data.city)
 
   const text = `You're almost there.\n\nHi ${data.firstName},\n\nYour listing for ${data.businessName} is ${data.completionPercentage}% complete. Just a few more details and you'll be ready to go live.\n\nStill to complete:\n${data.missingItems.map((i) => `• ${i}`).join('\n')}\n\nOnce everything's filled in, hit Submit for Review and our team will check it within 24 hours.\n\nFinish your listing: ${data.dashboardUrl}\n\nNeed help completing your listing? Reach out to us here: ${data.contactCentreUrl} — or email ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+
+  return { subject, html, text }
+}
+
+/**
+ * Outreach email inviting an (unclaimed) business to claim their pre-built listing.
+ * The CTA deep-links straight to the claim flow pre-selected for this business
+ * (/claim?business_id=...), so they never have to search for themselves.
+ */
+export function createClaimInvitationEmail(data: ClaimInvitationEmailData): EmailTemplate {
+  const cityDisplay = data.city.charAt(0).toUpperCase() + data.city.slice(1)
+  const subject = `Claim your QWIKKER listing for ${data.businessName}`
+
+  const html = wrapInLayout(`
+    <div style="padding:36px 30px;">
+      <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Your listing is ready to claim.</h2>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hey ${data.businessName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Good news &mdash; <strong style="color:#fff;">${data.businessName}</strong> has been added to <strong style="color:#00d083;">QWIKKER ${cityDisplay}</strong>, the local app that helps people discover great businesses near them.</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">We've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.</p>
+
+      <div style="margin:28px 0 12px;text-align:center;">
+        <a href="${data.claimUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">Claim My Listing</a>
+      </div>
+      <p style="font-size:13px;line-height:1.6;color:#888;margin:0 0 24px;text-align:center;">Takes under 5 minutes &mdash; no need to search, this link opens your business directly.</p>
+
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Any questions? Just reply to this email or reach us at <a href="mailto:${data.supportEmail}" style="color:#00d083;">${data.supportEmail}</a>.</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
+    </div>`, data.city)
+
+  const text = `Your listing is ready to claim.\n\nHey ${data.businessName},\n\nGood news — ${data.businessName} has been added to QWIKKER ${cityDisplay}, the local app that helps people discover great businesses near them.\n\nWe've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.\n\nClaim your listing: ${data.claimUrl}\n\n(Takes under 5 minutes — this link opens your business directly, no need to search.)\n\nAny questions? Reply to this email or reach us at ${data.supportEmail}.\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
