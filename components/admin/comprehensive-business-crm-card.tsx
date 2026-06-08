@@ -1408,6 +1408,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </svg>
             Sync
           </Button>
+          <a
+            href={getGoogleMapsUrl(business)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-emerald-500 text-emerald-400 hover:bg-emerald-500/20 text-sm font-medium transition-colors"
+            title="View on Google Maps"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Maps
+          </a>
           {isClaimed && (
             <Button
               size="sm"
@@ -1665,7 +1678,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 text-sm">Address:</span>
-                        <span className="text-white text-sm text-right">{business.business_address || 'Not provided'}</span>
+                        {business.business_address ? (
+                          <a
+                            href={getGoogleMapsUrl(business)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-400 hover:text-emerald-300 hover:underline text-sm text-right transition-colors"
+                            title="View on Google Maps"
+                          >
+                            {business.business_address}
+                          </a>
+                        ) : (
+                          <span className="text-white text-sm text-right">Not provided</span>
+                        )}
                       </div>
                       <div className="flex items-start justify-between">
                         <span className="text-slate-400 text-sm">Hours:</span>
