@@ -234,6 +234,8 @@ export async function POST(request: NextRequest) {
           subdomain: cleanSubdomain,
           country_code: countryCode,
           country_name: countryName,
+          // Derive Google Places country restriction from the franchise's country.
+          google_places_country: countryCode.toLowerCase(),
           timezone: timezone || 'Europe/London',
           status: 'pending_setup', // Transition to pending_setup
           // Owner details (replace placeholders)
@@ -268,6 +270,9 @@ export async function POST(request: NextRequest) {
           subdomain: cleanSubdomain,
           country_code: countryCode,
           country_name: countryName,
+          // Google Places country restriction — derive from the franchise's country so
+          // autocomplete/verification is scoped correctly (not silently defaulted to UK).
+          google_places_country: countryCode.toLowerCase(),
           timezone: timezone || 'Europe/London',
           status: 'pending_setup', // New franchises are pending until admin completes setup wizard
           // Owner details

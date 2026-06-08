@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
         status,
         google_places_api_key,
         google_places_country,
+        country_code,
         city_center_lat,
         city_center_lng,
         lat,
@@ -127,7 +128,12 @@ export async function GET(request: NextRequest) {
       city: config.city,
       status: config.status,
       googlePlacesPublicKey: config.google_places_api_key || null,
-      country: config.google_places_country || 'gb',
+      // Derive the Places country restriction from the franchise's own country.
+      // NEVER hardcode 'gb' — that silently restricts non-UK franchises (e.g. Kefalonia)
+      // to UK-only results. Prefer the explicit google_places_country, fall back to the
+      // authoritative country_code, and if neither is set return null so the client
+      // applies NO country restriction (relying on location bias instead).
+      country: (config.google_places_country || config.country_code || '').toLowerCase() || null,
       center: hasCenter ? {
         lat: parseFloat(centerLat as any),
         lng: parseFloat(centerLng as any)

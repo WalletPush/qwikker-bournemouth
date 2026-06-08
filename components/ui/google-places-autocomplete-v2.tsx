@@ -145,7 +145,12 @@ export function GooglePlacesAutocompleteV2({
         const request: google.maps.places.AutocompletionRequest = {
           input: inputValue,
           types: ['establishment'],
-          componentRestrictions: { country: tenantConfig.country || 'gb' },
+        }
+
+        // Only restrict by country when one is configured for this franchise.
+        // Hardcoding 'gb' here previously forced UK-only results for non-UK cities.
+        if (tenantConfig.country) {
+          request.componentRestrictions = { country: tenantConfig.country }
         }
         
         // Add location bias if center is configured
