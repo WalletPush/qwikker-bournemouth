@@ -13,6 +13,15 @@ interface GoogleAddressAutocompleteProps {
   value?: string
   disabled?: boolean
   className?: string
+  cityOverride?: string // DEV ONLY: allows ?city=X on localhost/vercel
+}
+
+interface TenantConfig {
+  ok: boolean
+  googlePlacesPublicKey?: string
+  country?: string
+  center?: { lat: number; lng: number } | null
+  onboardingRadiusMeters?: number
 }
 
 export function GoogleAddressAutocomplete({ 
@@ -20,33 +29,37 @@ export function GoogleAddressAutocomplete({
   onChange,
   value,
   disabled, 
-  className 
+  className,
+  cityOverride
 }: GoogleAddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load Google Places API script (using singleton loader)
+    // Load tenant config first so we use the FRANCHISE's Google key + country + center
+    // (not a global env key, and not a hardcoded UK restriction). This keeps each
+    // franchise billing their own Google account and scopes suggestions to their city.
     const loadGooglePlaces = async () => {
-      // Check if already loaded
-      if (isGoogleMapsLoaded()) {
-        initAutocomplete()
-        return
-      }
-
-      // Check for API key
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-      if (!apiKey) {
-        setError('unavailable')
-        setIsLoading(false)
-        return
-      }
-
-      // Load using singleton loader
       try {
-        await loadGoogleMaps(apiKey)
-        initAutocomplete()
+        let url = '/api/tenant/config'
+        if (cityOverride) {
+          url += `?city=${encodeURIComponent(cityOverride)}`
+        }
+
+        const response = await fetch(url)
+        const config: TenantConfig = await response.json()
+
+        if (!config.ok || !config.googlePlacesPublicKey) {
+          setError('unavailable')
+          setIsLoading(false)
+          return
+        }
+
+        if (!isGoogleMapsLoaded()) {
+          await loadGoogleMaps(config.googlePlacesPublicKey)
+        }
+        initAutocomplete(config)
       } catch (err) {
         console.error('[GoogleAddressAutocomplete] Failed to load Google Maps:', err)
         setError('unavailable')
@@ -54,15 +67,31 @@ export function GoogleAddressAutocomplete({
       }
     }
 
-    const initAutocomplete = () => {
+    const initAutocomplete = (config: TenantConfig) => {
       if (!inputRef.current) return
 
       try {
-        const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        const options: any = {
           types: ['address'],
-          componentRestrictions: { country: 'gb' },
           fields: ['formatted_address', 'address_components']
-        })
+        }
+
+        // Only restrict by country when one is configured for this franchise
+        // (never hardcode 'gb' — that forces UK-only results for non-UK cities).
+        if (config.country) {
+          options.componentRestrictions = { country: config.country }
+        }
+
+        // Bias suggestions toward the franchise's city center when available.
+        if (config.center && config.onboardingRadiusMeters && window.google.maps.Circle) {
+          const circle = new window.google.maps.Circle({
+            center: config.center,
+            radius: config.onboardingRadiusMeters
+          })
+          options.bounds = circle.getBounds()
+        }
+
+        const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, options)
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace()
@@ -107,7 +136,7 @@ export function GoogleAddressAutocomplete({
     }
 
     loadGooglePlaces()
-  }, [onAddressSelected])
+  }, [onAddressSelected, cityOverride])
 
   if (error) {
     // Silently fall back to regular input if Google Places fails
@@ -152,6 +181,9 @@ declare global {
   interface Window {
     google: {
       maps: {
+        Circle: new (opts: { center: { lat: number; lng: number }; radius: number }) => {
+          getBounds: () => unknown
+        }
         places: {
           Autocomplete: new (
             input: HTMLInputElement,
@@ -159,6 +191,7 @@ declare global {
               types?: string[]
               componentRestrictions?: { country: string }
               fields?: string[]
+              bounds?: unknown
             }
           ) => {
             addListener: (event: string, callback: () => void) => void
