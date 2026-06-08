@@ -54,6 +54,23 @@ const getSubscription = (business: BusinessCRMData) => {
   return Array.isArray(business.subscription) ? business.subscription[0] : business.subscription
 }
 
+// Build the best available Google Maps URL for a business:
+// 1. Exact place via google_place_id (opens the precise listing)
+// 2. Coordinates (latitude/longitude)
+// 3. Fallback to a name + address/town search
+const getGoogleMapsUrl = (business: BusinessCRMData): string => {
+  if (business.google_place_id) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.business_name)}&query_place_id=${business.google_place_id}`
+  }
+  if (business.latitude != null && business.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`
+  }
+  const query = [business.business_name, business.business_address || business.business_town]
+    .filter(Boolean)
+    .join(' ')
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
+
 // Helper function to get tier-specific border color
 const getTierBorderColor = (business: BusinessCRMData) => {
   // ✅ FIXED: Handle subscription as array
@@ -971,6 +988,20 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </button>
+
+              {/* View on Google Maps — exact place via place_id, else coords, else name search */}
+              <a
+                href={getGoogleMapsUrl(business)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
+                title="View on Google Maps"
+              >
+                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </a>
               
               {/* Message Button - Opens CRM with compose form (only for claimed businesses) */}
               {isClaimed && (
@@ -1038,7 +1069,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                     Lookup on Google
                   </button>
                   <a
-                    href={`https://www.google.com/maps/search/${encodeURIComponent(business.business_name + ' ' + business.business_town)}`}
+                    href={getGoogleMapsUrl(business)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors"
