@@ -131,7 +131,9 @@ export default function ClaimPage() {
             if (response.ok) {
               const { business } = await response.json()
               if (business) {
-                // Server confirmed this business is eligible
+                // Server confirmed this business is eligible.
+                // Map the full shape (rating, image, placeholder fields) so the
+                // Confirm card matches the search-result experience exactly.
                 setSelectedBusiness({
                   id: business.id,
                   name: business.name,
@@ -140,6 +142,15 @@ export default function ClaimPage() {
                   business_address: business.address,
                   category: business.category,
                   business_category: business.category,
+                  system_category: business.system_category,
+                  display_category: business.display_category,
+                  placeholder_variant: business.placeholder_variant ?? 0,
+                  tagline: business.tagline,
+                  image: business.image,
+                  rating: business.rating,
+                  reviewCount: business.reviewCount,
+                  yearsOnGoogle: business.yearsOnGoogle,
+                  hours: business.hours,
                   status: 'unclaimed'
                 })
                 setStep('confirm')

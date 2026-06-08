@@ -52,10 +52,12 @@ export async function GET(request: NextRequest) {
     // Use admin client for read (bypasses RLS for franchise-level queries)
     const supabase = createAdminClient()
 
-    // Query business_profiles with strict eligibility checks
+    // Query business_profiles with strict eligibility checks.
+    // Select the same fields the search endpoint returns so the "Confirm Your
+    // Business" card renders identically (correct placeholder, rating, etc.).
     const { data: business, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, system_category, business_address, city')
+      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, business_tagline, business_images, rating, review_count, years_on_google, business_hours, city')
       .eq('id', businessId)
       .eq('city', requestCity)
       .eq('status', 'unclaimed')
@@ -70,14 +72,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Return minimal fields needed for UI
+    // Return the same shape as /api/claim/search results so the UI is consistent
     return NextResponse.json({
       business: {
         id: business.id,
         name: business.business_name,
-        address: business.business_address,
+        address: `${business.business_address}${business.business_town ? ', ' + business.business_town : ''}${business.business_postcode ? ', ' + business.business_postcode : ''}`,
         city: business.city,
-        category: business.system_category
+        category: business.business_category || business.business_type,
+        system_category: business.system_category,
+        display_category: business.display_category,
+        placeholder_variant: business.placeholder_variant ?? 0,
+        tagline: business.business_tagline,
+        image: business.business_images?.[0] || null,
+        rating: business.rating,
+        reviewCount: business.review_count,
+        yearsOnGoogle: business.years_on_google,
+        hours: business.business_hours || '',
       }
     })
 
