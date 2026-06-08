@@ -1,4 +1,5 @@
-import { sendEmail, sendEmailWithRetry } from '../email/email-service'
+import { sendEmailWithRetry } from '../email/email-service'
+import { sendFranchiseEmail } from '../email/send-franchise-email'
 import { 
   createBusinessWelcomeEmail,
   createBusinessSubmittedEmail,
@@ -30,12 +31,12 @@ export async function sendBusinessWelcomeNotification(
 
     const template = createBusinessWelcomeEmail(data)
 
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: email,
       template,
       tags: [
         { name: 'category', value: 'business_welcome' },
-        { name: 'city', value: data.city },
       ]
     })
 
@@ -71,12 +72,12 @@ export async function sendBusinessSubmittedNotification(
 
     const template = createBusinessSubmittedEmail(data)
 
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: email,
       template,
       tags: [
         { name: 'category', value: 'business_submitted' },
-        { name: 'city', value: data.city },
       ]
     })
 
@@ -109,12 +110,12 @@ export async function sendBusinessApprovalNotification(data: BusinessApprovalEma
     
     const template = createBusinessApprovalEmail(data)
     
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: data.email,
       template,
       tags: [
         { name: 'category', value: 'business_approval' },
-        { name: 'city', value: data.city },
         { name: 'business_type', value: 'approval' }
       ]
     })
@@ -149,12 +150,12 @@ export async function sendOfferApprovalNotification(data: OfferApprovalEmailData
     
     const template = createOfferApprovalEmail(data)
     
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: data.email,
       template,
       tags: [
         { name: 'category', value: 'offer_approval' },
-        { name: 'city', value: data.city },
         { name: 'business_type', value: 'offer' }
       ]
     })
@@ -189,12 +190,12 @@ export async function sendMenuApprovalNotification(data: MenuApprovalEmailData):
     
     const template = createMenuApprovalEmail(data)
     
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: data.firstName ? `${data.firstName} <${data.businessName}>` : data.businessName,
       template,
       tags: [
         { name: 'category', value: 'menu_approval' },
-        { name: 'city', value: data.city },
         { name: 'menu_type', value: data.menuType }
       ]
     })
@@ -229,12 +230,12 @@ export async function sendBusinessRejectionNotification(data: BusinessRejectionE
     
     const template = createBusinessRejectionEmail(data)
     
-    const result = await sendEmailWithRetry({
+    const result = await sendFranchiseEmail({
+      city: data.city,
       to: data.email,
       template,
       tags: [
         { name: 'category', value: 'business_rejection' },
-        { name: 'city', value: data.city },
         { name: 'business_type', value: 'rejection' }
       ]
     })
