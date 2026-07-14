@@ -25,6 +25,7 @@ export function getFranchiseBaseUrl(city: string): string {
 interface FranchiseEmailOptions {
   city: string
   to: string | string[]
+  bcc?: string | string[]
   template: EmailTemplate
   replyTo?: string
   tags?: Array<{ name: string; value: string }>
@@ -131,7 +132,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
   messageId?: string
   error?: string
 }> {
-  const { city, to, template, replyTo, tags = [] } = options
+  const { city, to, bcc, template, replyTo, tags = [] } = options
 
   const franchiseConfig = await getFranchiseResendConfig(city)
 
@@ -156,6 +157,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
       const result = await sendWithRetry(cityResend, {
         from: `${fromName} <${fromEmail}>`,
         to: Array.isArray(to) ? to : [to],
+        ...(bcc ? { bcc: Array.isArray(bcc) ? bcc : [bcc] } : {}),
         replyTo: replyToEmail,
         subject: template.subject,
         html: template.html,
@@ -183,6 +185,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
     const result = await sendWithRetry(globalResend, {
       from: EMAIL_CONFIG.from,
       to: Array.isArray(to) ? to : [to],
+      ...(bcc ? { bcc: Array.isArray(bcc) ? bcc : [bcc] } : {}),
       replyTo: replyTo || EMAIL_CONFIG.replyTo,
       subject: template.subject,
       html: template.html,

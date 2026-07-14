@@ -11,6 +11,12 @@ interface ImageCarouselProps {
   showArrows?: boolean
   showDots?: boolean
   imageTransforms?: ImageTransform[]
+  /**
+   * 'cover' (default) fills the frame and crops overflow.
+   * 'contain' shows the WHOLE image (no cropping) over a blurred fill of the
+   * same image, so nothing gets cut off — used for the business detail hero.
+   */
+  fit?: 'cover' | 'contain'
 }
 
 export function ImageCarousel({ 
@@ -18,8 +24,26 @@ export function ImageCarousel({
   alt, 
   className = '', 
   showArrows = true, 
-  showDots = false 
+  showDots = false,
+  fit = 'cover'
 }: ImageCarouselProps) {
+  const isContain = fit === 'contain'
+  const objectFitClass = isContain ? 'object-contain' : 'object-cover object-center'
+  // Inline styles guarantee the fit/size regardless of stale or unlayered global
+  // CSS (e.g. an `img { height: auto }` reset that would otherwise defeat object-fit).
+  const mainImgStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: isContain ? 'contain' : 'cover',
+    objectPosition: 'center',
+  }
+  const backdropImgStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  }
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [imageLoading, setImageLoading] = useState(true)
@@ -50,16 +74,26 @@ export function ImageCarousel({
 
   if (images.length === 1) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 relative">
+      <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 relative overflow-hidden">
         {imageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-700">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-500 border-t-slate-300"></div>
           </div>
         )}
+        {isContain && !imageError && (
+          <img
+            src={images[0]}
+            alt=""
+            aria-hidden="true"
+            className="scale-110 blur-2xl opacity-50"
+            style={backdropImgStyle}
+          />
+        )}
         <img 
           src={images[0]} 
           alt={alt}
-          className={`w-full h-full object-cover object-center transition-opacity duration-300 ${
+          style={mainImgStyle}
+          className={`relative transition-opacity duration-300 ${
             imageLoading ? 'opacity-0' : 'opacity-100'
           }`}
           onLoad={() => setImageLoading(false)}
@@ -92,19 +126,31 @@ export function ImageCarousel({
   }
 
   return (
-    <div className="relative group w-full h-full bg-gradient-to-br from-slate-700 to-slate-800">
+    <div className="relative group w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 overflow-hidden">
       {/* Loading State */}
       {imageLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-700 z-10">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-500 border-t-slate-300"></div>
         </div>
       )}
-      
+
+      {/* Blurred backdrop fill (contain mode) so the full image shows without bars */}
+      {isContain && !imageError && (
+        <img
+          src={images[currentIndex]}
+          alt=""
+          aria-hidden="true"
+          className="scale-110 blur-2xl opacity-50"
+          style={backdropImgStyle}
+        />
+      )}
+
       {/* Main Image */}
       <img 
         src={images[currentIndex]} 
         alt={`${alt} - Image ${currentIndex + 1}`}
-        className={`w-full h-full object-cover object-center transition-opacity duration-300 ${
+        style={mainImgStyle}
+        className={`relative transition-opacity duration-300 ${
           imageLoading ? 'opacity-0' : 'opacity-100'
         }`}
         onLoad={() => setImageLoading(false)}

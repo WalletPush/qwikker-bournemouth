@@ -88,7 +88,7 @@ export function BusinessCard({
     }
     
     // Fallback to town
-    return business.town || business.location || business.city || 'Bournemouth'
+    return business.town || business.location || business.city || 'Location'
   }
   
   // Helper to resolve offers count from various possible fields

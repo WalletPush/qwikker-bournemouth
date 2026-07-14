@@ -36,6 +36,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const [walletOffers, setWalletOffers] = useState<Set<string>>(new Set())
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const autoClaimProcessed = useRef(false)
   
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
@@ -97,6 +98,74 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify(updatedWallet))
     }
   }, [allOffers, favoriteOffers, claimedOffers, walletOffers, walletPassId])
+
+  // Auto-claim + add to wallet when a non-pass-holder followed a landing-page
+  // "Claim this offer" deep link: /join?returnTo=/user/offers?autoClaim={offerId}.
+  // After the pass is installed they land here; we claim, push to wallet, drop an
+  // in-app notification, confirm on-screen, then strip the param. Runs once.
+  useEffect(() => {
+    const autoClaimId = searchParams.get('autoClaim')
+    if (!autoClaimId || !walletPassId || autoClaimProcessed.current) return
+    autoClaimProcessed.current = true
+
+    const run = async () => {
+      const offer = allOffers.find(o => o.id === autoClaimId)
+      const offerTitle = offer?.title || 'Your offer'
+      const businessName = offer?.businessName || 'the business'
+      const userId = walletPassId || 'anonymous-user'
+
+      try {
+        if (!claimedOffers.has(autoClaimId) && !walletOffers.has(autoClaimId)) {
+          const { claimOffer: claimAction } = await import('@/lib/actions/offer-claim-actions')
+          await claimAction({ offerId: autoClaimId, offerTitle, businessName, visitorWalletPassId: walletPassId })
+        }
+
+        if (!walletOffers.has(autoClaimId)) {
+          await fetch('/api/walletpass/update-main-pass', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userWalletPassId: walletPassId,
+              currentOffer: offerTitle,
+              offerDetails: { businessName, offerId: autoClaimId },
+            }),
+          })
+
+          const actions = await import('@/lib/actions/offer-claim-actions')
+          actions.updateOfferClaimStatus(autoClaimId, walletPassId, 'wallet_added').catch(() => {})
+          actions.notifyOfferAddedToWallet({ offerId: autoClaimId, walletPassId }).catch(() => {})
+
+          setClaimedOffers(prev => {
+            const s = new Set([...prev, autoClaimId])
+            if (typeof window !== 'undefined') localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...s]))
+            return s
+          })
+          setWalletOffers(prev => {
+            const s = new Set([...prev, autoClaimId])
+            if (typeof window !== 'undefined') localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...s]))
+            return s
+          })
+        }
+
+        showSuccessMessage(
+          'Added to your wallet!',
+          `"${offerTitle}" from ${businessName} is now in your wallet. Explore more local offers below.`,
+          () => setSelectedFilter('all')
+        )
+      } catch (error) {
+        console.error('Auto-claim failed:', error)
+      } finally {
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('autoClaim')
+          window.history.replaceState({}, '', url.toString())
+        }
+      }
+    }
+
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, walletPassId, allOffers])
 
   // Handle auto-scroll to specific highlighted business
   useEffect(() => {

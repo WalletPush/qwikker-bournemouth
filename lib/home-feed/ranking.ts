@@ -6,7 +6,7 @@
  */
 
 import type { TimeOfDay, BusinessTier } from './types'
-import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -312,6 +312,7 @@ export function getBusinessImage(
   logo: string | null,
   systemCategory?: string | null,
   businessId?: string | null,
+  placeholderVariant?: number | null,
 ): {
   image: string | null
   logo: string | null
@@ -321,7 +322,12 @@ export function getBusinessImage(
   }
 
   if (systemCategory && businessId) {
-    return { image: getPlaceholderUrl(systemCategory, businessId), logo }
+    // Respect the admin-selected placeholder variant when present, otherwise
+    // fall back to the deterministic hash-based choice (identical to before).
+    return {
+      image: getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant).url,
+      logo,
+    }
   }
 
   return { image: null, logo }

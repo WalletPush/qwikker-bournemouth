@@ -52,6 +52,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Ownership is now proven. Give a fresh completion window so a legitimate but
+    // slow user (filling business details, account, uploads) isn't rejected at the
+    // final submit step. Truly abandoned/never-verified codes still die at 15 min;
+    // submit re-checks this (extended) expiry, so expired codes are still blocked.
+    const completionWindow = new Date(Date.now() + 20 * 60 * 1000) // 20 minutes to finish
+    await supabase
+      .from('verification_codes')
+      .update({ expires_at: completionWindow.toISOString() })
+      .eq('id', verification.id)
+
     // Code is valid
     return NextResponse.json({
       success: true,

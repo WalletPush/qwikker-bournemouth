@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BusinessCard } from '@/components/user/business-card'
 import { Button } from '@/components/ui/button'
+import { SuccessModal } from '@/components/ui/success-modal'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 
 interface ProfilePreviewPageProps {
@@ -13,6 +14,11 @@ interface ProfilePreviewPageProps {
 export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
   const router = useRouter()
   const [showHero, setShowHero] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  // Whether the listing is already live vs still awaiting admin review.
+  const isLive = profile.status === 'approved'
+  const townLabel = profile.business_town || 'your area'
 
   // Transform profile data to match BusinessCard format
   const businessData = {
@@ -76,7 +82,7 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
           </Button>
           
           <Button
-            onClick={() => router.push('/dashboard/action-items')}
+            onClick={() => setShowConfirm(true)}
             size="lg"
             className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] border-2 border-green-400/30"
           >
@@ -84,6 +90,23 @@ export function ProfilePreviewPage({ profile }: ProfilePreviewPageProps) {
           </Button>
         </div>
       </div>
+
+      {/* Submit confirmation — accurately reflects live vs under-review status */}
+      <SuccessModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        title={isLive ? "You're all set! 🎉" : 'Submitted for review!'}
+        message={
+          isLive
+            ? `Your listing is live on Qwikker — customers in ${townLabel} can find you right now.\n\nYou can keep editing anytime from your dashboard; changes go live after a quick review.`
+            : `Thanks! Your listing has been sent to the Qwikker team for a quick review.\n\nWe'll email you the moment it goes live — usually within 24 hours.`
+        }
+        buttonText="Continue"
+        onButtonClick={() => {
+          setShowConfirm(false)
+          router.push('/dashboard/action-items')
+        }}
+      />
       
       {/* Hero Modal - Full Screen */}
       {showHero && (

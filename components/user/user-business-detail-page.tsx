@@ -26,9 +26,10 @@ interface UserBusinessDetailPageProps {
     businessId: string
     visitorWalletPassId?: string
   } | null
+  currencySymbol?: string
 }
 
-export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, trackingData }: UserBusinessDetailPageProps) {
+export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, trackingData, currencySymbol = '£' }: UserBusinessDetailPageProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -407,6 +408,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                   businessName={business.name}
                   businessId={business.id}
                   systemCategory={systemCategory}
+                  placeholderVariant={business.placeholder_variant}
                   showUnclaimedBadge={false}
                   className="h-full w-full"
                 />
@@ -991,7 +993,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                         </div>
                       </div>
                       <div className="text-right ml-2 shrink-0">
-                        <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price)}</span>
+                        <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price, currencySymbol)}</span>
                       </div>
                     </div>
                   ))}

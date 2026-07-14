@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { getWalletPassCookie } from '@/lib/utils/wallet-session'
 import { filterActiveOffers } from '@/lib/utils/offer-helpers'
+import { isBusinessTrialActive } from '@/lib/utils/trial-status'
 
 interface DiscoverPageProps {
   searchParams: Promise<{
@@ -162,29 +163,12 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     console.error('❌ Error fetching businesses for discover page:', error, JSON.stringify(error))
   }
   
-  // ✅ CRITICAL: Filter out expired trials
-  const activeBusinesses = (approvedBusinesses || []).filter(business => {
-    // If no subscription data, assume active (legacy businesses)
-    if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-      return true
-    }
-    
-    const sub = business.business_subscriptions[0]
-    
-    // If not in trial, they're active (paid customers)
-    if (!sub.is_in_free_trial) {
-      return true
-    }
-    
-    // If in trial, check if expired
-    if (sub.free_trial_end_date) {
-      const endDate = new Date(sub.free_trial_end_date)
-      const now = new Date()
-      return endDate >= now // Only show if trial NOT expired
-    }
-    
-    return true // Default to showing if we can't determine
-  })
+  // ✅ CRITICAL: Filter out expired trials.
+  // Uses the shared helper which normalises the business_subscriptions embed
+  // (UNIQUE(business_id) makes PostgREST return an OBJECT, not an array).
+  const activeBusinesses = (approvedBusinesses || []).filter(business =>
+    isBusinessTrialActive((business as any).business_subscriptions)
+  )
   
   // Transform real approved businesses to match the expected format
   const realBusinesses = activeBusinesses.map(business => {

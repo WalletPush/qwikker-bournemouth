@@ -7,7 +7,7 @@ import { getCityFromHostname } from '@/lib/utils/city-detection'
 
 export async function POST(request: NextRequest) {
   try {
-    const { businessIds } = await request.json()
+    const { businessIds, approved = true } = await request.json()
     
     if (!businessIds || !Array.isArray(businessIds) || businessIds.length === 0) {
       return NextResponse.json(
@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Whether to grant (true) or revoke (false) Tier 3 AI-chat eligibility
+    const nextApproved = approved !== false
     
     // Get admin session from cookie
     const cookieStore = await cookies()
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await supabaseAdmin
         .from('business_profiles')
         .update({
-          admin_chat_fallback_approved: true,
+          admin_chat_fallback_approved: nextApproved,
           updated_at: new Date().toISOString()
         })
         .in('id', validBusinessIds)
@@ -125,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const skippedCount = invalidBusinesses.length
 
-    console.log(`✅ Bulk AI eligible update: ${updatedCount} updated, ${skippedCount} skipped`)
+    console.log(`✅ Bulk AI eligible update (approved=${nextApproved}): ${updatedCount} updated, ${skippedCount} skipped`)
 
     return NextResponse.json({
       success: true,

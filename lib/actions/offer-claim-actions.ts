@@ -2,6 +2,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getRequestCityFallback } from '@/lib/utils/city-detection'
+import { generateShortCode } from '@/lib/utils/short-code'
 
 /**
  * Claim an offer for a user
@@ -189,6 +190,98 @@ export async function claimOffer(data: {
       message: 'Offer claimed successfully!',
       data: { stored_in_db: false, claim_id: null }
     }
+  }
+}
+
+/**
+ * Best-effort in-app notification when an offer is auto-added to the user's wallet
+ * (via a landing-page "Claim this offer" deep link). Surfaces in the user's
+ * notifications feed/bell. Mirrors the proven push_notifications +
+ * push_notification_recipients insert shape. Never throws — a failure here must
+ * not break the claim/wallet flow.
+ */
+export async function notifyOfferAddedToWallet(data: { offerId: string; walletPassId: string }) {
+  try {
+    if (!data.offerId || !data.walletPassId) return { success: false }
+    const supabase = createServiceRoleClient()
+
+    const { data: offer } = await supabase
+      .from('business_offers')
+      .select('offer_name, business_id')
+      .eq('id', data.offerId)
+      .single()
+    if (!offer) return { success: false }
+
+    const { data: biz } = await supabase
+      .from('business_profiles')
+      .select('business_name, city, user_id')
+      .eq('id', offer.business_id)
+      .single()
+
+    const city = biz?.city || (await getRequestCityFallback())
+    const businessName = biz?.business_name || 'A local business'
+    const message = `"${offer.offer_name}" from ${businessName} was added to your wallet. Tap to explore more local offers.`
+    const destinationUrl = `https://${city}.qwikker.com/user/offers`
+
+    // Parent notification row (retry on short_code collision, like the push route)
+    let notificationId: string | null = null
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: row, error } = await supabase
+        .from('push_notifications')
+        .insert({
+          city,
+          business_id: offer.business_id,
+          created_by_user_id: biz?.user_id ?? null,
+          message,
+          personalized_template: message,
+          audience_type: 'all',
+          notification_type: 'promotional',
+          destination_type: 'offers',
+          destination_url: destinationUrl,
+          short_code: generateShortCode(8),
+          sent_at: new Date().toISOString(),
+          sent_count: 1,
+          failed_count: 0,
+        })
+        .select('id')
+        .single()
+
+      if (error?.code === '23505' && error.message?.includes('short_code')) continue
+      if (error) {
+        console.error('❌ notifyOfferAddedToWallet: notification insert failed:', error)
+        return { success: false }
+      }
+      notificationId = row.id
+      break
+    }
+    if (!notificationId) return { success: false }
+
+    // Recipient row (this is what the user's feed reads)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { error } = await supabase
+        .from('push_notification_recipients')
+        .insert({
+          push_notification_id: notificationId,
+          wallet_pass_id: data.walletPassId,
+          personalized_message: message,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          short_code: generateShortCode(10),
+          tracking_url: destinationUrl,
+        })
+
+      if (error?.code === '23505' && error.message?.includes('short_code')) continue
+      if (error) {
+        console.error('❌ notifyOfferAddedToWallet: recipient insert failed:', error)
+        return { success: false }
+      }
+      break
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('❌ notifyOfferAddedToWallet failed:', error)
+    return { success: false }
   }
 }
 

@@ -1,22 +1,29 @@
 /**
- * Format price to ensure proper £ symbol display
- * Handles cases where business might have already included £ symbol
+ * Format a business-entered price for display.
+ *
+ * Businesses type prices freely (e.g. "From €45/day", "Free", "$20", "£10", or
+ * just "45"). We must NOT blindly prepend a currency symbol, or a franchise on
+ * another currency ends up with nonsense like "£From €45/day" (dennis quick-win,
+ * Jul 2026). Rule: if the value already contains a currency symbol or any
+ * descriptive text, show it exactly as typed. Only a BARE number gets a symbol,
+ * and that symbol is configurable per franchise (defaults to £ to preserve
+ * existing UK behaviour).
  */
-export function formatPrice(price: string | number | undefined | null): string {
-  if (!price) return '£0.00'
-  
+export function formatPrice(
+  price: string | number | undefined | null,
+  currencySymbol: string = '£'
+): string {
+  if (price === null || price === undefined) return ''
+
   const priceStr = price.toString().trim()
-  
-  // If price is empty or just whitespace
-  if (!priceStr) return '£0.00'
-  
-  // If price already starts with £, return as is
-  if (priceStr.startsWith('£')) {
-    return priceStr
-  }
-  
-  // If price is just a number, add £ symbol
-  return `£${priceStr}`
+  if (!priceStr) return ''
+
+  // Already has its own currency symbol or descriptive text — respect it as-is.
+  const isBareNumber = /^\d+(\.\d{1,2})?$/.test(priceStr)
+  if (!isBareNumber) return priceStr
+
+  // Bare number → prefix the franchise currency symbol.
+  return `${currencySymbol}${priceStr}`
 }
 
 /**

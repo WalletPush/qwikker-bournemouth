@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Building2, User, Mail, Phone, MapPin, Clock, FileText, Settings, Copy, CheckCircle } from 'lucide-react'
-import { BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, SUBSCRIPTION_PLAN_OPTIONS } from '@/types/profiles'
+import { BUSINESS_TYPE_OPTIONS, SUBSCRIPTION_PLAN_OPTIONS } from '@/types/profiles'
 
 interface BusinessCreationModalProps {
   isOpen: boolean
@@ -283,18 +283,12 @@ export function BusinessCreationModal({ isOpen, onClose, onCreateBusiness, city 
 
                 <div>
                   <Label htmlFor="businessTown">Town</Label>
-                  <Select value={formData.businessTown} onValueChange={(value) => handleInputChange('businessTown', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select town" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUSINESS_TOWN_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="businessTown"
+                    value={formData.businessTown}
+                    onChange={(e) => handleInputChange('businessTown', e.target.value)}
+                    placeholder="e.g. Christchurch"
+                  />
                 </div>
 
                 <div>

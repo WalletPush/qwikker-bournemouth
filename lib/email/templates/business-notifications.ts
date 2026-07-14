@@ -14,6 +14,14 @@ function wrapInLayout(content: string, city: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QWIKKER</title>
+  <style>
+    /* Responsive helpers — supported by iOS Mail, Apple Mail, Gmail app & Outlook mobile.
+       Desktop/Outlook-Windows ignore these and keep the fixed layout. */
+    @media only screen and (max-width:480px) {
+      .qw-pad { padding: 28px 20px !important; }
+      .qw-col { display: block !important; width: 100% !important; padding: 0 0 12px 0 !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#ffffff;">
   <div style="max-width:600px;margin:0 auto;background:#1a1a1a;">
@@ -50,6 +58,33 @@ export interface BusinessSubmittedEmailData {
   businessName: string
   city: string
   supportEmail: string
+}
+
+export interface FreeTierTrialNudgeEmailData {
+  firstName: string
+  businessName: string
+  city: string
+  /** Human-readable trial tier name, e.g. "Featured" — from franchise_crm_configs.default_trial_tier */
+  trialTierDisplayName: string
+  /** Trial length in days — from franchise_crm_configs.founding_member_trial_days */
+  trialDays: number
+  /**
+   * The exact feature bullets for the trial tier. MUST be sourced from
+   * getTierFeatures(default_trial_tier) so the email matches what the tier
+   * actually includes (and what the pricing/claim pages advertise).
+   */
+  features: string[]
+  /** One-click path to start the trial / upgrade */
+  upgradeUrl: string
+  dashboardUrl: string
+  supportEmail: string
+  /** Absolute base URL used to load hosted email icons from /public/email (e.g. https://city.qwikker.com). */
+  assetBaseUrl: string
+  /** Optional hosted screenshots. When omitted, image rows are skipped (no broken images). */
+  featureImages?: {
+    analytics?: string
+    loyalty?: string
+  }
 }
 
 export interface BusinessApprovalEmailData {
@@ -178,6 +213,132 @@ export function createBusinessWelcomeEmail(data: BusinessWelcomeEmailData): Emai
     </div>`, data.city)
 
   const text = `Welcome to QWIKKER, ${data.firstName}\n\nThanks for registering ${data.businessName}. Your dashboard is ready.\n\nBefore you go live, complete your profile: logo, photo, description, hours, and tagline. Then hit Submit for Review.\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+
+  return { subject, html, text }
+}
+
+export function createFreeTierTrialNudgeEmail(data: FreeTierTrialNudgeEmailData): EmailTemplate {
+  const tier = data.trialTierDisplayName
+  const days = data.trialDays
+  const subject = `${data.firstName}, try ${tier} free for ${days} days`
+
+  // Derive capabilities from the tier's REAL feature list (single source of
+  // truth = getTierFeatures) so a benefit only appears if the tier includes it.
+  const feats = (data.features || []).join(' | ').toLowerCase()
+  const hasLoyalty = /stamp|loyalt/.test(feats)
+  const hasPush = /push/.test(feats)
+  const hasAnalytics = /analytic/.test(feats)
+  const hasBadge = /badge|pick|featured|higher/.test(feats)
+
+  // Compact, benefit-led items — icon + short title + one line. Tier-gated so an
+  // item only appears if the tier actually includes it.
+  const ASSET = `${data.assetBaseUrl}/email`
+  type Benefit = { icon: string; title: string; line: string }
+  const benefits: Benefit[] = [
+    { icon: 'ic-visibility.png', title: 'Get found first', line: 'Rank higher in the AI concierge so nearby customers discover you.' },
+    { icon: 'ic-offers.png', title: 'Win the decision', line: 'Put timely offers in front of people as they choose where to spend.' },
+  ]
+  if (hasBadge) benefits.push({ icon: 'ic-badge.png', title: 'Stand out', line: 'A premium badge and priority placement in the listings.' })
+  if (hasLoyalty) benefits.push({ icon: 'ic-loyalty.png', title: 'Keep them coming back', line: 'A digital stamp card that lives in the customer&rsquo;s phone wallet.' })
+  if (hasPush) benefits.push({ icon: 'ic-push.png', title: 'Reach them instantly', line: 'Send offers straight to customers&rsquo; phones &mdash; no ad budget.' })
+  if (hasAnalytics) benefits.push({ icon: 'ic-analytics.png', title: 'See what works', line: 'Track views, saves and redemptions &mdash; stop guessing.' })
+
+  const iconCard = (b: Benefit) => `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+          <tr>
+            <td style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:10px;padding:18px 16px;">
+              <img src="${ASSET}/${b.icon}" width="42" height="42" alt="" style="display:block;border:0;border-radius:9px;margin:0 0 12px;" />
+              <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#ffffff;letter-spacing:-0.2px;">${b.title}</p>
+              <p style="margin:0;font-size:13px;line-height:1.55;color:#999999;">${b.line}</p>
+            </td>
+          </tr>
+        </table>`
+
+  // 2-column grid (pairs of cards per row) — table-based for email clients.
+  let grid = ''
+  for (let i = 0; i < benefits.length; i += 2) {
+    const left = benefits[i]
+    const right = benefits[i + 1]
+    grid += `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:0 0 12px;">
+        <tr>
+          <td class="qw-col" width="50%" valign="top" style="padding:0 6px 0 0;">${iconCard(left)}</td>
+          <td class="qw-col" width="50%" valign="top" style="padding:0 0 0 6px;">${right ? iconCard(right) : ''}</td>
+        </tr>
+      </table>`
+  }
+
+  // "Did you know?" strip — one concise, genuine retention truth (no invented
+  // Qwikker stats), themed to the loyalty angle when the tier includes it.
+  const factLine = hasLoyalty
+    ? 'A paper stamp card gets lost in a pocket &mdash; a digital one lives in the phone they never put down. And keeping a customer costs a fraction of winning a new one.'
+    : 'Keeping a customer costs a fraction of winning a new one &mdash; so getting found, and giving people a reason to return, is where growth compounds.'
+
+  // Optional screenshots (only rendered when a hosted URL is supplied)
+  const screenshots = [
+    data.featureImages?.analytics
+      ? `<img src="${data.featureImages.analytics}" alt="Your analytics dashboard" style="width:100%;max-width:540px;border-radius:8px;border:1px solid #2e2e2e;display:block;margin:0 0 12px;" />`
+      : '',
+    data.featureImages?.loyalty
+      ? `<img src="${data.featureImages.loyalty}" alt="Digital loyalty card" style="width:100%;max-width:540px;border-radius:8px;border:1px solid #2e2e2e;display:block;margin:0 0 12px;" />`
+      : '',
+  ].join('')
+
+  const screenshotBlock = screenshots
+    ? `<p style="font-size:12px;font-weight:700;color:#00d083;text-transform:uppercase;letter-spacing:1.5px;margin:32px 0 14px;">See it in action</p>${screenshots}`
+    : ''
+
+  const html = wrapInLayout(`
+    <div class="qw-pad" style="padding:40px 34px;">
+      <h2 style="font-size:23px;font-weight:700;color:#ffffff;margin:0 0 18px;line-height:1.35;letter-spacing:-0.3px;">Welcome to QWIKKER, ${data.firstName}.</h2>
+      <p style="font-size:15px;line-height:1.75;color:#d8d8d8;margin:0 0 16px;"><strong style="color:#fff;">${data.businessName}</strong> is now live on the free listing. Before you settle in, there&rsquo;s something worth knowing: you can unlock the full <strong style="color:#fff;">${tier}</strong> experience <strong style="color:#00d083;">free for ${days} days</strong> &mdash; with nothing to lose.</p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:26px 0;">
+        <tr>
+          <td style="background:#141414;border:1px solid #00d083;border-radius:10px;padding:26px 24px;text-align:center;">
+            <p style="margin:0 0 8px;font-size:11px;color:#00d083;text-transform:uppercase;letter-spacing:2px;">Your free trial</p>
+            <h3 style="margin:0;font-size:24px;color:#ffffff;font-weight:700;letter-spacing:-0.3px;">${days} days of ${tier}, free</h3>
+            <p style="margin:12px 0 0;font-size:13px;color:#8f8f8f;">No commitment &nbsp;&middot;&nbsp; No card required &nbsp;&middot;&nbsp; Cancel anytime</p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size:12px;font-weight:700;color:#00d083;text-transform:uppercase;letter-spacing:1.5px;margin:34px 0 16px;">How ${tier} helps you win &mdash; and keep &mdash; customers</p>
+
+      ${grid}
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:24px 0;">
+        <tr>
+          <td style="background:#181818;border:1px solid #2e2e2e;border-radius:8px;padding:20px 22px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#00d083;text-transform:uppercase;letter-spacing:1.5px;">Did you know</p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#c4c4c4;">${factLine}</p>
+          </td>
+        </tr>
+      </table>
+
+      ${screenshotBlock}
+
+      <div style="margin:34px 0 12px;text-align:center;">
+        <a href="${data.upgradeUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:15px 38px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;letter-spacing:0.2px;">Start your free trial</a>
+      </div>
+      <p style="font-size:13px;line-height:1.6;color:#7d7d7d;margin:10px 0 0;text-align:center;">Around 60 seconds to set up &mdash; and you won&rsquo;t be charged during your trial.</p>
+      <p style="font-size:13px;line-height:1.6;color:#7d7d7d;margin:6px 0 0;text-align:center;">Prefer to look around first? <a href="${data.dashboardUrl}" style="color:#00d083;text-decoration:none;">Open your dashboard</a>.</p>
+
+      <p style="font-size:15px;line-height:1.75;color:#d8d8d8;margin:34px 0 16px;">Any questions before you begin, simply reply to this email or reach us at <a href="mailto:${data.supportEmail}" style="color:#00d083;text-decoration:none;">${data.supportEmail}</a>.</p>
+      <p style="font-size:15px;line-height:1.75;color:#d8d8d8;margin:0;">Best,<br>The QWIKKER Team</p>
+    </div>`, data.city)
+
+  // Plain-text mirror (benefit-led, no HTML entities)
+  const textBenefits: string[] = [
+    '- Get found first: rank higher in the AI concierge so nearby customers discover you.',
+    '- Win the decision: put timely offers in front of people as they choose where to spend.',
+  ]
+  if (hasBadge) textBenefits.push('- Stand out: a premium badge and priority placement in the listings.')
+  if (hasLoyalty) textBenefits.push('- Keep them coming back: a digital stamp card in the customer\'s phone wallet.')
+  if (hasPush) textBenefits.push('- Reach them instantly: send offers straight to customers\' phones, no ad budget.')
+  if (hasAnalytics) textBenefits.push('- See what works: track views, saves and redemptions, so you stop guessing.')
+
+  const text = `Welcome to QWIKKER, ${data.firstName}\n\n${data.businessName} is now live on the free listing. You can unlock the full ${tier} experience free for ${days} days — no commitment, no card required, cancel anytime.\n\nHow ${tier} helps you win and keep customers:\n${textBenefits.join('\n')}\n\nDid you know? Industry research puts the cost of winning a new customer at roughly five times the cost of keeping one you already have — getting found by the right people, and giving them a reason to return, is where the growth is.\n\nStart your free trial: ${data.upgradeUrl}\nOr look around first: ${data.dashboardUrl}\n\nQuestions? Simply reply, or email ${data.supportEmail}.\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }

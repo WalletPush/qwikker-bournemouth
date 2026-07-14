@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateBusinessInfo } from '@/lib/actions/business-actions'
-import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, MenuPreviewItem } from '@/types/profiles'
+import { Profile, BUSINESS_TYPE_OPTIONS, MenuPreviewItem } from '@/types/profiles'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured } from '@/types/business-hours'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { updateProfileFile } from '@/lib/actions/file-actions'
 import { GoogleVerificationSection } from './GoogleVerificationSection'
-import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
+import { getVibeTagCategoriesForBusiness, getVibeTagLabel, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
 
 interface CleanProfilePageProps {
   profile: Profile
@@ -590,17 +590,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="business_town" className="text-white">Town <span className="text-red-500">*</span></Label>
-                <select
+                <Input
                   id="business_town"
                   value={businessData.business_town}
                   onChange={(e) => setBusinessData(prev => ({ ...prev, business_town: e.target.value }))}
-                  className="w-full h-10 px-3 bg-slate-700/50 border border-slate-600/50 rounded-md text-white"
-                >
-                  <option value="">Select town</option>
-                  {BUSINESS_TOWN_OPTIONS.map(town => (
-                    <option key={town.value} value={town.value} className="bg-slate-800">{town.label}</option>
-                  ))}
-                </select>
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  placeholder="e.g. Christchurch"
+                />
               </div>
               <div>
                 <Label htmlFor="business_postcode" className="text-white">Postcode</Label>
@@ -815,30 +811,67 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
               <p className="text-slate-400 mt-2">Help customers find you by describing your vibe</p>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {VIBE_TAG_CATEGORIES.map(category => (
-                <div key={category.id}>
-                  <h4 className="text-sm font-semibold text-slate-300 mb-2">{category.label}</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {category.tags.map(tag => {
-                      const isSelected = selectedVibeTags.includes(tag.slug)
-                      return (
-                        <button
-                          key={tag.slug}
-                          type="button"
-                          onClick={() => toggleVibeTag(tag.slug)}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                            isSelected
-                              ? 'bg-[#00d083]/20 text-[#00d083] border border-[#00d083]/50'
-                              : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:border-slate-500'
-                          }`}
-                        >
-                          {tag.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                // Vibe tags adapt to the selected business type (dennis-03).
+                // Reactive to the Business Type dropdown; falls back to the free-text
+                // category, then the stored system_category.
+                const vibeTagCategories = getVibeTagCategoriesForBusiness({
+                  businessType: businessData.business_type,
+                  categoryText: businessData.business_category,
+                  systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+                })
+                const shownSlugs = new Set(vibeTagCategories.flatMap(c => c.tags.map(t => t.slug)))
+                // Any previously-selected tags that don't belong to the current type's
+                // set (e.g. type was changed) — shown so they can still be removed.
+                const hiddenSelected = selectedVibeTags.filter(s => !shownSlugs.has(s))
+                return (
+                  <>
+                    {vibeTagCategories.map(category => (
+                      <div key={category.id}>
+                        <h4 className="text-sm font-semibold text-slate-300 mb-2">{category.label}</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {category.tags.map(tag => {
+                            const isSelected = selectedVibeTags.includes(tag.slug)
+                            return (
+                              <button
+                                key={tag.slug}
+                                type="button"
+                                onClick={() => toggleVibeTag(tag.slug)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-[#00d083]/20 text-[#00d083] border border-[#00d083]/50'
+                                    : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:border-slate-500'
+                                }`}
+                              >
+                                {tag.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {hiddenSelected.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-300 mb-2">Also selected</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {hiddenSelected.map(slug => (
+                            <button
+                              key={slug}
+                              type="button"
+                              onClick={() => toggleVibeTag(slug)}
+                              className="px-3 py-1.5 rounded-full text-sm font-medium transition-all bg-[#00d083]/20 text-[#00d083] border border-[#00d083]/50"
+                            >
+                              {getVibeTagLabel(slug)}
+                              <span className="ml-1">×</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
 
               {/* Custom tags */}
               <div>

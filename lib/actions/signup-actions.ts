@@ -85,6 +85,51 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     const defaultTrialTier = franchiseConfig?.default_trial_tier || 'featured'
     
     console.log(`🌍 Detected location: ${locationInfo.displayName} (${locationInfo.city}) from hostname: ${hostname}${devLocationOverride ? ` [ENV: ${devLocationOverride}]` : ''}${urlLocation ? ` [URL: ${urlLocation}]` : ''}`)
+
+    // 0b. dennis-18: If this Google-verified business is ALREADY on the platform,
+    // don't create a duplicate listing (and an orphaned auth user). google_place_id
+    // is a reliable dedupe key. Route the user to the claim flow instead.
+    if (verification?.method === 'google' && verification.placeId) {
+      const { data: existingRows } = await supabaseAdmin
+        .from('business_profiles')
+        .select('id, business_name, status, city')
+        .eq('google_place_id', verification.placeId)
+        .limit(1)
+
+      const existing = existingRows?.[0]
+      if (existing) {
+        const sameCity = existing.city?.trim().toLowerCase() === locationInfo.city?.trim().toLowerCase()
+
+        // Already imported/listed but nobody owns it yet → send them to claim it.
+        if (existing.status === 'unclaimed' && sameCity) {
+          console.log(`♻️ dennis-18: "${existing.business_name}" already listed (unclaimed) — routing to claim flow`)
+          return {
+            success: false,
+            alreadyListed: true,
+            businessId: existing.id,
+            redirectTo: `/claim?business_id=${existing.id}`,
+            error: `${existing.business_name} is already listed on QWIKKER. Let's get you claiming it instead of creating a duplicate.`,
+          }
+        }
+
+        // Exists in another city → cross-city, block with a clear message.
+        if (!sameCity) {
+          return {
+            success: false,
+            alreadyListed: true,
+            error: `${existing.business_name} is already listed on QWIKKER in ${existing.city}. Please contact support if this needs updating.`,
+          }
+        }
+
+        // Exists and already claimed/active → they should log in, not re-register.
+        return {
+          success: false,
+          alreadyListed: true,
+          error: `${existing.business_name} is already registered on QWIKKER. Please log in, or contact support if you believe this is a mistake.`,
+        }
+      }
+    }
+
     // 1. Create user in auth.users using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: formData.email,
@@ -350,19 +395,43 @@ export async function createUserAndProfile(formData: SignupData, files: { logo?:
     }
 
     // 📧 SEND WELCOME EMAIL (non-blocking)
+    // Free-tier signups get the trial-nudge email (a warm welcome + promotion of
+    // the franchise's configured free trial). Trial signups get the standard
+    // welcome. This avoids sending two emails at once.
     try {
-      const { sendBusinessWelcomeNotification } = await import('@/lib/notifications/email-notifications')
+      const { sendBusinessWelcomeNotification, sendFreeTierTrialNudgeNotification } = await import('@/lib/notifications/email-notifications')
       const { getFranchiseSupportEmail, getFranchiseBaseUrl } = await import('@/lib/email/send-franchise-email')
       const supportEmail = await getFranchiseSupportEmail(locationInfo.city)
-      const dashboardUrl = `${getFranchiseBaseUrl(locationInfo.city)}/dashboard`
+      const baseUrl = getFranchiseBaseUrl(locationInfo.city)
+      const dashboardUrl = `${baseUrl}/dashboard`
 
-      sendBusinessWelcomeNotification(formData.email, {
-        firstName: formData.firstName,
-        businessName: formData.businessName,
-        city: locationInfo.city,
-        dashboardUrl,
-        supportEmail,
-      }).catch(err => console.error('⚠️ Welcome email error (non-critical):', err))
+      if (planChoice === 'free') {
+        // Trial tier + length + features MUST match what this franchise offers.
+        const { getTierFeatures } = await import('@/lib/utils/tier-limits')
+        const trialTierDisplayName = defaultTrialTier.charAt(0).toUpperCase() + defaultTrialTier.slice(1)
+        const trialDays = franchiseConfig?.founding_member_trial_days || 90
+
+        sendFreeTierTrialNudgeNotification(formData.email, {
+          firstName: formData.firstName,
+          businessName: formData.businessName,
+          city: locationInfo.city,
+          trialTierDisplayName,
+          trialDays,
+          features: getTierFeatures(defaultTrialTier),
+          upgradeUrl: `${baseUrl}/dashboard/settings`,
+          dashboardUrl,
+          supportEmail,
+          assetBaseUrl: baseUrl,
+        }).catch(err => console.error('⚠️ Trial nudge email error (non-critical):', err))
+      } else {
+        sendBusinessWelcomeNotification(formData.email, {
+          firstName: formData.firstName,
+          businessName: formData.businessName,
+          city: locationInfo.city,
+          dashboardUrl,
+          supportEmail,
+        }).catch(err => console.error('⚠️ Welcome email error (non-critical):', err))
+      }
     } catch (error) {
       console.error('⚠️ Welcome email import error (non-critical):', error)
     }

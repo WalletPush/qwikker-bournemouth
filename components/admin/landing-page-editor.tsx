@@ -6,58 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import Image from 'next/image'
-
-function Toggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (val: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-        checked ? 'bg-[#00d083]' : 'bg-slate-600'
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  )
-}
-
-interface SupporterLogo {
-  name: string
-  logo_url: string
-  url?: string | null
-}
-
-interface Tier2Sponsor {
-  name: string
-  logo_url: string
-  url?: string | null
-}
-
-interface LandingPageConfig {
-  hero_headline?: string | null
-  hero_subtitle?: string | null
-  hero_image_url?: string | null
-  sponsor_enabled?: boolean
-  sponsor_name?: string | null
-  sponsor_tagline?: string | null
-  sponsor_logo_url?: string | null
-  sponsor_url?: string | null
-  tier2_sponsors?: Tier2Sponsor[] | null
-  supporters_enabled?: boolean
-  supporters_heading?: string | null
-  supporter_logos?: SupporterLogo[] | null
-  show_founding_counter?: boolean
-  founding_member_total_spots?: number
-  show_featured_businesses?: boolean
-  featured_business_ids?: string[] | null
-  show_pass_count?: boolean
-}
+import { LandingPageConfig, HERO_PRESETS, resolveTemplate, resolvePublishStatus } from '@/lib/constants/landing-templates'
+import { TemplatePicker } from '@/components/admin/landing-page/template-picker'
+import { ThemePicker } from '@/components/admin/landing-page/theme-picker'
+import { SectionManager } from '@/components/admin/landing-page/section-manager'
+import { LivePreview } from '@/components/admin/landing-page/live-preview'
+import { OffersSectionEditor, CategoryTilesEditor } from '@/components/admin/landing-page/offers-tiles-editors'
+import { WaitlistPanel } from '@/components/admin/landing-page/waitlist-panel'
 
 interface BusinessOption {
   id: string
@@ -89,6 +44,7 @@ async function uploadImageToCloudinary(file: File, folder: string): Promise<stri
 }
 
 export function LandingPageEditor({ city }: LandingPageEditorProps) {
+  const displayName = city.charAt(0).toUpperCase() + city.slice(1)
   const [config, setConfig] = useState<LandingPageConfig>({})
   const [businesses, setBusinesses] = useState<BusinessOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -101,6 +57,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
   const [newSupporterName, setNewSupporterName] = useState('')
   const [newTier2Name, setNewTier2Name] = useState('')
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  // While in Coming Soon mode the live-page builders are hidden by default to
+  // avoid confusion; admins can expand them to prep ahead of launch.
+  const [showLiveSetup, setShowLiveSetup] = useState(false)
 
   const heroFileRef = useRef<HTMLInputElement>(null)
   const sponsorFileRef = useRef<HTMLInputElement>(null)
@@ -262,7 +221,156 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-[1400px] mx-auto">
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-8 xl:items-start">
+        {/* Controls */}
+        <div className="space-y-6 min-w-0">
+          {/* Publish status: the single most important switch — controls whether the
+              public sees the live landing page or a branded "coming soon" page. */}
+          {(() => {
+            const isLive = resolvePublishStatus(config) === 'live'
+            return (
+              <Card className={`border ${isLive ? 'bg-[#00d083]/10 border-[#00d083]/40' : 'bg-amber-500/10 border-amber-500/40'}`}>
+                <CardContent className="py-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <span className={`mt-1.5 inline-block w-2.5 h-2.5 rounded-full ${isLive ? 'bg-[#00d083] animate-pulse' : 'bg-amber-500'}`} />
+                      <div>
+                        <p className="text-white font-semibold">
+                          {isLive ? 'Your city is LIVE' : 'Your city is in Coming Soon mode'}
+                        </p>
+                        <p className="text-sm text-slate-400 mt-0.5 max-w-md">
+                          {isLive
+                            ? 'The public sees your full landing page and can install the pass.'
+                            : 'Visitors see a branded coming-soon page with no pass install. Build out your businesses & offers, then go live.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden shrink-0 self-start">
+                      <button
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, publish_status: 'coming_soon' }))}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${!isLive ? 'bg-amber-500 text-black' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                      >
+                        Coming Soon
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, publish_status: 'live' }))}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${isLive ? 'bg-[#00d083] text-white' : 'bg-slate-900 text-slate-400 hover:text-slate-200'}`}
+                      >
+                        Go Live
+                      </button>
+                    </div>
+                  </div>
+                  {isLive && <WaitlistPanel />}
+                </CardContent>
+              </Card>
+            )
+          })()}
+
+          {/* Coming Soon page editor — only relevant while the city is hidden.
+              Edits here update the live preview immediately. */}
+          {resolvePublishStatus(config) === 'coming_soon' && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <CardTitle className="text-white">Coming Soon Page</CardTitle>
+                    <p className="text-sm text-slate-400 mt-1">What visitors see until you go live. Uses your theme. No pass install.</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Launch label (optional)</Label>
+                  <p className="text-xs text-slate-500">Small badge, e.g. &quot;Launching this summer&quot;. Blank = &quot;Coming soon&quot;.</p>
+                  <Input
+                    value={config.coming_soon_launch_label || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, coming_soon_launch_label: e.target.value || null }))}
+                    placeholder="Coming soon"
+                    maxLength={60}
+                    className="bg-slate-900 border-slate-600 text-white focus:border-[#00d083]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Headline (optional)</Label>
+                  <p className="text-xs text-slate-500">Blank = &quot;Something good is coming to {displayName}&quot;.</p>
+                  <Input
+                    value={config.coming_soon_headline || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, coming_soon_headline: e.target.value || null }))}
+                    placeholder={`Something good is coming to ${displayName}`}
+                    maxLength={120}
+                    className="bg-slate-900 border-slate-600 text-white focus:border-[#00d083]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Intro text (optional)</Label>
+                  <p className="text-xs text-slate-500">Blank = the default Qwikker explainer.</p>
+                  <textarea
+                    value={config.coming_soon_subtitle || ''}
+                    onChange={(e) => setConfig(prev => ({ ...prev, coming_soon_subtitle: e.target.value || null }))}
+                    placeholder="Tell visitors what's coming to their city…"
+                    maxLength={400}
+                    rows={3}
+                    className="w-full rounded-md bg-slate-900 border border-slate-600 text-white px-3 py-2 text-sm focus:border-[#00d083] outline-none resize-none"
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <div>
+                    <Label className="text-slate-300">Collect a waitlist</Label>
+                    <p className="text-xs text-slate-500 mt-0.5">Show an email capture so you can notify people at launch.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, coming_soon_waitlist_enabled: !(prev.coming_soon_waitlist_enabled !== false) }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.coming_soon_waitlist_enabled !== false ? 'bg-[#00d083]' : 'bg-slate-600'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.coming_soon_waitlist_enabled !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Preview for smaller screens (sticky version lives in the right column on xl) */}
+          <div className="xl:hidden">
+            <LivePreview config={config} city={city} displayName={displayName} businesses={businesses} />
+          </div>
+
+          <TemplatePicker config={config} displayName={displayName} onChange={setConfig} />
+          <ThemePicker config={config} onChange={setConfig} />
+
+          {/* Live-page builders. Irrelevant while in Coming Soon, so collapse them
+              behind a clear header to keep that mode focused (still editable to prep). */}
+          {resolvePublishStatus(config) === 'coming_soon' && (
+            <button
+              type="button"
+              onClick={() => setShowLiveSetup(v => !v)}
+              className="w-full flex items-center justify-between gap-4 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3.5 text-left hover:border-slate-600 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-medium text-slate-200">Live page setup</p>
+                <p className="text-xs text-slate-500 mt-0.5">Sections, offers, featured businesses & sponsors. These appear when you go live — set them up any time.</p>
+              </div>
+              <span className="text-xs font-medium text-[#00d083] shrink-0">{showLiveSetup ? 'Hide' : 'Show'}</span>
+            </button>
+          )}
+
+          <div className={
+            resolvePublishStatus(config) === 'coming_soon'
+              ? (showLiveSetup ? 'space-y-6 opacity-70' : 'hidden')
+              : 'space-y-6'
+          }>
+          <SectionManager config={config} onChange={setConfig} />
+          <OffersSectionEditor config={config} onChange={setConfig} />
+          <CategoryTilesEditor config={config} onChange={setConfig} />
+
       {/* Hero Section */}
       <Card className="bg-slate-800/50 border-slate-700">
         <CardHeader>
@@ -303,9 +411,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label className="text-slate-300">Background Image</Label>
-            <p className="text-xs text-slate-500">Recommended: 1920x1080 or wider. Leave blank for the default city bokeh.</p>
+            <p className="text-xs text-slate-500">Recommended: 1920x1080 or wider. Pick a built-in background or upload your own.</p>
 
             {config.hero_image_url && (
               <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-600">
@@ -326,6 +434,40 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               </div>
             )}
 
+            {/* Built-in background presets (+ template default) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(() => {
+                const templateDefault = resolveTemplate(config).defaultHeroImage
+                const isDefault = !config.hero_image_url
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, hero_image_url: null }))}
+                    className={`relative h-16 rounded-lg overflow-hidden border-2 transition-all ${isDefault ? 'border-[#00d083] ring-1 ring-[#00d083]/40' : 'border-slate-700 hover:border-slate-500'}`}
+                    title="Use this template's default"
+                  >
+                    <Image src={templateDefault} alt="Template default" fill className="object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/60 text-[10px] text-white py-0.5 text-center">Default</span>
+                  </button>
+                )
+              })()}
+              {HERO_PRESETS.map((preset) => {
+                const isSelected = config.hero_image_url === preset.url
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, hero_image_url: preset.url }))}
+                    className={`relative h-16 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-[#00d083] ring-1 ring-[#00d083]/40' : 'border-slate-700 hover:border-slate-500'}`}
+                    title={preset.label}
+                  >
+                    <Image src={preset.url} alt={preset.label} fill className="object-cover" />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/60 text-[10px] text-white py-0.5 text-center truncate px-1">{preset.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
             <input
               ref={heroFileRef}
               type="file"
@@ -340,7 +482,7 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
               disabled={uploadingHero}
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
             >
-              {uploadingHero ? 'Uploading...' : config.hero_image_url ? 'Replace Image' : 'Upload Image'}
+              {uploadingHero ? 'Uploading...' : 'Upload your own'}
             </Button>
           </div>
         </CardContent>
@@ -362,13 +504,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex items-center justify-between">
-            <Label className="text-slate-300">Enable Sponsor Banner</Label>
-            <Toggle
-              checked={config.sponsor_enabled || false}
-              onCheckedChange={(val) => setConfig(prev => ({ ...prev, sponsor_enabled: val }))}
-            />
-          </div>
+          {!config.sponsor_enabled && (
+            <p className="text-xs text-slate-500">Turn <span className="text-slate-300 font-medium">Sponsors</span> on in the <span className="text-slate-300 font-medium">Sections</span> panel above, then configure it here.</p>
+          )}
 
           {config.sponsor_enabled && (
             <>
@@ -569,13 +707,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex items-center justify-between">
-            <Label className="text-slate-300">Enable Supporters Section</Label>
-            <Toggle
-              checked={config.supporters_enabled || false}
-              onCheckedChange={(val) => setConfig(prev => ({ ...prev, supporters_enabled: val }))}
-            />
-          </div>
+          {!config.supporters_enabled && (
+            <p className="text-xs text-slate-500">Turn <span className="text-slate-300 font-medium">Supporters</span> on in the <span className="text-slate-300 font-medium">Sections</span> panel above, then configure it here.</p>
+          )}
 
           {config.supporters_enabled && (
             <>
@@ -699,16 +833,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-slate-300">Show Counter on Landing Page</Label>
-              <p className="text-xs text-slate-500 mt-1">Displays remaining founding member spots to create urgency</p>
-            </div>
-            <Toggle
-              checked={config.show_founding_counter || false}
-              onCheckedChange={(val) => setConfig(prev => ({ ...prev, show_founding_counter: val }))}
-            />
-          </div>
+          {!config.show_founding_counter && (
+            <p className="text-xs text-slate-500">Turn <span className="text-slate-300 font-medium">Founding Member Counter</span> on in the <span className="text-slate-300 font-medium">Sections</span> panel above, then set the total here.</p>
+          )}
 
           {config.show_founding_counter && (
             <div className="space-y-2">
@@ -752,13 +879,9 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label className="text-slate-300">Show Featured Businesses</Label>
-            <Toggle
-              checked={config.show_featured_businesses || false}
-              onCheckedChange={(val) => setConfig(prev => ({ ...prev, show_featured_businesses: val }))}
-            />
-          </div>
+          {!config.show_featured_businesses && (
+            <p className="text-xs text-slate-500">Turn <span className="text-slate-300 font-medium">Featured Businesses</span> on in the <span className="text-slate-300 font-medium">Sections</span> panel above, then pick businesses here.</p>
+          )}
 
           {config.show_featured_businesses && (
             <>
@@ -792,35 +915,7 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
           )}
         </CardContent>
       </Card>
-
-      {/* Pass Holder Count */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#00d083]/10">
-              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div>
-              <CardTitle className="text-white">Pass Holder Count</CardTitle>
-              <p className="text-sm text-slate-400 mt-1">Show how many people have the city pass on your landing page</p>
-            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-slate-300">Show Pass Holder Count</Label>
-              <p className="text-xs text-slate-500 mt-1">Displays &quot;Join X people already exploring [city]&quot; on the landing page</p>
-            </div>
-            <Toggle
-              checked={config.show_pass_count || false}
-              onCheckedChange={(val) => setConfig(prev => ({ ...prev, show_pass_count: val }))}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Save */}
       {loadFailed && (
@@ -847,6 +942,13 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
       >
         {isSaving ? 'Saving...' : 'Save Landing Page Configuration'}
       </Button>
+        </div>
+
+        {/* Sticky live preview (xl and up) */}
+        <div className="hidden xl:block xl:sticky xl:top-6">
+          <LivePreview config={config} city={city} displayName={displayName} businesses={businesses} />
+        </div>
+      </div>
     </div>
   )
 }

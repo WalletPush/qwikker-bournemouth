@@ -56,21 +56,26 @@ const getSubscription = (business: BusinessCRMData) => {
   return Array.isArray(business.subscription) ? business.subscription[0] : business.subscription
 }
 
-// Build the best available Google Maps URL for a business:
-// 1. Exact place via google_place_id (opens the precise listing)
-// 2. Coordinates (latitude/longitude)
-// 3. Fallback to a name + address/town search
+// Build the best available Google Maps URL for a business. Order matters so we
+// open the actual BUSINESS LISTING, never a bare dropped pin (dennis-06):
+// 1. Exact place via google_place_id (opens the precise Google listing)
+// 2. Name + address/town text search (opens the business's listing card)
+// 3. Raw coordinates — LAST resort only (this is what shows a bare pin)
 const getGoogleMapsUrl = (business: BusinessCRMData): string => {
   if (business.google_place_id) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.business_name)}&query_place_id=${business.google_place_id}`
   }
-  if (business.latitude != null && business.longitude != null) {
-    return `https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`
-  }
   const query = [business.business_name, business.business_address || business.business_town]
     .filter(Boolean)
     .join(' ')
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+    .trim()
+  if (query) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  }
+  if (business.latitude != null && business.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.business_name || 'business')}`
 }
 
 // Helper function to get tier-specific border color
@@ -914,9 +919,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
       <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor(business)} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
 
         {/* Main Content */}
-        <div className="p-6">
-          {/* Header Row */}
-          <div className="flex items-start justify-between mb-6">
+        <div className="p-6 @container">
+          {/* Header Row — stacks (name above actions) when the CARD itself is
+              narrow (e.g. 2-up grid), rows out when it has room. Uses container
+              queries so it responds to card width, not viewport width. */}
+          <div className="flex flex-col gap-3 @min-[480px]:flex-row @min-[480px]:items-start @min-[480px]:justify-between @min-[480px]:gap-0 mb-4">
             {/* Left: Business Info with Avatar */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <InitialAvatar 
@@ -924,7 +931,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 className="w-12 h-12 rounded-xl border-2 border-slate-600/50 shadow-lg text-base font-bold flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <h3 className="text-2xl font-bold text-white truncate">
+                <h3 className="text-xl @min-[480px]:text-2xl font-bold text-white leading-tight line-clamp-2 break-words">
                   {business.business_name}
                 </h3>
                 {/* Google Primary Type */}
@@ -981,7 +988,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Right: Quick Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            <div className="flex items-center gap-2 flex-shrink-0 @min-[480px]:ml-4">
               <button
                 onClick={() => contactEmail ? window.open(`mailto:${contactEmail}`) : setShowAddEmailModal(true)}
                 className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
@@ -1144,12 +1151,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           )}
 
           {/* Tier-colored Full Width Line - More Visible */}
-          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-6 opacity-80`} />
+          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-4 opacity-80`} />
 
-          {/* Stats Grid - Centered Icons & Text */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Stats Grid - Centered Icons & Text (columns respond to card width) */}
+          <div className="grid grid-cols-3 @min-[560px]:grid-cols-5 gap-3">
             {/* Tier */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
+            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
               <svg className="w-4 h-4 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
@@ -1171,12 +1178,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Billing */}
-            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-blue-500/20 text-center">
+            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-blue-500/20 text-center">
               <svg className="w-4 h-4 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
-                <span className="font-medium text-white text-base leading-tight block">
+                <span className="font-medium text-white text-sm @min-[560px]:text-base leading-tight block">
                   {/* Show trial end date if on trial (subscription OR legacy) */}
                   {sub?.is_in_free_trial && sub?.free_trial_end_date
                     ? formatDateConsistent(sub.free_trial_end_date)
@@ -1189,7 +1196,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Status */}
-            <div className={`backdrop-blur-sm px-4 py-5 rounded-xl border text-center ${
+            <div className={`backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border text-center ${
               // ✅ FIXED: Check trial_status directly (cleaner logic)
               business.trial_status === 'expired'
                 ? 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
@@ -1237,12 +1244,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             </div>
 
             {/* Joined */}
-            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-4 py-5 rounded-xl border border-amber-500/20 text-center">
+            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-amber-500/20 text-center">
               <svg className="w-4 h-4 text-amber-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
-              <span className="font-medium text-white text-base leading-tight block">
+              <span className="font-medium text-white text-sm @min-[560px]:text-base leading-tight block">
                 {formatDateConsistent(business.created_at)}
               </span>
             </div>
@@ -1258,7 +1265,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                 (entitlement.state === 'UNCLAIMED' && business.admin_chat_fallback_approved)
               
               return (
-                <div className={`backdrop-blur-sm px-4 py-5 rounded-xl border text-center ${
+                <div
+                  title="Whether this business can appear in the AI chat. Paid & trial businesses are always eligible. Imported/unclaimed listings only appear as text-only fallback suggestions once approved via 'Make AI eligible' (and can be removed again)."
+                  className={`backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border text-center ${
                   isAiEligible
                     ? 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
                     : 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'

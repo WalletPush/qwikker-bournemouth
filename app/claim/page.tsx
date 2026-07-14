@@ -373,7 +373,16 @@ export default function ClaimPage() {
       if (result.success) {
         setStep('submitted')
       } else {
-        alert(result.error || 'Failed to submit claim. Please try again.')
+        const msg = result.error || 'Failed to submit claim. Please try again.'
+        // If the code expired mid-flow, send them back to re-verify with a clear
+        // message instead of a dead-end failure after they've filled everything.
+        if (/expired|invalid or expired/i.test(msg)) {
+          setVerificationCode('')
+          setStep('email-verify')
+          alert('Your verification code expired before you finished. We\'ll send you a fresh one — please verify again to complete your claim.')
+        } else {
+          alert(msg)
+        }
       }
     } catch (error) {
       console.error('Submit claim error:', error)

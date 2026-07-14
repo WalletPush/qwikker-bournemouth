@@ -33,7 +33,7 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
     const supabase = createServiceRoleClient()
     const { data: cityConfig, error: configError } = await supabase
       .from('franchise_crm_configs')
-      .select('display_name, currency_symbol, status')
+      .select('display_name, currency_symbol, status, landing_page_config')
       .eq('city', city)
       .single()
     
@@ -43,6 +43,16 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
     // If city not found or not active, redirect to global site
     if (!cityConfig || (cityConfig.status !== 'active' && cityConfig.status !== 'pending_setup')) {
       console.log('🎫 [JOIN] Redirecting to / - cityConfig not found or inactive')
+      redirect('/')
+    }
+
+    // 🔒 COMING SOON GATE: a city in coming-soon mode must not take pass installs.
+    // Mirrors the publish logic in app/page.tsx (admin switch wins; existing
+    // `active` cities without an explicit switch stay live).
+    const cfg = (cityConfig.landing_page_config as { publish_status?: 'live' | 'coming_soon' } | null) || {}
+    const publiclyLive = cfg.publish_status === 'live' || (cfg.publish_status !== 'coming_soon' && cityConfig.status === 'active')
+    if (!publiclyLive) {
+      console.log('🎫 [JOIN] Redirecting to / - city is in coming-soon mode')
       redirect('/')
     }
     

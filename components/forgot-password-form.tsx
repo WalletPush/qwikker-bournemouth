@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
+import { sendPasswordResetEmail } from '@/lib/actions/password-reset-actions'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,16 +23,14 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
-      if (error) throw error
+      // Sends a per-city branded reset email via the franchise's Resend key.
+      // Always resolves to success (anti-enumeration); the email only arrives if
+      // the account actually exists.
+      await sendPasswordResetEmail(email)
       setSuccess(true)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')

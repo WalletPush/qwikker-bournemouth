@@ -13,9 +13,11 @@ import {
   createSecretMenuApprovalEmail,
   createImageApprovalEmail,
   createChangeRejectionEmail,
+  createFreeTierTrialNudgeEmail,
 } from '@/lib/email/templates/business-notifications'
 import { createCityLiveEmail } from '@/lib/email/templates/city-request-notifications'
 import { createConsumerWelcomeEmail } from '@/lib/email/templates/consumer-notifications'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -178,6 +180,21 @@ export async function POST(request: NextRequest) {
         template: createCityLiveEmail({
           cityName: 'Bournemouth',
           cityUrl: 'https://bournemouth.qwikker.com',
+        }),
+      },
+      {
+        key: '13_free_tier_trial_nudge',
+        template: createFreeTierTrialNudgeEmail({
+          firstName: 'Test User',
+          businessName: 'Test Restaurant',
+          city,
+          trialTierDisplayName: 'Featured',
+          trialDays: 90,
+          features: getTierFeatures('featured'),
+          upgradeUrl: `${dashboardUrl}/dashboard/settings`,
+          dashboardUrl: `${dashboardUrl}/dashboard`,
+          supportEmail,
+          assetBaseUrl: dashboardUrl,
         }),
       },
     ]

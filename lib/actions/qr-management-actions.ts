@@ -262,6 +262,37 @@ export async function updateQRCodeTarget(id: string, newTargetUrl: string) {
 }
 
 /**
+ * Update a QR code's human-friendly name + description (server-side, bypasses RLS).
+ * `name` is NOT NULL in the DB, so an empty name is ignored (keeps the existing value).
+ */
+export async function updateQRCodeDetails(
+  id: string,
+  details: { name?: string; description?: string }
+) {
+  const supabase = createServiceRoleClient()
+
+  const update: Record<string, any> = { updated_at: new Date().toISOString() }
+  if (typeof details.name === 'string' && details.name.trim()) {
+    update.name = details.name.trim()
+  }
+  if (typeof details.description === 'string') {
+    update.description = details.description.trim() || null
+  }
+
+  const { error } = await supabase
+    .from('qr_codes')
+    .update(update)
+    .eq('id', id)
+
+  if (error) {
+    console.error('❌ Failed to update QR code details:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+/**
  * Delete a QR code (server-side, bypasses RLS)
  */
 export async function deleteQRCode(id: string) {

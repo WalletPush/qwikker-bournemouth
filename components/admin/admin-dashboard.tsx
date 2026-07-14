@@ -112,7 +112,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [selectedBusinessIds, setSelectedBusinessIds] = useState<Set<string>>(new Set())
   const [isAiEligibleModalOpen, setIsAiEligibleModalOpen] = useState(false)
   const [isUpdatingAiEligible, setIsUpdatingAiEligible] = useState(false)
-  const [bulkUpdateSuccess, setBulkUpdateSuccess] = useState<{count: number, skipped: number} | null>(null)
+  const [bulkUpdateSuccess, setBulkUpdateSuccess] = useState<{count: number, skipped: number, approved: boolean} | null>(null)
   
   // Filter state for AI eligible
   const [showOnlyAiEligible, setShowOnlyAiEligible] = useState(false)
@@ -134,8 +134,11 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   }
 
   const toggleSelectAll = (businesses: any[]) => {
-    // Only select businesses that are NOT already AI eligible
-    const eligibleForSelection = businesses.filter(b => !b.admin_chat_fallback_approved)
+    // In the "Show AI Eligible" view we act on ALREADY-eligible rows (to revoke);
+    // otherwise we act on NOT-yet-eligible rows (to grant).
+    const eligibleForSelection = businesses.filter(b =>
+      showOnlyAiEligible ? b.admin_chat_fallback_approved : !b.admin_chat_fallback_approved
+    )
     
     if (selectedBusinessIds.size === eligibleForSelection.length && eligibleForSelection.length > 0) {
       setSelectedBusinessIds(new Set())
@@ -155,14 +158,16 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessIds: Array.from(selectedBusinessIds)
+          businessIds: Array.from(selectedBusinessIds),
+          // Revoke when we're in the AI-eligible filter view, grant otherwise
+          approved: !showOnlyAiEligible
         })
       })
 
       const result = await response.json()
 
       if (response.ok && result.success) {
-        setBulkUpdateSuccess({ count: result.updated, skipped: result.skipped })
+        setBulkUpdateSuccess({ count: result.updated, skipped: result.skipped, approved: !showOnlyAiEligible })
         setSelectedBusinessIds(new Set())
         setIsAiEligibleModalOpen(false)
         
@@ -2159,7 +2164,7 @@ Qwikker Admin Team`
                       {bulkUpdateSuccess && (
                         <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                           <p className="text-emerald-300 text-sm">
-                            ✓ {bulkUpdateSuccess.count} businesses are now AI eligible
+                            ✓ {bulkUpdateSuccess.count} businesses are {bulkUpdateSuccess.approved ? 'now AI eligible' : 'no longer AI eligible'}
                             {bulkUpdateSuccess.skipped > 0 && ` (${bulkUpdateSuccess.skipped} skipped)`}
                           </p>
                         </div>
@@ -2169,7 +2174,9 @@ Qwikker Admin Team`
                       <div className="flex items-center justify-between gap-4 p-4 bg-slate-800/30 border border-slate-700 rounded-lg flex-wrap">
                         <div className="flex items-center gap-3">
                           {(() => {
-                            const eligibleForSelection = allUnclaimedBusinesses.filter(b => !b.admin_chat_fallback_approved)
+                            const eligibleForSelection = allUnclaimedBusinesses.filter(b =>
+                              showOnlyAiEligible ? b.admin_chat_fallback_approved : !b.admin_chat_fallback_approved
+                            )
                             const alreadyAiEligible = allUnclaimedBusinesses.filter(b => b.admin_chat_fallback_approved).length
                             
                             return (
@@ -2205,7 +2212,8 @@ Qwikker Admin Team`
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => { setShowOnlyAiEligible(!showOnlyAiEligible); if (!showOnlyAiEligible) setShowRecentImports(false) }}
+                            onClick={() => { setSelectedBusinessIds(new Set()); setShowOnlyAiEligible(!showOnlyAiEligible); if (!showOnlyAiEligible) setShowRecentImports(false) }}
+                            title="Filter to listings currently approved for the AI chat, so you can review or remove them."
                             className={`bg-transparent border-slate-600 hover:bg-slate-800/40 text-sm ${
                               showOnlyAiEligible ? 'border-purple-500/50 text-purple-300' : 'text-slate-300'
                             }`}
@@ -2216,9 +2224,16 @@ Qwikker Admin Team`
                             variant="outline"
                             onClick={() => setIsAiEligibleModalOpen(true)}
                             disabled={selectedBusinessIds.size === 0}
-                            className="bg-transparent border-slate-600 text-slate-200 hover:bg-slate-800/40 disabled:opacity-50"
+                            title={showOnlyAiEligible
+                              ? 'Remove these imported listings from the AI chat. They stay visible in Discover, but stop appearing as text-only fallback suggestions in chat/Atlas.'
+                              : 'Approve these imported listings to appear in the AI chat as text-only fallback suggestions (name, category, Google rating) when no paid/claimed match exists. Does not affect Discover.'}
+                            className={`bg-transparent disabled:opacity-50 ${
+                              showOnlyAiEligible
+                                ? 'border-red-500/50 text-red-300 hover:bg-red-500/10'
+                                : 'border-slate-600 text-slate-200 hover:bg-slate-800/40'
+                            }`}
                           >
-                            Make AI eligible {selectedBusinessIds.size > 0 && `(${selectedBusinessIds.size})`}
+                            {showOnlyAiEligible ? 'Remove AI eligibility' : 'Make AI eligible'} {selectedBusinessIds.size > 0 && `(${selectedBusinessIds.size})`}
                           </Button>
                         </div>
                       </div>
@@ -2290,8 +2305,9 @@ Qwikker Admin Team`
                       
                       return (
                         <div key={business.id} className="relative">
-                          {/* Selection Checkbox - Only show if NOT already AI eligible */}
-                          {!business.admin_chat_fallback_approved && (
+                          {/* Selection Checkbox - grant mode shows NOT-yet-eligible rows;
+                              the "Show AI Eligible" view shows already-eligible rows (to revoke). */}
+                          {(showOnlyAiEligible ? business.admin_chat_fallback_approved : !business.admin_chat_fallback_approved) && (
                             <div className="absolute top-3 left-3 z-10">
                               <input
                                 type="checkbox"
@@ -3747,6 +3763,7 @@ Qwikker Admin Team`
         onConfirm={handleBulkAiEligible}
         selectedCount={selectedBusinessIds.size}
         isLoading={isUpdatingAiEligible}
+        mode={showOnlyAiEligible ? 'disable' : 'enable'}
       />
 
       {/* Delete Business Modal (for incomplete listings) */}

@@ -30,10 +30,14 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/protected')
+      // Session is established via /auth/callback; send them to their dashboard.
+      router.push('/dashboard')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(
+        error instanceof Error
+          ? `${error.message}. If this link has expired, please request a new password reset email.`
+          : 'An error occurred. Please request a new password reset email.'
+      )
     } finally {
       setIsLoading(false)
     }

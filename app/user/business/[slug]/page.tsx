@@ -9,6 +9,8 @@ import { trackBusinessVisit } from '@/lib/actions/business-visit-actions'
 import { getWalletPassCookie, setWalletPassCookie } from '@/lib/utils/wallet-session'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
+import { isBusinessTrialActive } from '@/lib/utils/trial-status'
+import { getCurrencySymbolForCity } from '@/lib/utils/currency'
 
 
 interface BusinessDetailPageProps {
@@ -120,6 +122,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       booking_url,
       booking_preference,
       google_place_id,
+      placeholder_variant,
       auto_imported,
       business_offers!left(
         id,
@@ -142,29 +145,12 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     .eq('city', currentCity) // SECURITY: Filter by franchise city
     .not('business_name', 'is', null)
   
-  // ✅ CRITICAL: Filter out expired trials
-  const activeBusinesses = (approvedBusinesses || []).filter(business => {
-    // If no subscription data, assume active (legacy businesses)
-    if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-      return true
-    }
-    
-    const sub = business.business_subscriptions[0]
-    
-    // If not in trial, they're active (paid customers)
-    if (!sub.is_in_free_trial) {
-      return true
-    }
-    
-    // If in trial, check if expired
-    if (sub.free_trial_end_date) {
-      const endDate = new Date(sub.free_trial_end_date)
-      const now = new Date()
-      return endDate >= now // Only show if trial NOT expired
-    }
-    
-    return true // Default to showing if we can't determine
-  })
+  // ✅ CRITICAL: Filter out expired trials.
+  // Shared helper normalises the business_subscriptions embed
+  // (UNIQUE(business_id) makes PostgREST return an OBJECT, not an array).
+  const activeBusinesses = (approvedBusinesses || []).filter(business =>
+    isBusinessTrialActive((business as any).business_subscriptions)
+  )
   
   // 💚 Fetch vibes for all active businesses
   const vibesMap = new Map()
@@ -247,6 +233,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       booking_preference: business.booking_preference || null,
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,
+      placeholder_variant: business.placeholder_variant, // Admin placeholder override
       auto_imported: business.auto_imported,
       tags: [
         business.display_category || business.business_category, // Use new field with fallback
@@ -306,6 +293,9 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     }
   }
   
+  // Franchise currency symbol so featured-item prices show the right currency
+  const currencySymbol = await getCurrencySymbolForCity(currentCity)
+
   return (
     <UserDashboardLayout currentSection="discover" currentUser={currentUser} walletPassId={walletPassId}>
       <UserBusinessDetailPage
@@ -313,6 +303,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         businesses={allBusinesses}
         walletPassId={walletPassId}
         trackingData={trackingData}
+        currencySymbol={currencySymbol}
       />
     </UserDashboardLayout>
   )

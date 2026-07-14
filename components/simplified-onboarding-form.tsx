@@ -290,6 +290,18 @@ export function SimplifiedOnboardingForm({ referralCode, trialConfig }: Simplifi
       const result = await createUserAndProfile(fullFormData, files, referralCode || undefined, urlLocation || undefined, verification, planChoice || 'trial')
       
       if (!result.success) {
+        // dennis-18: business already on the platform. Route to the claim flow
+        // (if we have a deep-link) or show the friendly message, instead of a
+        // generic "signup failed" error.
+        const alreadyListed = (result as { alreadyListed?: boolean }).alreadyListed
+        const listedRedirect = (result as { redirectTo?: string }).redirectTo
+        if (alreadyListed) {
+          alert(result.error || 'This business is already on QWIKKER.')
+          if (listedRedirect) {
+            router.push(listedRedirect)
+          }
+          return
+        }
         throw new Error(result.error || 'Signup failed')
       }
 

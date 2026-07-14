@@ -6,9 +6,27 @@ import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { z } from 'zod'
 
 const landingPageConfigSchema = z.object({
+  // Template + theme (admins pick a template and a curated accent; layout/copy stay locked)
+  template: z.enum(['signature', 'vibrant', 'editorial']).optional(),
+  theme: z.object({
+    accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    accent_hover: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+    mode: z.enum(['dark', 'light']).optional(),
+  }).optional(),
+  section_order: z.array(z.string().max(40)).max(40).optional(),
+  sections_enabled: z.record(z.string().max(40), z.boolean()).optional(),
+
+  // City-admin publish switch (live vs branded coming-soon page)
+  publish_status: z.enum(['live', 'coming_soon']).optional(),
+  coming_soon_launch_label: z.string().max(60).nullable().optional(),
+  coming_soon_headline: z.string().max(120).nullable().optional(),
+  coming_soon_subtitle: z.string().max(400).nullable().optional(),
+  coming_soon_waitlist_enabled: z.boolean().optional(),
+
   hero_headline: z.string().max(120).nullable().optional(),
   hero_subtitle: z.string().max(300).nullable().optional(),
   hero_image_url: z.string().url().nullable().optional(),
+  hero_blur: z.number().min(0).max(100).nullable().optional(),
 
   sponsor_enabled: z.boolean().optional(),
   sponsor_name: z.string().max(100).nullable().optional(),
@@ -37,6 +55,18 @@ const landingPageConfigSchema = z.object({
   show_featured_businesses: z.boolean().optional(),
   featured_business_ids: z.array(z.string().uuid()).nullable().optional(),
   show_pass_count: z.boolean().optional(),
+
+  // New sections
+  offers_section: z.object({
+    enabled: z.boolean().optional(),
+    heading: z.string().max(100).nullable().optional(),
+    max: z.number().int().min(1).max(24).optional(),
+  }).optional(),
+  category_tiles: z.object({
+    enabled: z.boolean().optional(),
+    heading: z.string().max(100).nullable().optional(),
+    categories: z.array(z.string().max(40)).max(12).nullable().optional(),
+  }).optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -68,7 +98,7 @@ export async function GET(request: NextRequest) {
     const [configResult, businessesResult] = await Promise.all([
       supabaseAdmin
         .from('franchise_crm_configs')
-        .select('landing_page_config, founding_member_enabled, founding_member_total_spots')
+        .select('landing_page_config, founding_member_enabled, founding_member_total_spots, status')
         .eq('city', requestCity)
         .single(),
       supabaseAdmin
@@ -99,9 +129,17 @@ export async function GET(request: NextRequest) {
       return true
     })
 
+    // Backward-compat: surface an explicit publish_status so the editor toggle
+    // reflects reality. Existing `active` cities (no switch saved yet) are treated
+    // as live; everything else defaults to coming-soon (safe / hidden by default).
+    const storedConfig = (configResult.data?.landing_page_config || {}) as Record<string, unknown>
+    if (storedConfig.publish_status !== 'live' && storedConfig.publish_status !== 'coming_soon') {
+      storedConfig.publish_status = configResult.data?.status === 'active' ? 'live' : 'coming_soon'
+    }
+
     return NextResponse.json({
       success: true,
-      config: configResult.data?.landing_page_config || {},
+      config: storedConfig,
       foundingMemberEnabled: configResult.data?.founding_member_enabled || false,
       foundingMemberTotalSpots: configResult.data?.founding_member_total_spots || 0,
       businesses: activeBusinesses.map(b => ({ id: b.id, business_name: b.business_name, status: b.status })),

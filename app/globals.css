@@ -246,10 +246,15 @@ body {
   max-width: 100%;
 }
 
-/* Ensure images don't cause overflow */
-img {
-  max-width: 100%;
-  height: auto;
+/* Ensure images don't cause overflow.
+   Must live in @layer base so Tailwind utilities (h-full, object-contain, etc.)
+   can override it. An unlayered `img {}` rule beats ALL layered utilities in
+   Tailwind v4, which silently defeats object-fit and fixed-height image frames. */
+@layer base {
+  img {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 /* Fix tables on mobile */

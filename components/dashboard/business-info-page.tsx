@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { updateBusinessInfo } from '@/lib/actions/business-actions'
-import { Profile, BUSINESS_TYPE_OPTIONS, BUSINESS_TOWN_OPTIONS, MenuPreviewItem } from '@/types/profiles'
+import { Profile, BUSINESS_TYPE_OPTIONS, MenuPreviewItem } from '@/types/profiles'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured } from '@/types/business-hours'
-import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
+import { getVibeTagCategoriesForBusiness, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
 
 interface BusinessInfoPageProps {
   profile: Profile
@@ -419,19 +419,13 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="business_town" className="text-white">Town <span className="text-red-500">*</span></Label>
-                <select
+                <Input
                   id="business_town"
                   value={formData.business_town}
                   onChange={(e) => handleInputChange('business_town', e.target.value)}
-                  className="w-full bg-slate-900 text-white border-slate-600 focus:border-[#00d083] rounded-md p-2"
-                >
-                  <option value="">Select town</option>
-                  {BUSINESS_TOWN_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  className="bg-slate-900 text-white border-slate-600 focus:border-[#00d083]"
+                  placeholder="e.g. Christchurch"
+                />
               </div>
               <div>
                 <Label htmlFor="business_postcode" className="text-white">Postcode</Label>
@@ -568,7 +562,12 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
               Help customers find you by describing your vibe. These tags appear on your profile and power AI recommendations.
             </p>
 
-            {VIBE_TAG_CATEGORIES.map(category => (
+            {/* Vibe tags adapt to the selected business type (dennis-03) */}
+            {getVibeTagCategoriesForBusiness({
+              businessType: formData.business_type,
+              categoryText: formData.business_category,
+              systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+            }).map(category => (
               <div key={category.id}>
                 <p className="text-sm font-medium text-slate-300 mb-2">{category.label}</p>
                 <div className="flex flex-wrap gap-2">

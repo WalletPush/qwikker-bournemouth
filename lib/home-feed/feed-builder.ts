@@ -6,6 +6,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isBusinessTrialActive } from '@/lib/utils/trial-status'
 import { getFranchiseConfig } from '@/lib/utils/franchise-config'
 import { getCityDisplayName } from '@/lib/utils/city-detection'
 import {
@@ -201,6 +202,7 @@ async function fetchBusinesses(supabase: any, city: string) {
       business_type,
       system_category,
       display_category,
+      placeholder_variant,
       vibe_tags,
       rating,
       review_count,
@@ -221,16 +223,8 @@ async function fetchBusinesses(supabase: any, city: string) {
     return []
   }
 
-  // Filter expired trials
-  return (data || []).filter((b: any) => {
-    if (!b.business_subscriptions?.length) return true
-    const sub = b.business_subscriptions[0]
-    if (!sub.is_in_free_trial) return true
-    if (sub.free_trial_end_date) {
-      return new Date(sub.free_trial_end_date) >= new Date()
-    }
-    return true
-  })
+  // Filter expired trials via shared helper (normalises object/array embed shape)
+  return (data || []).filter((b: any) => isBusinessTrialActive(b.business_subscriptions))
 }
 
 async function fetchOffers(supabase: any, city: string) {
@@ -259,6 +253,7 @@ async function fetchOffers(supabase: any, city: string) {
         latitude,
         longitude,
         system_category,
+        placeholder_variant,
         city
       )
     `)
@@ -304,6 +299,7 @@ async function fetchTonightEvents(supabase: any, city: string) {
         latitude,
         longitude,
         system_category,
+        placeholder_variant,
         city
       )
     `)
@@ -592,7 +588,7 @@ function buildTonightSection(
     if (counts.happening_tonight >= caps.happening_tonight) break
     if (!dedup.canUseBusinessInRail(event.business_id, railBusinessIds)) continue
 
-    const { image, logo } = getBusinessImage(event.biz.business_images, event.biz.logo || event.logo, event.biz.system_category, event.business_id)
+    const { image, logo } = getBusinessImage(event.biz.business_images, event.biz.logo || event.logo, event.biz.system_category, event.business_id, event.biz.placeholder_variant)
     cards.push({
       id: `event-${event.id}`,
       label: 'happening_tonight',
@@ -654,7 +650,7 @@ function buildTonightSection(
     if (!dedup.canUseOffer(offer.id)) continue
 
     const biz = offer.business_profiles
-    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, offer.business_id)
+    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, offer.business_id, biz.placeholder_variant)
     cards.push({
       id: `deal-${offer.id}`,
       label: 'tonights_deal',
@@ -711,7 +707,7 @@ function buildTonightSection(
       if (counts.place_to_try >= dynamicPlaceCap) break
       if (!dedup.canUseBusinessInRail(biz.id, railBusinessIds)) continue
 
-      const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, biz.id)
+      const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, biz.id, biz.placeholder_variant)
       cards.push({
         id: `place-${biz.id}`,
         label: 'place_to_try',
@@ -758,7 +754,7 @@ function buildDishesSection(
     if (!biz.menu_preview || !Array.isArray(biz.menu_preview)) continue
 
     const { boost, reasons } = computeBusinessPreferenceBoost(biz, mappedTokens, loyaltyMap)
-    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, biz.id)
+    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, biz.id, biz.placeholder_variant)
 
     for (const dish of biz.menu_preview as MenuPreviewItem[]) {
       if (!dish.name) continue
@@ -853,7 +849,7 @@ function buildDealsSection(
     if (!dedup.canUseOffer(offer.id)) continue
 
     const biz = offer.business_profiles
-    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, offer.business_id)
+    const { image, logo } = getBusinessImage(biz.business_images, biz.logo, biz.system_category, offer.business_id, biz.placeholder_variant)
     result.push({
       id: `deal-${offer.id}`,
       offerId: offer.id,
@@ -933,7 +929,7 @@ function buildPersonalizedSection(
     if (result.length >= MAX_CARDS_PER_RAIL) break
     if (!dedup.canUseBusinessInRail(item.biz.id, railBusinessIds)) continue
 
-    const { image, logo } = getBusinessImage(item.biz.business_images, item.biz.logo, item.biz.system_category, item.biz.id)
+    const { image, logo } = getBusinessImage(item.biz.business_images, item.biz.logo, item.biz.system_category, item.biz.id, item.biz.placeholder_variant)
 
     const bizOffer = offers.find((o: any) =>
       o.business_id === item.biz.id && dedup.canUseOffer(o.id)

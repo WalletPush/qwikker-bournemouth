@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { getApprovedBusinessesForQR, createQRCode, updateQRCodeTarget, deleteQRCode as deleteQRCodeAction, fetchQRCodesForAdmin, QRBusiness } from '@/lib/actions/qr-management-actions'
+import { getApprovedBusinessesForQR, createQRCode, updateQRCodeTarget, updateQRCodeDetails, deleteQRCode as deleteQRCodeAction, fetchQRCodesForAdmin, QRBusiness } from '@/lib/actions/qr-management-actions'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
 import { Download, Search, Filter, Eye } from 'lucide-react'
@@ -21,6 +21,7 @@ interface Business {
 interface GeneratedQR {
   id: string
   code_name: string
+  description?: string
   qr_type: 'discover' | 'offers' | 'secret-menu' | 'other'
   qr_category: 'qwikker-marketing' | 'static-business' | 'intent-routing'
   qr_subtype: string
@@ -50,6 +51,9 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [qrType, setQrType] = useState<'discover' | 'offers' | 'secret-menu' | 'other'>('discover')
   const [qrSubtype, setQrSubtype] = useState('')
   const [targetUrl, setTargetUrl] = useState('')
+  // Optional human-friendly name + description (fall back to auto-generated values)
+  const [qrName, setQrName] = useState('')
+  const [qrDescription, setQrDescription] = useState('')
   const [logoUrl, setLogoUrl] = useState('/qwikker-icon.svg') // Default to icon (best for QR centre)
   const [generating, setGenerating] = useState(false)
   const [generatedQrData, setGeneratedQrData] = useState<string | null>(null)
@@ -59,9 +63,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [businessSearch, setBusinessSearch] = useState('')
   const [showBusinessDropdown, setShowBusinessDropdown] = useState(false)
   
-  // Edit URL functionality
+  // Edit functionality (URL + name + description)
   const [editingCode, setEditingCode] = useState<GeneratedQR | null>(null)
   const [editUrl, setEditUrl] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const { showSuccess, showError, ModalComponent } = useElegantModal()
 
@@ -124,6 +131,7 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       const mappedCodes: GeneratedQR[] = (data || []).map((qr: any) => ({
         id: qr.id,
         code_name: qr.name || qr.qr_code,
+        description: qr.description || '',
         qr_type: qr.qr_type === 'marketing' ? 'other' : qr.qr_type as any,
         qr_category: qr.qr_type === 'marketing' ? 'qwikker-marketing' : 
                      qr.qr_type === 'business_dynamic' ? 'intent-routing' : 'static-business',
@@ -344,8 +352,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       const result = await createQRCode({
         qr_code: codeName,
         qr_type: qrType,
-        name: codeName.replace(/-/g, ' ').toUpperCase(),
-        description: `${qrSubtype} QR code`,
+        name: qrName.trim() || codeName.replace(/-/g, ' ').toUpperCase(),
+        description: qrDescription.trim() || `${qrSubtype} QR code`,
         category: qrSubtype,
         current_target_url: finalTargetUrl,
         default_target_url: finalTargetUrl,
@@ -369,6 +377,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       // Reset form (keep logo selection for next generation)
       setQrSubtype('')
       setTargetUrl('')
+      setQrName('')
+      setQrDescription('')
       if (activeSection !== 'intent-routing') {
         setSelectedBusiness('')
       }
@@ -381,25 +391,63 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
     }
   }
 
-  const updateQRCode = async (qrCode: GeneratedQR, newUrl: string) => {
-    try {
-      const result = await updateQRCodeTarget(qrCode.id, newUrl)
+  const openEditModal = (code: GeneratedQR) => {
+    setEditingCode(code)
+    setEditUrl(code.destination_url)
+    setEditName(code.code_name || '')
+    setEditDescription(code.description || '')
+  }
 
-      if (!result.success) {
-        throw new Error(result.error)
+  const closeEditModal = () => {
+    setEditingCode(null)
+    setEditUrl('')
+    setEditName('')
+    setEditDescription('')
+  }
+
+  const saveQRCodeEdit = async (qrCode: GeneratedQR) => {
+    const urlChanged = !!editUrl && editUrl !== qrCode.destination_url
+    const nameChanged = editName.trim() !== (qrCode.code_name || '')
+    const descriptionChanged = editDescription.trim() !== (qrCode.description || '')
+
+    if (!urlChanged && !nameChanged && !descriptionChanged) {
+      closeEditModal()
+      return
+    }
+
+    setSavingEdit(true)
+    try {
+      if (urlChanged) {
+        const result = await updateQRCodeTarget(qrCode.id, editUrl)
+        if (!result.success) throw new Error(result.error)
       }
 
-      const updatedCodes = generatedCodes.map(code => 
-        code.id === qrCode.id ? { ...code, destination_url: newUrl } : code
-      )
-      setGeneratedCodes(updatedCodes)
-      setEditingCode(null)
-      setEditUrl('')
-      showSuccess('QR Code URL updated successfully!')
-      
+      if (nameChanged || descriptionChanged) {
+        const result = await updateQRCodeDetails(qrCode.id, {
+          name: editName,
+          description: editDescription,
+        })
+        if (!result.success) throw new Error(result.error)
+      }
+
+      setGeneratedCodes(prev => prev.map(code =>
+        code.id === qrCode.id
+          ? {
+              ...code,
+              destination_url: urlChanged ? editUrl : code.destination_url,
+              code_name: nameChanged && editName.trim() ? editName.trim() : code.code_name,
+              description: descriptionChanged ? editDescription.trim() : code.description,
+            }
+          : code
+      ))
+      closeEditModal()
+      showSuccess('QR Code updated successfully!')
+
     } catch (error) {
       console.error('❌ Failed to update QR code:', error)
-      showError('Failed to update QR code URL')
+      showError('Failed to update QR code')
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -802,6 +850,35 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 </select>
               </div>
 
+              {/* Name (optional) */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">
+                  Name <span className="text-slate-500 font-normal">(optional)</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Front window sticker"
+                  value={qrName}
+                  onChange={(e) => setQrName(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
+                <p className="text-xs text-slate-500">Leave blank to auto-generate a code name.</p>
+              </div>
+
+              {/* Description (optional) */}
+              <div className="space-y-2">
+                <Label className="text-slate-300">
+                  Description <span className="text-slate-500 font-normal">(optional)</span>
+                </Label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Placed by the till for the summer BOGOF offer"
+                  value={qrDescription}
+                  onChange={(e) => setQrDescription(e.target.value)}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm resize-none placeholder:text-slate-500"
+                />
+              </div>
+
               {/* Target URL (Non-Intent Routing Only) */}
               {activeSection !== 'intent-routing' && (
                 <div className="space-y-2">
@@ -1078,13 +1155,10 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => {
-                            setEditingCode(code)
-                            setEditUrl(code.destination_url)
-                          }}
+                          onClick={() => openEditModal(code)}
                           className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black"
                         >
-                          Edit URL
+                          Edit
                         </Button>
                         <Button 
                           size="sm" 
@@ -1104,19 +1178,16 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
         </CardContent>
       </Card>
 
-      {/* Edit URL Modal */}
+      {/* Edit QR Code Modal */}
       {editingCode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-lg w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white text-lg font-semibold">Edit QR Code URL</h3>
+              <h3 className="text-white text-lg font-semibold">Edit QR Code</h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setEditingCode(null)
-                  setEditUrl('')
-                }}
+                onClick={closeEditModal}
                 className="text-slate-400 hover:text-white"
               >
                 ✕
@@ -1131,6 +1202,28 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                 <p className="text-slate-400 text-xs mb-4">
                   {editingCode.qr_category} • {editingCode.qr_subtype}
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-300">Name</Label>
+                <Input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white"
+                  placeholder="e.g. Front window sticker"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-300">Description</Label>
+                <textarea
+                  rows={2}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm resize-none placeholder:text-slate-500"
+                  placeholder="e.g. Placed by the till for the summer BOGOF offer"
+                />
               </div>
               
               <div className="space-y-2">
@@ -1152,20 +1245,17 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
               <div className="flex gap-3 justify-end">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setEditingCode(null)
-                    setEditUrl('')
-                  }}
+                  onClick={closeEditModal}
                   className="text-slate-300 border-slate-600 hover:bg-slate-700"
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => updateQRCode(editingCode, editUrl)}
-                  disabled={!editUrl || editUrl === editingCode.destination_url}
+                  onClick={() => saveQRCodeEdit(editingCode)}
+                  disabled={savingEdit}
                   className="bg-[#00d083] hover:bg-[#00b570] text-white"
                 >
-                  Update URL
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>

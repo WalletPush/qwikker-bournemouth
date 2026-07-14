@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Building2, Upload, X, Check, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
-import { VIBE_TAG_CATEGORIES, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH } from '@/lib/constants/vibe-tags'
+import { getVibeTagCategoriesForBusiness, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH } from '@/lib/constants/vibe-tags'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured, convertStructuredToText } from '@/types/business-hours'
 import { getTierFeatures } from '@/lib/utils/tier-limits'
@@ -737,11 +737,12 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
                 Help customers find you by selecting tags that describe your business. You can always change these later.
               </p>
 
-              {VIBE_TAG_CATEGORIES.map(category => (
-                <div key={category.id}>
-                  <p className="text-sm font-medium mb-1.5">{category.label}</p>
+              {/* Vibe tags adapt to the business category/type (dennis-03) */}
+              {getVibeTagCategoriesForBusiness({ categoryText: category, businessType: type }).map(vibeCategory => (
+                <div key={vibeCategory.id}>
+                  <p className="text-sm font-medium mb-1.5">{vibeCategory.label}</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {category.tags.map(tag => {
+                    {vibeCategory.tags.map(tag => {
                       const isSelected = selectedVibeTags.includes(tag.slug)
                       return (
                         <button

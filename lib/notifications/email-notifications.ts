@@ -7,12 +7,14 @@ import {
   createOfferApprovalEmail, 
   createMenuApprovalEmail,
   createBusinessRejectionEmail,
+  createFreeTierTrialNudgeEmail,
   BusinessWelcomeEmailData,
   BusinessSubmittedEmailData,
   BusinessApprovalEmailData,
   OfferApprovalEmailData,
   MenuApprovalEmailData,
-  BusinessRejectionEmailData
+  BusinessRejectionEmailData,
+  FreeTierTrialNudgeEmailData
 } from '../email/templates/business-notifications'
 
 /**
@@ -49,6 +51,53 @@ export async function sendBusinessWelcomeNotification(
     return result
   } catch (error) {
     console.error('❌ Error sending business welcome email:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Send the free-tier → trial nudge email.
+ *
+ * Sent when a business signs up on the FREE listing (not the trial). It thanks
+ * them for joining and promotes the franchise's configured free trial. The tier
+ * name + trial length MUST come from franchise_crm_configs (default_trial_tier +
+ * founding_member_trial_days) so the email always matches what that franchise
+ * actually offers.
+ */
+export async function sendFreeTierTrialNudgeNotification(
+  email: string,
+  data: FreeTierTrialNudgeEmailData
+): Promise<{
+  success: boolean
+  messageId?: string
+  error?: string
+}> {
+  try {
+    console.log(`📧 Sending free-tier trial nudge email to ${data.firstName} (${email})`)
+
+    const template = createFreeTierTrialNudgeEmail(data)
+
+    const result = await sendFranchiseEmail({
+      city: data.city,
+      to: email,
+      template,
+      tags: [
+        { name: 'category', value: 'free_tier_trial_nudge' },
+      ]
+    })
+
+    if (result.success) {
+      console.log(`✅ Free-tier trial nudge email sent: ${result.messageId}`)
+    } else {
+      console.error(`❌ Failed to send free-tier trial nudge email: ${result.error}`)
+    }
+
+    return result
+  } catch (error) {
+    console.error('❌ Error sending free-tier trial nudge email:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
