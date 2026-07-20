@@ -27,6 +27,23 @@ export function formatPrice(
 }
 
 /**
+ * Should we render a price at all?
+ *
+ * AI-pulled / imported featured menu items usually have NO price (or a placeholder
+ * zero), and rendering that as "£0.00" looks broken. This returns false for empty,
+ * missing, or purely-zero values (with or without a currency symbol), while still
+ * allowing legitimate text prices like "Free" or "From £10".
+ */
+export function hasDisplayablePrice(price: string | number | undefined | null): boolean {
+  if (price === null || price === undefined) return false
+  const str = price.toString().trim()
+  if (!str) return false
+  // Purely zero, optionally with a leading currency symbol: £0, $0.00, €0,00, 0
+  if (/^[£$€]?\s*0+([.,]0+)?\s*$/.test(str)) return false
+  return true
+}
+
+/**
  * Clean price string for database storage (remove £ symbol)
  */
 export function cleanPrice(price: string): string {

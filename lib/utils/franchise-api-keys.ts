@@ -20,6 +20,9 @@ export interface FranchiseApiKeys {
   openai_api_key: string | null
   anthropic_api_key: string | null
   
+  // Google Places (import + on-demand reviews)
+  google_places_api_key: string | null
+  
   // Already in DB
   slack_webhook_url: string | null
   walletpush_api_key: string | null
@@ -49,6 +52,7 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
         resend_from_name,
         openai_api_key,
         anthropic_api_key,
+        google_places_api_key,
         slack_webhook_url,
         walletpush_api_key,
         walletpush_template_id,
@@ -78,6 +82,7 @@ export async function getFranchiseApiKeys(city: string): Promise<FranchiseApiKey
       resend_from_name: data.resend_from_name || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
       openai_api_key: clean(data.openai_api_key) || null,
       anthropic_api_key: clean(data.anthropic_api_key) || null,
+      google_places_api_key: clean(data.google_places_api_key) || process.env.GOOGLE_PLACES_API_KEY || null,
       slack_webhook_url: data.slack_webhook_url || process.env[`SLACK_WEBHOOK_URL_${city.toUpperCase()}`] || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || null,
       walletpush_api_key: clean(data.walletpush_api_key) || process.env.MOBILE_WALLET_APP_KEY || null,
       walletpush_template_id: data.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID || null,
@@ -107,6 +112,7 @@ function getFallbackApiKeys(city: string): FranchiseApiKeys {
     resend_from_name: process.env.EMAIL_FROM?.split('<')[0].trim() || `${city.charAt(0).toUpperCase() + city.slice(1)} Qwikker`,
     openai_api_key: null, // NO FALLBACK - franchise must configure
     anthropic_api_key: null, // NO FALLBACK - franchise must configure
+    google_places_api_key: process.env.GOOGLE_PLACES_API_KEY || null,
     slack_webhook_url: process.env[`SLACK_WEBHOOK_URL_${city.toUpperCase()}`] || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || null,
     walletpush_api_key: process.env.MOBILE_WALLET_APP_KEY || null,
     walletpush_template_id: process.env.MOBILE_WALLET_TEMPLATE_ID || null,

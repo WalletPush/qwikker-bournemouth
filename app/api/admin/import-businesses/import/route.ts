@@ -361,6 +361,9 @@ export async function POST(request: NextRequest) {
         let failed = 0
         const total = placeIds.length
         const importedPlaceIds: string[] = []
+        // New business_profiles ids (+ names) for the just-imported rows, so the
+        // client can immediately run enrich-on-import against them.
+        const importedBusinessIds: { id: string; name: string }[] = []
         const skippedPlaceIds: string[] = []
         const failedItems: { placeId: string; reason: string }[] = []
 
@@ -375,6 +378,7 @@ export async function POST(request: NextRequest) {
               failed,
               total,
               importedPlaceIds,
+              importedBusinessIds,
               skippedPlaceIds,
               failedItems,
             })}\n\n`))
@@ -580,7 +584,7 @@ export async function POST(request: NextRequest) {
             const simpleTagline = `${formattedCategory} • ${townName}`
 
             // Create business profile (use systemCategory from admin form)
-            const { error: insertError } = await supabase
+            const { data: insertedRow, error: insertError } = await supabase
               .from('business_profiles')
               .insert({
                 business_name: place.displayName?.text || 'Unknown',
@@ -615,6 +619,8 @@ export async function POST(request: NextRequest) {
                 owner_user_id: null
                 // NOTE: plan and trial fields are NOT set here - the trigger will normalize them to free/null
               })
+              .select('id')
+              .single()
 
             if (insertError) {
               console.error(`❌ Failed to insert ${place.displayName?.text}:`, insertError)
@@ -637,6 +643,9 @@ export async function POST(request: NextRequest) {
 
             imported++
             importedPlaceIds.push(placeId)
+            if (insertedRow?.id) {
+              importedBusinessIds.push({ id: insertedRow.id, name: place.displayName?.text || 'Unknown' })
+            }
             console.log(`✅ Imported: ${place.displayName?.text}`)
 
             // Send progress update
@@ -686,6 +695,7 @@ export async function POST(request: NextRequest) {
           failed,
           total,
           importedPlaceIds,
+          importedBusinessIds,
           skippedPlaceIds,
           failedItems,
         })}\n\n`))

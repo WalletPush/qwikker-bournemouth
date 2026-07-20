@@ -4,6 +4,7 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getSystemCategoryFromDisplayLabel, isValidSystemCategory } from '@/lib/constants/system-categories'
+import { getMaxOffers } from '@/lib/utils/tier-limits'
 import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
 import { createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
@@ -221,6 +222,58 @@ export async function POST(request: NextRequest) {
           { error: 'Failed to update business status' },
           { status: 500 }
         )
+      }
+
+      // 2b. Publish any AI-drafted offers the owner accepted at claim time.
+      // These go live immediately (status='approved') since the admin is
+      // approving the claim now. Non-fatal: a failure here must not block the claim.
+      try {
+        const accepted = Array.isArray(claim.accepted_offers) ? claim.accepted_offers : []
+        const ALLOWED_TYPES = new Set([
+          'discount', 'two_for_one', 'freebie', 'buy_x_get_y', 'percentage_off', 'fixed_amount_off', 'other',
+        ])
+
+        // Plan gating: cap how many offers can go live by the resulting tier.
+        // Free → claimed_free (1). Trial → the city's default trial tier.
+        let maxOffers = getMaxOffers('claimed_free')
+        if (isTrialClaim) {
+          const { data: fc } = await supabaseAdmin
+            .from('franchise_crm_configs')
+            .select('default_trial_tier')
+            .eq('city', claim.business.city)
+            .single()
+          maxOffers = getMaxOffers(fc?.default_trial_tier || 'featured')
+        }
+
+        const nowIso = new Date().toISOString()
+        const offerRows = accepted
+          .filter((o: Record<string, unknown>) => o && typeof o.offer_name === 'string' && typeof o.offer_value === 'string')
+          .slice(0, 10)
+          .map((o: Record<string, unknown>, i: number) => ({
+            business_id: claim.business_id,
+            offer_name: String(o.offer_name).trim().slice(0, 120),
+            offer_type: ALLOWED_TYPES.has(o.offer_type as string) ? (o.offer_type as string) : 'other',
+            offer_value: String(o.offer_value).trim().slice(0, 120),
+            offer_claim_amount: o.offer_claim_amount === 'single' ? 'single' : 'multiple',
+            offer_terms: String(o.offer_terms || '').trim().slice(0, 500),
+            status: 'approved',
+            approved_by: admin.id,
+            approved_at: nowIso,
+            display_order: i,
+          }))
+          .filter((o: { offer_name: string; offer_value: string }) => o.offer_name && o.offer_value)
+          .slice(0, maxOffers)
+
+        if (offerRows.length > 0) {
+          const { error: offersError } = await supabaseAdmin.from('business_offers').insert(offerRows)
+          if (offersError) {
+            console.error('⚠️ Failed to publish accepted claim offers (non-fatal):', offersError)
+          } else {
+            console.log(`✅ Published ${offerRows.length} accepted offer(s) for ${claim.business_id}`)
+          }
+        }
+      } catch (offersErr) {
+        console.error('⚠️ Accepted-offers publish threw (non-fatal):', offersErr)
       }
 
       // 3. Create subscription — trial path uses RPC, free path creates free tier subscription

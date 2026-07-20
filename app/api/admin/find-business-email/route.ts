@@ -3,37 +3,7 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-
-// Email-like tokens we never want to suggest (tracking, assets, examples, etc.)
-const EMAIL_BLOCKLIST = [
-  'sentry', 'wixpress', 'example.', '@example', 'cloudflare', 'godaddy',
-  'squarespace', 'wordpress', 'yourdomain', 'domain.com', 'email.com',
-  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.css', '.js',
-]
-
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
-
-function extractEmails(html: string): string[] {
-  const found = new Set<string>()
-
-  // mailto: links are the highest-signal source
-  const mailtoRegex = /mailto:([^"'?\s>]+)/gi
-  let m: RegExpExecArray | null
-  while ((m = mailtoRegex.exec(html)) !== null) {
-    found.add(m[1].trim().toLowerCase())
-  }
-
-  // Plain-text emails anywhere in the markup
-  const matches = html.match(EMAIL_REGEX) || []
-  for (const raw of matches) {
-    found.add(raw.trim().toLowerCase())
-  }
-
-  return Array.from(found).filter((email) => {
-    if (email.length > 254) return false
-    return !EMAIL_BLOCKLIST.some((bad) => email.includes(bad))
-  })
-}
+import { extractEmailsFromHtml } from '@/lib/utils/email-filter'
 
 // Reject loopback, link-local, private ranges and cloud metadata IPs (SSRF guard)
 function isBlockedHost(hostname: string): boolean {
@@ -136,10 +106,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'The website on file is not a valid URL' }, { status: 400 })
     }
 
-    // Try the homepage and a common contact page, with a hard timeout
+    // Try the homepage plus the pages most likely to carry a contact email,
+    // with a hard timeout. Homepage is first so its addresses rank highest.
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
-    const candidateUrls = [baseUrl, new URL('/contact', baseUrl).toString()]
+    const candidatePaths = ['/contact', '/contact-us', '/about', '/about-us', '/get-in-touch']
+    const candidateUrls = [
+      baseUrl,
+      ...candidatePaths.map((p) => {
+        try {
+          return new URL(p, baseUrl).toString()
+        } catch {
+          return ''
+        }
+      }),
+    ].filter(Boolean)
 
     const emails = new Set<string>()
     try {
@@ -147,7 +128,7 @@ export async function POST(request: NextRequest) {
         candidateUrls.map((u) => fetchPage(u, controller.signal).catch(() => ''))
       )
       for (const page of pages) {
-        if (page) extractEmails(page).forEach((e) => emails.add(e))
+        if (page) extractEmailsFromHtml(page).forEach((e) => emails.add(e))
       }
     } finally {
       clearTimeout(timeout)

@@ -3,8 +3,12 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
-import { createClaimInvitationEmail } from '@/lib/email/templates/business-notifications'
+import {
+  buildClaimTemplate,
+  getInviteContent,
+  isAlreadyClaimed,
+  sendClaimInvite,
+} from '@/lib/listing-engine/send-claim-invite'
 
 /**
  * Admin action: send (or preview) a branded "claim your listing" outreach email
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const { data: business, error: businessError } = await supabaseAdmin
       .from('business_profiles')
-      .select('id, business_name, email, city, status, owner_user_id')
+      .select('id, business_name, email, city, status, owner_user_id, rating, review_count')
       .eq('id', businessId)
       .single()
 
@@ -63,12 +67,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Only unclaimed listings can be invited to claim
-    const isClaimed = !!business.owner_user_id || business.status === 'approved' || business.status === 'live'
-    if (isClaimed) {
-      return NextResponse.json(
-        { error: 'This business has already been claimed' },
-        { status: 400 }
-      )
+    if (isAlreadyClaimed(business)) {
+      return NextResponse.json({ error: 'This business has already been claimed' }, { status: 400 })
     }
 
     if (!business.email) {
@@ -79,18 +79,10 @@ export async function POST(request: NextRequest) {
     }
 
     const city = business.city || requestCity
-    const baseUrl = getFranchiseBaseUrl(city)
-    const supportEmail = getFranchiseSupportEmail(city)
-
-    const template = createClaimInvitationEmail({
-      businessName: business.business_name || 'your business',
-      city,
-      claimUrl: `${baseUrl}/claim?business_id=${business.id}`,
-      forBusinessUrl: `${baseUrl}/for-business`,
-      supportEmail,
-    })
 
     if (mode === 'preview') {
+      const content = await getInviteContent(supabaseAdmin, business.id)
+      const template = buildClaimTemplate(business, city, content)
       return NextResponse.json({
         success: true,
         preview: true,
@@ -100,28 +92,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const emailResult = await sendFranchiseEmail({
-      city,
-      to: business.email,
-      template,
-      tags: [{ name: 'type', value: 'claim_invitation' }],
-    })
-
-    if (!emailResult.success) {
-      console.error(`❌ [${city}] Claim invitation failed for ${business.email}: ${emailResult.error}`)
-      return NextResponse.json(
-        { error: emailResult.error || 'Failed to send email' },
-        { status: 502 }
-      )
+    const outcome = await sendClaimInvite(supabaseAdmin, business, admin.id)
+    if (!outcome.ok) {
+      return NextResponse.json({ error: outcome.error || 'Failed to send email' }, { status: 502 })
     }
 
-    console.log(`📧 [${city}] Claim invitation sent to ${business.email} (${business.business_name})`)
-
-    return NextResponse.json({
-      success: true,
-      messageId: emailResult.messageId,
-      to: business.email,
-    })
+    return NextResponse.json({ success: true, to: outcome.to })
   } catch (error) {
     console.error('send-claim-email API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -254,7 +254,12 @@ async function fetchOffers(supabase: any, city: string) {
         longitude,
         system_category,
         placeholder_variant,
-        city
+        city,
+        business_subscriptions!business_subscriptions_business_id_fkey(
+          is_in_free_trial,
+          free_trial_end_date,
+          status
+        )
       )
     `)
     .eq('status', 'approved')
@@ -265,12 +270,12 @@ async function fetchOffers(supabase: any, city: string) {
     return []
   }
 
-  // Filter expired offers client-side
+  // Filter expired offers AND offers from expired-trial businesses.
   const now = new Date()
   return (data || []).filter((o: any) => {
     if (o.offer_end_date && new Date(o.offer_end_date) < now) return false
     if (o.offer_start_date && new Date(o.offer_start_date) > now) return false
-    return true
+    return isBusinessTrialActive(o.business_profiles?.business_subscriptions, now)
   })
 }
 
@@ -300,7 +305,12 @@ async function fetchTonightEvents(supabase: any, city: string) {
         longitude,
         system_category,
         placeholder_variant,
-        city
+        city,
+        business_subscriptions!business_subscriptions_business_id_fkey(
+          is_in_free_trial,
+          free_trial_end_date,
+          status
+        )
       )
     `)
     .eq('status', 'approved')
@@ -312,7 +322,11 @@ async function fetchTonightEvents(supabase: any, city: string) {
     return []
   }
 
-  return (data || []).map((e: any) => ({
+  // Hide events from expired-trial businesses (normalised embed shape).
+  const nowTs = new Date()
+  return (data || [])
+    .filter((e: any) => isBusinessTrialActive(e.business_profiles?.business_subscriptions, nowTs))
+    .map((e: any) => ({
     ...e,
     business_name: e.business_profiles?.business_name,
     logo: e.business_profiles?.logo,

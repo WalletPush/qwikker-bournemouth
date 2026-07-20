@@ -12,6 +12,9 @@ export interface ClaimBusiness {
   business_category?: string
   system_category?: string  // ✅ CRITICAL: For placeholder images (e.g., 'restaurant', 'cafe')
   display_category?: string // ✅ Display label (e.g., 'Italian Restaurant')
+  placeholder_variant?: number // Which placeholder image variant to use (0-based)
+  tagline?: string
+  yearsOnGoogle?: number
   type?: string
   business_type?: string
   phone?: string

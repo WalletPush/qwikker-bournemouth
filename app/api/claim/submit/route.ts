@@ -43,6 +43,45 @@ export async function POST(request: NextRequest) {
     const editedBookingUrl = formData.get('editedBookingUrl') as string
     const editedVibeTags = formData.get('editedVibeTags') as string
     const planChoice = formData.get('planChoice') as string
+
+    // Accepted AI-drafted offers (owner chose to publish these at claim time).
+    // Validated + normalised before storing so we never persist arbitrary shapes.
+    const ALLOWED_OFFER_TYPES = new Set([
+      'discount', 'two_for_one', 'freebie', 'buy_x_get_y', 'percentage_off', 'fixed_amount_off', 'other',
+    ])
+    let acceptedOffers: Array<{
+      offer_name: string
+      offer_type: string
+      offer_value: string
+      offer_claim_amount: string
+      offer_terms: string
+    }> = []
+    try {
+      const raw = formData.get('acceptedOffers') as string | null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          acceptedOffers = parsed
+            .filter((o) => o && typeof o.offer_name === 'string' && typeof o.offer_value === 'string')
+            .slice(0, 10)
+            .map((o) => ({
+              offer_name: String(o.offer_name).trim().slice(0, 120),
+              offer_type: ALLOWED_OFFER_TYPES.has(o.offer_type) ? o.offer_type : 'other',
+              offer_value: String(o.offer_value).trim().slice(0, 120),
+              offer_claim_amount: o.offer_claim_amount === 'single' ? 'single' : 'multiple',
+              offer_terms: String(o.offer_terms || '').trim().slice(0, 500),
+            }))
+            .filter((o) => o.offer_name && o.offer_value)
+        }
+      }
+    } catch {
+      acceptedOffers = []
+    }
+    // Plan gating: free/claimed_free listings may publish only 1 offer. The trial
+    // tier's higher limit is enforced at approval (we don't know the tier here).
+    if (planChoice !== 'trial') {
+      acceptedOffers = acceptedOffers.slice(0, 1)
+    }
     
     // Extract image files
     const logoFile = formData.get('logo') as File | null
@@ -376,6 +415,7 @@ export async function POST(request: NextRequest) {
         edited_booking_preference: editedBookingPreference || null,
         edited_booking_url: editedBookingUrl || null,
         edited_vibe_tags: editedVibeTags || null,
+        accepted_offers: acceptedOffers.length > 0 ? acceptedOffers : null,
         plan_choice: planChoice || 'free',
         logo_upload: logoUrl,
         hero_image_upload: heroImageUrl,

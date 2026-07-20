@@ -9,11 +9,13 @@ import { EmailVerification } from '@/components/claim/email-verification'
 import { CreateAccount } from '@/components/claim/create-account'
 import { PendingApproval } from '@/components/claim/pending-approval'
 import { ConfirmBusinessDetails } from '@/components/claim/confirm-business-details'
+import { ReviewAiOffers, type DraftOffer } from '@/components/claim/review-ai-offers'
 import type { ClaimBusiness } from '@/types/claim'
 import { getDisplayName, getDisplayAddress, getDisplayCategory, getDisplayType, getDisplayDescription, getDisplayReviewCount } from '@/types/claim'
 import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { getCityFromHostnameClient } from '@/lib/utils/client-city-detection'
+import { getMaxOffers } from '@/lib/utils/tier-limits'
 
 // Mock businesses for testing (dev/preview only)
 const MOCK_BUSINESSES: ClaimBusiness[] = [
@@ -49,7 +51,7 @@ const MOCK_BUSINESSES: ClaimBusiness[] = [
   }
 ]
 
-type Step = 'search' | 'confirm' | 'email-verify' | 'verify-code' | 'business-details' | 'account' | 'submitted'
+type Step = 'search' | 'confirm' | 'email-verify' | 'verify-code' | 'business-details' | 'offers' | 'account' | 'submitted'
 
 export default function ClaimPage() {
   const [step, setStep] = useState<Step>('search')
@@ -62,6 +64,10 @@ export default function ClaimPage() {
   
   // Edited business data
   const [editedBusinessData, setEditedBusinessData] = useState<any>(null)
+
+  // AI-drafted offers (from the Acquisition Engine) for this business, if any
+  const [draftOffers, setDraftOffers] = useState<DraftOffer[]>([])
+  const [acceptedOffers, setAcceptedOffers] = useState<DraftOffer[]>([])
   
   // SECURITY: Detect city from subdomain (server-derived)
   const [city, setCity] = useState<string | null>(null)
@@ -167,6 +173,28 @@ export default function ClaimPage() {
     }
   }, [])
 
+  // Load any AI-drafted offers for the selected business (non-blocking; empty if none)
+  useEffect(() => {
+    const id = selectedBusiness?.id
+    if (!id) {
+      setDraftOffers([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/claim/draft-offers?business_id=${encodeURIComponent(id)}`)
+        const data = await res.json()
+        if (!cancelled) setDraftOffers(data.success && Array.isArray(data.offers) ? data.offers : [])
+      } catch {
+        if (!cancelled) setDraftOffers([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBusiness?.id])
+
   // Debounce search (auto-search after 250ms of no typing)
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
@@ -259,6 +287,8 @@ export default function ClaimPage() {
 
   const handleBack = () => {
     if (step === 'account') {
+      setStep(draftOffers.length > 0 ? 'offers' : 'business-details')
+    } else if (step === 'offers') {
       setStep('business-details')
     } else if (step === 'business-details') {
       setStep('verify-code')
@@ -304,6 +334,11 @@ export default function ClaimPage() {
 
   const handleBusinessDetailsConfirmed = (editedData: any) => {
     setEditedBusinessData(editedData)
+    setStep(draftOffers.length > 0 ? 'offers' : 'account')
+  }
+
+  const handleOffersConfirmed = (accepted: DraftOffer[]) => {
+    setAcceptedOffers(accepted)
     setStep('account')
   }
 
@@ -361,6 +396,11 @@ export default function ClaimPage() {
         if (editedBusinessData.plan_choice) {
           formData.append('planChoice', editedBusinessData.plan_choice)
         }
+      }
+
+      // Add accepted AI-drafted offers (owner chose to publish these)
+      if (acceptedOffers.length > 0) {
+        formData.append('acceptedOffers', JSON.stringify(acceptedOffers))
       }
 
       const response = await fetch('/api/claim/submit', {
@@ -820,6 +860,32 @@ export default function ClaimPage() {
             onBack={handleBack}
           />
         )}
+
+        {/* Step 5b: Review AI-drafted offers (only when the business has drafts) */}
+        {step === 'offers' && selectedBusiness && (() => {
+          // The plan chosen in the previous step decides how many offers can go live.
+          // Free/claimed_free = 1; trial uses the city's trial tier.
+          const isTrial = editedBusinessData?.plan_choice === 'trial'
+          const trialTier = trialConfig?.trialTier || 'featured'
+          const effectiveTier = isTrial ? trialTier : 'claimed_free'
+          const maxOffers = getMaxOffers(effectiveTier)
+          const trialTierLabel = trialTier.charAt(0).toUpperCase() + trialTier.slice(1)
+          const trialAllowsMore = !!(trialConfig && trialConfig.trialDays > 0 && getMaxOffers(trialTier) > 1)
+          const planLabel = isTrial ? `${trialTierLabel} trial` : 'free listing'
+          return (
+            <ReviewAiOffers
+              businessName={getDisplayName(selectedBusiness)}
+              offers={draftOffers}
+              maxOffers={maxOffers}
+              planLabel={planLabel}
+              trialAllowsMore={trialAllowsMore}
+              trialDays={trialConfig?.trialDays || 30}
+              trialTierLabel={trialTierLabel}
+              onContinue={handleOffersConfirmed}
+              onBack={handleBack}
+            />
+          )
+        })()}
 
         {/* Step 6: Create Account */}
         {step === 'account' && selectedBusiness && (

@@ -16,7 +16,8 @@ import {
   Building2,
   XCircle,
   Info,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react'
 import {
   Select,
@@ -26,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ImportProgressModal } from '@/components/admin/import-progress-modal'
+import { EnrichProgressModal, type EnrichProgress } from '@/components/admin/enrich-progress-modal'
 import { ImportMapPreview } from '@/components/admin/import-map-preview'
 import { ONBOARDING_CATEGORY_OPTIONS, type SystemCategory, SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
@@ -153,6 +155,20 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
   // Ref so the SSE loop can synchronously check finalization without stale closure issues
   const hasFinalized = useRef(false)
   const previewRef = useRef<HTMLDivElement>(null)
+
+  // Enrich-on-import: opt-in AI content generation that runs after a successful import.
+  const [generateRich, setGenerateRich] = useState(true)
+  const [includeFields, setIncludeFields] = useState({
+    description: true,
+    tagline: true,
+    featuredItems: true,
+    offers: true,
+  })
+  const [showEnrichModal, setShowEnrichModal] = useState(false)
+  const [enrichProgress, setEnrichProgress] = useState<EnrichProgress | null>(null)
+  const [enrichComplete, setEnrichComplete] = useState(false)
+  const [enrichCancelled, setEnrichCancelled] = useState(false)
+  const enrichCancelRef = useRef(false)
 
   // Helper: Extract cuisine tags from Google types
   const getCuisineTags = (googleTypes?: string[]): string[] => {
@@ -340,14 +356,22 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
               setCompletedAt(new Date().toISOString())
               setIsImportComplete(true)
               setIsImporting(false)
-              
+
               // Reset results after successful import
               setTimeout(() => {
                 setResults([])
                 setSelectedResults([])
                 setShowPreview(false)
               }, 2000)
-              
+
+              // If the admin opted into rich content, hand straight over to the
+              // "Enriching..." modal for the newly-created businesses.
+              const toEnrich: { id: string; name: string }[] = data.importedBusinessIds ?? []
+              if (generateRich && toEnrich.length > 0) {
+                setShowProgressModal(false)
+                runEnrichQueue(toEnrich)
+              }
+
               return
             } else if (data.type === 'cancelled') {
               // Guard against duplicate SSE events
@@ -407,6 +431,62 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
     setImportedData([])
     setCompletedAt(null)
     hasFinalized.current = false
+  }
+
+  // Sequentially enrich the just-imported businesses (client-driven queue with live
+  // progress). Drafts are saved server-side as each one finishes, so stopping early
+  // still keeps whatever was already generated.
+  const runEnrichQueue = async (businesses: { id: string; name: string }[]) => {
+    enrichCancelRef.current = false
+    setEnrichCancelled(false)
+    setEnrichComplete(false)
+    setShowEnrichModal(true)
+    const include = includeFields
+    let done = 0
+    let failed = 0
+    setEnrichProgress({ current: 0, total: businesses.length, done, failed, currentBusiness: businesses[0]?.name || '' })
+
+    for (let i = 0; i < businesses.length; i++) {
+      if (enrichCancelRef.current) {
+        setEnrichCancelled(true)
+        return
+      }
+      const b = businesses[i]
+      setEnrichProgress({ current: i, total: businesses.length, done, failed, currentBusiness: b.name })
+      try {
+        const res = await fetch('/api/admin/offer-engine/enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId: b.id, include }),
+        })
+        if (!res.ok) throw new Error('enrich failed')
+        done++
+      } catch {
+        failed++
+      }
+      setEnrichProgress({ current: i + 1, total: businesses.length, done, failed, currentBusiness: b.name })
+    }
+
+    if (!enrichCancelRef.current) setEnrichComplete(true)
+    else setEnrichCancelled(true)
+  }
+
+  const handleCancelEnrich = () => {
+    enrichCancelRef.current = true
+    setEnrichCancelled(true)
+  }
+
+  const handleCloseEnrichModal = () => {
+    setShowEnrichModal(false)
+    setEnrichProgress(null)
+    setEnrichComplete(false)
+    setEnrichCancelled(false)
+    enrichCancelRef.current = false
+  }
+
+  const handleGoToConfirm = () => {
+    window.parent.postMessage({ type: 'navigate', tab: 'acquisition' }, '*')
+    handleCloseEnrichModal()
   }
 
   const handleSelectAll = () => {
@@ -855,8 +935,54 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
                   <li><strong>NOT visible in AI chat</strong> until marked as AI Eligible in Unclaimed Listings</li>
                   <li>Owners can claim & upgrade via QR code or claim page</li>
                   <li>Placeholder images used until real photos uploaded</li>
+                  <li>If <strong>Generate rich content</strong> is on, we draft AI descriptions, taglines, featured items &amp; offers after import. This stays <strong>hidden from customers</strong> until you Confirm it in the Acquisition Engine &mdash; the basic listing goes live immediately.</li>
                 </ul>
               </div>
+            </div>
+
+            {/* Generate rich content (enrich-on-import) */}
+            <div className="p-4 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={generateRich}
+                  onChange={(e) => setGenerateRich(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span className="font-semibold text-purple-900 dark:text-purple-100">
+                      Generate rich content after import
+                    </span>
+                  </div>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-0.5">
+                    AI reads each business&apos;s website + Google reviews to draft content for the selected businesses.
+                    Stays hidden until you Confirm it in the Acquisition Engine.
+                  </p>
+                </div>
+              </label>
+
+              {generateRich && (
+                <div className="flex flex-wrap gap-x-5 gap-y-2 pl-7">
+                  {([
+                    { key: 'description', label: 'Description' },
+                    { key: 'tagline', label: 'Tagline' },
+                    { key: 'featuredItems', label: 'Featured items' },
+                    { key: 'offers', label: 'Suggested offers' },
+                  ] as const).map((f) => (
+                    <label key={f.key} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeFields[f.key]}
+                        onChange={(e) => setIncludeFields((prev) => ({ ...prev, [f.key]: e.target.checked }))}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-purple-800 dark:text-purple-200">{f.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Selection Summary */}
@@ -866,7 +992,7 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
                   {selectedResults.length} businesses selected
                 </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Ready to import using preview data
+                  {generateRich ? 'Import, then generate rich content' : 'Ready to import using preview data'}
                 </p>
               </div>
               <Button
@@ -1034,6 +1160,17 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
         importedData={importedData}
         completedAt={completedAt}
         city={city}
+      />
+
+      {/* Enrich-on-import Progress Modal */}
+      <EnrichProgressModal
+        isOpen={showEnrichModal}
+        onClose={handleCloseEnrichModal}
+        progress={enrichProgress}
+        isComplete={enrichComplete}
+        isCancelled={enrichCancelled}
+        onCancel={handleCancelEnrich}
+        onGoToConfirm={handleGoToConfirm}
       />
     </div>
   )

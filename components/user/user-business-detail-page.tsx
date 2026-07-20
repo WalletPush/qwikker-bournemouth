@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
-import { formatPrice } from '@/lib/utils/price-formatter'
+import { formatPrice, hasDisplayablePrice } from '@/lib/utils/price-formatter'
 import { getHeroLine } from '@/lib/utils/business-labels'
 import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
 import { saveItem, unsaveItem } from '@/lib/actions/user-saved-actions'
@@ -992,9 +992,11 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                           </span>
                         </div>
                       </div>
-                      <div className="text-right ml-2 shrink-0">
-                        <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price, currencySymbol)}</span>
-                      </div>
+                      {hasDisplayablePrice(item.price) && (
+                        <div className="text-right ml-2 shrink-0">
+                          <span className="text-[#00d083] font-bold text-xl">{formatPrice(item.price, currencySymbol)}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   

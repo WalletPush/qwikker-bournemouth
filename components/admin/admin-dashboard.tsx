@@ -81,7 +81,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config' | 'acquisition'>(() => {
     const urlTab = searchParams.get('tab')
     // Backward compat: old ?tab=setup or ?tab=pricing → city-config
     if (urlTab === 'setup' || urlTab === 'pricing') return 'city-config'
@@ -236,6 +236,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         if (event.data?.filter === 'recent') {
           setShowRecentImports(true)
         }
+      }
+      if (event.data?.type === 'navigate' && event.data?.tab === 'acquisition') {
+        setActiveTab('acquisition')
       }
     }
     window.addEventListener('message', handleMessage)
@@ -1474,7 +1477,7 @@ Qwikker Admin Team`
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Control Center</p>
               </div>
 
-              {/* Control Center Items */}
+              {/* Control Center Items — import comes first (natural flow: import → acquire) */}
               <button
                 onClick={() => setActiveTab('import')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
@@ -1487,6 +1490,21 @@ Qwikker Admin Team`
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                 </svg>
                 <span>Import Businesses</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('acquisition')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  activeTab === 'acquisition'
+                    ? 'bg-[#00d083] text-black'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Acquisition Engine</span>
+                <span className={`ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded ${activeTab === 'acquisition' ? 'bg-black/20 text-black' : 'bg-[#00d083]/20 text-[#00d083]'}`}>New</span>
               </button>
 
               <button
@@ -1588,6 +1606,7 @@ Qwikker Admin Team`
                 {activeTab === 'contact-centre' && 'Contact Centre'}
                 {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
                 {activeTab === 'import' && 'Import Businesses'}
+                {activeTab === 'acquisition' && 'Acquisition Engine'}
                 {activeTab === 'claims' && 'Claim Requests'}
                 {activeTab === 'qr-management' && 'QR Code Management'}
                 {activeTab === 'ai-management' && 'AI Management'}
@@ -1912,6 +1931,7 @@ Qwikker Admin Team`
                   {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
                   {activeTab === 'qr-management' && 'QR Code Management'}
                   {activeTab === 'ai-management' && 'AI Management'}
+                  {activeTab === 'acquisition' && 'Acquisition Engine'}
                 </h2>
                 <p className="text-slate-400">
                   {activeTab === 'overview' && `Quick overview of ${cityDisplayName} admin activities and priority action`}
@@ -1929,6 +1949,7 @@ Qwikker Admin Team`
                   {activeTab === 'claims' && 'Review and approve business owners claiming their listings'}
                   {activeTab === 'qr-management' && 'Generate and manage QR codes for businesses, offers, and secret menus'}
                   {activeTab === 'ai-management' && 'Monitor AI usage, costs, knowledge base health, and configuration'}
+                  {activeTab === 'acquisition' && 'Turn imported businesses into claim-ready listings in three steps: enrich with AI, confirm to publish live, then invite the owner.'}
                 </p>
               </div>
             )}
@@ -3691,6 +3712,18 @@ Qwikker Admin Team`
               {/* AI Management Tab */}
               {activeTab === 'ai-management' && (
                 <AIManagementPage city={city} />
+              )}
+
+              {/* Acquisition Engine Tab */}
+              {activeTab === 'acquisition' && (
+                <div className="h-full">
+                  <iframe
+                    src="/admin/acquisition"
+                    className="w-full border-0 rounded-2xl bg-slate-800/50"
+                    style={{ height: 'calc(100vh - 200px)' }}
+                    title="Acquisition Engine"
+                  />
+                </div>
               )}
 
             </div>

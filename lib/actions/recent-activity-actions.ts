@@ -1,6 +1,7 @@
 'use server'
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isBusinessTrialActive } from '@/lib/utils/trial-status'
 
 export interface ActivityItem {
   id: string
@@ -48,23 +49,13 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
     
     const { data: recentBusinesses } = await query
     
-    // ✅ CRITICAL: Filter out expired trial businesses
-    const activeBusinesses = (recentBusinesses || []).filter(business => {
-      if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-        return true // No subscription = legacy/unclaimed (show)
-      }
-      
-      const sub = business.business_subscriptions[0]
-      if (!sub.is_in_free_trial) return true // Paid customer (show)
-      
-      if (sub.free_trial_end_date) {
-        const endDate = new Date(sub.free_trial_end_date)
-        const now = new Date()
-        return endDate >= now // Only show if trial NOT expired
-      }
-      
-      return true
-    })
+    // ✅ CRITICAL: Filter out expired trial businesses.
+    // Uses the shared helper, which normalises the UNIQUE(business_id) embed that
+    // PostgREST returns as a single OBJECT (the old Array.isArray guard here
+    // silently no-op'd and leaked expired trials — see trial-status.ts).
+    const activeBusinesses = (recentBusinesses || []).filter(business =>
+      isBusinessTrialActive((business as any).business_subscriptions)
+    )
 
     activeBusinesses?.slice(0, 5).forEach(business => {
       activity.push({
@@ -113,7 +104,7 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
     
     const { data: recentOffers } = await offersQuery
     
-    // ✅ CRITICAL: Filter expired offers AND expired trial businesses
+    // ✅ CRITICAL: Filter expired offers AND expired-trial businesses
     const now = new Date()
     const activeOffers = (recentOffers || []).filter(offer => {
       // Check offer expiry
@@ -121,24 +112,11 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
         const endDate = new Date(offer.offer_end_date)
         if (endDate < now) return false // Expired offer
       }
-      
-      // Check business eligibility (expired trial filter)
-      const business = offer.business_profiles
+
+      // Check business eligibility (expired-trial filter, normalised embed shape)
+      const business = offer.business_profiles as any
       if (!business) return false
-      
-      if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-        return true // No subscription = legacy/unclaimed (show)
-      }
-      
-      const sub = business.business_subscriptions[0]
-      if (!sub.is_in_free_trial) return true // Paid customer (show)
-      
-      if (sub.free_trial_end_date) {
-        const trialEndDate = new Date(sub.free_trial_end_date)
-        return trialEndDate >= now // Only show if trial NOT expired
-      }
-      
-      return true
+      return isBusinessTrialActive(business.business_subscriptions, now)
     })
 
     activeOffers?.slice(0, 5).forEach(offer => {
@@ -183,18 +161,9 @@ export async function getRecentBusinessActivity(franchiseCity?: string): Promise
     
     const { data: secretMenuBusinesses } = await secretQuery
     
-    const activeSecretMenuBusinesses = (secretMenuBusinesses || []).filter(business => {
-      if (!business.business_subscriptions || !Array.isArray(business.business_subscriptions) || business.business_subscriptions.length === 0) {
-        return true
-      }
-      const sub = business.business_subscriptions[0]
-      if (!sub.is_in_free_trial) return true
-      if (sub.free_trial_end_date) {
-        const endDate = new Date(sub.free_trial_end_date)
-        return endDate >= new Date()
-      }
-      return true
-    })
+    const activeSecretMenuBusinesses = (secretMenuBusinesses || []).filter(business =>
+      isBusinessTrialActive((business as any).business_subscriptions)
+    )
 
     activeSecretMenuBusinesses?.slice(0, 3).forEach(business => {
       try {

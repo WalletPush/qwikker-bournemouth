@@ -176,6 +176,15 @@ export interface ClaimInvitationEmailData {
   claimUrl: string
   forBusinessUrl: string
   supportEmail: string
+  /** Optional AI-drafted listing preview to show "look what we've built" content. */
+  listingTeaser?: {
+    tagline?: string | null
+    description?: string | null
+  }
+  /** Optional AI-drafted offers to showcase (already filtered for non-declined). */
+  offers?: Array<{ name: string; value: string; rationale?: string | null }>
+  /** Real Google social proof (from business_profiles) — never fabricated. */
+  socialProof?: { rating?: number | null; reviewCount?: number | null }
 }
 
 // ---------------------------------------------------------------------------
@@ -688,12 +697,65 @@ export function createClaimInvitationEmail(data: ClaimInvitationEmailData): Emai
     )
     .join('')
 
+  // Optional "look what we've built" preview blocks (listing + offers)
+  const teaser = data.listingTeaser
+  const hasTeaser = !!(teaser && (teaser.description || teaser.tagline))
+  const listingPreviewHtml = hasTeaser
+    ? `
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:0 0 20px;">
+        <h3 style="margin:0 0 10px;font-size:15px;color:#ffffff;">Here's the listing we've already written for you</h3>
+        ${teaser?.tagline ? `<p style="margin:0 0 10px;font-size:15px;font-style:italic;color:#00d083;">&ldquo;${teaser.tagline}&rdquo;</p>` : ''}
+        ${teaser?.description ? `<p style="margin:0;font-size:14px;line-height:1.7;color:#e0e0e0;">${teaser.description}</p>` : ''}
+      </div>`
+    : ''
+
+  // Real Google social proof — only shown when we actually have the numbers.
+  const rating = data.socialProof?.rating
+  const reviewCount = data.socialProof?.reviewCount
+  const hasSocialProof = typeof rating === 'number' && typeof reviewCount === 'number' && reviewCount > 0
+  const socialProofHtml = hasSocialProof
+    ? `
+      <div style="background:rgba(0,208,131,0.06);border:1px solid rgba(0,208,131,0.35);border-radius:8px;padding:14px 18px;margin:0 0 20px;">
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#e0e0e0;">
+          <span style="color:#00d083;font-weight:700;">&#9733; ${rating}</span> from <strong style="color:#fff;">${reviewCount.toLocaleString()} Google reviews</strong> &mdash; your reputation is already doing the work. QWIKKER puts it in front of nearby customers at the moment they&rsquo;re deciding.
+        </p>
+      </div>`
+    : ''
+
+  const offers = data.offers || []
+  const offerRows = offers
+    .map(
+      (o) => `
+          <tr>
+            <td style="padding:14px 16px;border:1px solid rgba(0,208,131,0.35);background:rgba(0,208,131,0.06);border-radius:8px;">
+              <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#ffffff;">${o.name}</p>
+              <p style="margin:0;font-size:14px;font-weight:600;color:#00d083;">${o.value}</p>
+              ${o.rationale ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.55;color:#b0b0b0;"><span style="color:#00d083;font-weight:600;">Why this works:</span> ${o.rationale}</p>` : ''}
+            </td>
+          </tr>
+          <tr><td style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>`
+    )
+    .join('')
+  const offersPreviewHtml =
+    offers.length > 0
+      ? `
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px 20px 10px;margin:0 0 24px;">
+        <h3 style="margin:0 0 6px;font-size:15px;color:#ffffff;">We've even drafted ${offers.length === 1 ? 'an offer' : `${offers.length} offers`} you could launch on day one</h3>
+        <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#b0b0b0;">Suggested from your menu and reviews &mdash; edit, swap or remove them once you claim.</p>
+        <table style="width:100%;border-collapse:collapse;">${offerRows}</table>
+      </div>`
+      : ''
+
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Your listing is ready to claim.</h2>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hey ${data.businessName},</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Good news &mdash; <strong style="color:#fff;">${data.businessName}</strong> has been added to <strong style="color:#00d083;">QWIKKER ${cityDisplay}</strong>, the local app that connects nearby customers to businesses by what they're craving &mdash; not keywords or ads.</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">We've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.</p>
+
+      ${socialProofHtml}
+      ${listingPreviewHtml}
+      ${offersPreviewHtml}
 
       <div style="margin:28px 0 12px;text-align:center;">
         <a href="${data.claimUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">Claim My Listing</a>
@@ -705,6 +767,11 @@ export function createClaimInvitationEmail(data: ClaimInvitationEmailData): Emai
         <table style="width:100%;border-collapse:collapse;">
           ${benefitRows}
         </table>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:0 0 24px;">
+        <h3 style="margin:0 0 8px;font-size:15px;color:#ffffff;">Turn first-timers into regulars</h3>
+        <p style="margin:0;font-size:14px;line-height:1.7;color:#e0e0e0;">QWIKKER includes a <strong style="color:#fff;">digital loyalty stamp card</strong> that lives in your customers&rsquo; phone wallet &mdash; no app to download, no paper cards to lose. Reward repeat visits and keep people coming back, all managed from your dashboard.</p>
       </div>
 
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 28px;">Want the full picture? <a href="${data.forBusinessUrl}" style="color:#00d083;font-weight:600;">See how QWIKKER works for businesses &rarr;</a></p>
@@ -725,7 +792,7 @@ Hey ${data.businessName},
 Good news — ${data.businessName} has been added to QWIKKER ${cityDisplay}, the local app that connects nearby customers to businesses by what they're craving — not keywords or ads.
 
 We've already built your listing from public information. Claim it (it's free) to take control, add offers, and start reaching local customers.
-
+${hasSocialProof ? `\n★ ${rating} from ${reviewCount!.toLocaleString()} Google reviews — your reputation is already doing the work. QWIKKER puts it in front of nearby customers as they decide.\n` : ''}${hasTeaser ? `\nThe listing we've written for you:${teaser?.tagline ? `\n"${teaser.tagline}"` : ''}${teaser?.description ? `\n${teaser.description}` : ''}\n` : ''}${offers.length > 0 ? `\nOffers we've drafted for you:\n${offers.map((o) => `• ${o.name} — ${o.value}${o.rationale ? `\n  Why this works: ${o.rationale}` : ''}`).join('\n')}\n` : ''}
 Claim your listing: ${data.claimUrl}
 (Takes under 5 minutes — this link opens your business directly, no need to search.)
 
@@ -733,6 +800,8 @@ Why local businesses use QWIKKER:
 • Intent-first discovery — customers arrive already looking for what you offer.
 • You control your offers — no discount wars, no coupon landfill.
 • Local by design — you compete locally, not with national chains or ad budgets.
+
+Turn first-timers into regulars: QWIKKER includes a digital loyalty stamp card that lives in your customers' phone wallet — no app to download, no paper cards to lose. Reward repeat visits and keep people coming back, all from your dashboard.
 
 See how QWIKKER works for businesses: ${data.forBusinessUrl}
 
