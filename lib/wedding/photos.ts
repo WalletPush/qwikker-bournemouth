@@ -1,30 +1,36 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { WEDDING_BUCKET } from './config'
 
 export interface WeddingPhoto {
+  id: string
   name: string
-  path: string
   url: string
+  publicId: string | null
   createdAt: string | null
 }
 
-// Lists every uploaded photo for a wedding slug (newest first). Uses the service role so
-// no anon "list" policy is needed on the bucket; public URLs render directly in the gallery.
+function deriveName(publicId: string | null, url: string): string {
+  const source = publicId || url
+  const base = source.split('/').pop() || 'photo'
+  return base.split('?')[0]
+}
+
+// Lists every recorded photo for a wedding slug (newest first). Service role only.
 export async function listWeddingPhotos(slug: string): Promise<WeddingPhoto[]> {
   const supabase = createAdminClient()
-  const { data, error } = await supabase.storage.from(WEDDING_BUCKET).list(slug, {
-    limit: 1000,
-    sortBy: { column: 'created_at', order: 'desc' },
-  })
+  const { data, error } = await supabase
+    .from('wedding_photos')
+    .select('id, url, public_id, created_at')
+    .eq('slug', slug.toLowerCase())
+    .order('created_at', { ascending: false })
+    .limit(2000)
 
   if (error || !data) return []
 
-  return data
-    // Real files have an id; folder placeholders (e.g. ".emptyFolderPlaceholder") don't.
-    .filter((f) => f.id !== null && !f.name.startsWith('.'))
-    .map((f) => {
-      const path = `${slug}/${f.name}`
-      const { data: pub } = supabase.storage.from(WEDDING_BUCKET).getPublicUrl(path)
-      return { name: f.name, path, url: pub.publicUrl, createdAt: f.created_at ?? null }
-    })
+  return data.map((row) => ({
+    id: row.id as string,
+    url: row.url as string,
+    publicId: (row.public_id as string | null) ?? null,
+    createdAt: (row.created_at as string | null) ?? null,
+    name: deriveName((row.public_id as string | null) ?? null, row.url as string),
+  }))
 }

@@ -57,7 +57,7 @@ export default async function WeddingPage({
 
   return (
     <main
-      className={`${weddingSerif.variable} ${weddingScript.variable} min-h-screen bg-gradient-to-b from-[#fdfaf4] via-[#faf3e8] to-[#f5ead8]`}
+      className={`${weddingSerif.variable} ${weddingScript.variable} min-h-screen bg-gradient-to-b from-white via-[#eef7fd] to-[#d6ecfa]`}
     >
       <WeddingAlbum
         slug={wedding.slug}

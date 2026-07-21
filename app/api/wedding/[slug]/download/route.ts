@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-import { getWedding, WEDDING_CITY, WEDDING_BUCKET } from '@/lib/wedding/config'
+import { getWedding, WEDDING_CITY } from '@/lib/wedding/config'
 import { listWeddingPhotos } from '@/lib/wedding/photos'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { createZip, type ZipFile } from '@/lib/wedding/zip'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+function extFromUrl(url: string): string {
+  const match = url.split('?')[0].match(/\.([a-z0-9]+)$/i)
+  return match ? match[1].toLowerCase() : 'jpg'
+}
 
 // Password-gated: bundles every uploaded photo into a single ZIP for the couple.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -32,16 +36,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const photos = await listWeddingPhotos(wedding.slug)
   if (photos.length === 0) return NextResponse.json({ error: 'empty' }, { status: 404 })
 
-  const supabase = createAdminClient()
   const files: ZipFile[] = []
   let idx = 1
   for (const photo of photos) {
-    const { data, error } = await supabase.storage.from(WEDDING_BUCKET).download(photo.path)
-    if (error || !data) continue
-    const buf = Buffer.from(await data.arrayBuffer())
-    const safeName = photo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    files.push({ name: `${String(idx).padStart(3, '0')}-${safeName}`, data: buf })
-    idx++
+    try {
+      const res = await fetch(photo.url)
+      if (!res.ok) continue
+      const buf = Buffer.from(await res.arrayBuffer())
+      const base = photo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const named = /\.[a-z0-9]+$/i.test(base) ? base : `${base}.${extFromUrl(photo.url)}`
+      files.push({ name: `${String(idx).padStart(3, '0')}-${named}`, data: buf })
+      idx++
+    } catch {
+      /* skip a single failed fetch, keep building the rest of the album */
+    }
   }
 
   if (files.length === 0) return NextResponse.json({ error: 'empty' }, { status: 404 })

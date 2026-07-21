@@ -15,12 +15,15 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { WEDDING_BUCKET, WEDDING_MAX_FILE_BYTES } from '@/lib/wedding/config'
+import {
+  CLOUDINARY_CLOUD,
+  CLOUDINARY_UNSIGNED_PRESET,
+  WEDDING_MAX_FILE_BYTES,
+  weddingCloudinaryFolder,
+} from '@/lib/wedding/config'
 
 interface Photo {
-  name: string
-  path: string
+  id: string
   url: string
 }
 
@@ -36,6 +39,37 @@ interface WeddingAlbumProps {
 
 const serif = { fontFamily: 'var(--font-wedding-serif), Georgia, serif' }
 const script = { fontFamily: 'var(--font-wedding-script), cursive' }
+
+interface CloudinaryResult {
+  url: string
+  publicId: string | null
+  width: number | null
+  height: number | null
+}
+
+async function uploadToCloudinary(file: File, slug: string): Promise<CloudinaryResult | null> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('upload_preset', CLOUDINARY_UNSIGNED_PRESET)
+  form.append('folder', weddingCloudinaryFolder(slug))
+  try {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST',
+      body: form,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data?.secure_url) return null
+    return {
+      url: data.secure_url as string,
+      publicId: (data.public_id as string) ?? null,
+      width: typeof data.width === 'number' ? data.width : null,
+      height: typeof data.height === 'number' ? data.height : null,
+    }
+  } catch {
+    return null
+  }
+}
 
 export function WeddingAlbum({
   slug,
@@ -62,7 +96,6 @@ export function WeddingAlbum({
   const [clearing, setClearing] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
 
   const refreshPhotos = useCallback(async () => {
     try {
@@ -95,6 +128,7 @@ export function WeddingAlbum({
       let done = 0
       let failed = 0
       const tooBig: string[] = []
+      const uploaded: CloudinaryResult[] = []
 
       for (const file of files) {
         if (file.size > WEDDING_MAX_FILE_BYTES) {
@@ -103,23 +137,31 @@ export function WeddingAlbum({
           setProgress({ done, total: files.length })
           continue
         }
-        const rawExt = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-        const ext = rawExt || 'jpg'
-        const key = `${slug}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`
-        const { error } = await supabase.storage.from(WEDDING_BUCKET).upload(key, file, {
-          contentType: file.type || undefined,
-          upsert: false,
-        })
-        if (error) failed++
+        const result = await uploadToCloudinary(file, slug)
+        if (result) uploaded.push(result)
+        else failed++
         done++
         setProgress({ done, total: files.length })
       }
 
+      // Record the uploads so the gallery / download / cleanup can see them.
+      if (uploaded.length > 0) {
+        try {
+          await fetch(`/api/wedding/${slug}/photos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ photos: uploaded }),
+          })
+        } catch {
+          /* if recording fails the asset still exists in Cloudinary; refresh will just miss it */
+        }
+      }
+
       setUploading(false)
-      const succeeded = files.length - failed - tooBig.length
+      const succeeded = uploaded.length
       setJustUploaded(succeeded)
       if (tooBig.length > 0) {
-        setUploadError(`${tooBig.length} photo(s) were too large (max 50MB each) and were skipped.`)
+        setUploadError(`${tooBig.length} photo(s) were too large (max 10MB each) and were skipped.`)
       } else if (failed > 0) {
         setUploadError(`${failed} photo(s) didn’t upload — please try those again.`)
       }
@@ -128,7 +170,7 @@ export function WeddingAlbum({
         setTimeout(() => setJustUploaded(0), 6000)
       }
     },
-    [slug, supabase, refreshPhotos]
+    [slug, refreshPhotos]
   )
 
   const onDrop = useCallback(
@@ -219,24 +261,24 @@ export function WeddingAlbum({
       {/* Hero */}
       <header className="text-center">
         <p
-          className="text-[11px] uppercase tracking-[0.35em] text-[#b08d57] sm:text-xs"
+          className="text-[11px] uppercase tracking-[0.35em] text-[#4a97cf] sm:text-xs"
           style={serif}
         >
           {welcome}
         </p>
-        <h1 className="mt-6 text-6xl leading-none text-[#3a3330] sm:text-8xl" style={script}>
+        <h1 className="mt-6 text-6xl leading-none text-[#2c4a5e] sm:text-8xl" style={script}>
           {coupleNames}
         </h1>
         <div className="mx-auto mt-6 flex items-center justify-center gap-3">
-          <span className="h-px w-12 bg-[#d8c6a8]" />
-          <Heart className="h-4 w-4 text-[#b08d57]" fill="#b08d57" />
-          <span className="h-px w-12 bg-[#d8c6a8]" />
+          <span className="h-px w-12 bg-[#bfe0f2]" />
+          <Heart className="h-4 w-4 text-[#5aa9e6]" fill="#5aa9e6" />
+          <span className="h-px w-12 bg-[#bfe0f2]" />
         </div>
-        <h2 className="mt-6 text-2xl text-[#5a4f45] sm:text-3xl" style={serif}>
+        <h2 className="mt-6 text-2xl text-[#45677d] sm:text-3xl" style={serif}>
           {title}
         </h2>
         <p
-          className="mx-auto mt-4 max-w-xl text-lg italic leading-relaxed text-[#7a6d60] sm:text-xl"
+          className="mx-auto mt-4 max-w-xl text-lg italic leading-relaxed text-[#5a7789] sm:text-xl"
           style={serif}
         >
           {intro}
@@ -253,16 +295,16 @@ export function WeddingAlbum({
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           className={`rounded-3xl border-2 border-dashed p-8 text-center transition-colors sm:p-12 ${
-            dragOver ? 'border-[#b08d57] bg-[#f3e9d7]' : 'border-[#d8c6a8] bg-white/60'
+            dragOver ? 'border-[#5aa9e6] bg-[#dceffa]' : 'border-[#bfe0f2] bg-white/70'
           }`}
         >
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f3e9d7]">
-            <Camera className="h-8 w-8 text-[#b08d57]" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#eaf5fc]">
+            <Camera className="h-8 w-8 text-[#5aa9e6]" />
           </div>
-          <h3 className="mt-5 text-2xl text-[#3a3330]" style={serif}>
+          <h3 className="mt-5 text-2xl text-[#2c4a5e]" style={serif}>
             Share your photos
           </h3>
-          <p className="mt-2 text-[#7a6d60]" style={serif}>
+          <p className="mt-2 text-[#5a7789]" style={serif}>
             Tap below to add photos from your phone, or drag them here.
           </p>
 
@@ -270,7 +312,7 @@ export function WeddingAlbum({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#b08d57] px-8 py-3.5 text-base font-medium text-white shadow-sm transition-all hover:bg-[#9a7a48] disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#5aa9e6] px-8 py-3.5 text-base font-medium text-white shadow-sm transition-all hover:bg-[#4a97cf] disabled:cursor-not-allowed disabled:opacity-70"
             style={serif}
           >
             {uploading ? (
@@ -299,22 +341,22 @@ export function WeddingAlbum({
           />
 
           {uploading && (
-            <div className="mx-auto mt-6 h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-[#eaddc6]">
+            <div className="mx-auto mt-6 h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-[#d6ecfa]">
               <div
-                className="h-full rounded-full bg-[#b08d57] transition-all"
+                className="h-full rounded-full bg-[#5aa9e6] transition-all"
                 style={{ width: `${pct}%` }}
               />
             </div>
           )}
 
           {!uploading && justUploaded > 0 && (
-            <p className="mt-5 inline-flex items-center gap-2 text-[#5a8a5a]" style={serif}>
+            <p className="mt-5 inline-flex items-center gap-2 text-[#3f8f5a]" style={serif}>
               <Check className="h-5 w-5" />
               Thank you! {justUploaded} photo{justUploaded !== 1 ? 's' : ''} added to the album.
             </p>
           )}
           {uploadError && (
-            <p className="mt-4 text-sm text-[#b5544a]" style={serif}>
+            <p className="mt-4 text-sm text-[#c0564c]" style={serif}>
               {uploadError}
             </p>
           )}
@@ -324,25 +366,25 @@ export function WeddingAlbum({
       {/* Gallery */}
       <section className="mt-16">
         <div className="text-center">
-          <h3 className="text-3xl text-[#3a3330]" style={script}>
+          <h3 className="text-3xl text-[#2c4a5e]" style={script}>
             The album so far
           </h3>
-          <p className="mt-1 text-sm uppercase tracking-[0.25em] text-[#b08d57]" style={serif}>
+          <p className="mt-1 text-sm uppercase tracking-[0.25em] text-[#4a97cf]" style={serif}>
             {photos.length} moment{photos.length !== 1 ? 's' : ''} shared
           </p>
         </div>
 
         {photos.length === 0 ? (
-          <p className="mt-10 text-center italic text-[#9a8d7e]" style={serif}>
+          <p className="mt-10 text-center italic text-[#8aa5b5]" style={serif}>
             No photos yet — be the first to share one!
           </p>
         ) : (
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((photo, i) => (
               <button
-                key={photo.path}
+                key={photo.id}
                 onClick={() => setLightbox(i)}
-                className="group relative aspect-square overflow-hidden rounded-xl bg-[#eaddc6] shadow-sm ring-1 ring-black/5"
+                className="group relative aspect-square overflow-hidden rounded-xl bg-[#eaf5fc] shadow-sm ring-1 ring-[#bfe0f2]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -359,11 +401,11 @@ export function WeddingAlbum({
 
       {/* Download for the couple */}
       <section className="mt-20 text-center">
-        <div className="mx-auto max-w-md rounded-3xl border border-[#e4d5ba] bg-white/60 p-8">
-          <h3 className="text-2xl text-[#3a3330]" style={serif}>
+        <div className="mx-auto max-w-md rounded-3xl border border-[#bfe0f2] bg-white/70 p-8">
+          <h3 className="text-2xl text-[#2c4a5e]" style={serif}>
             Are you the happy couple?
           </h3>
-          <p className="mt-2 text-[#7a6d60]" style={serif}>
+          <p className="mt-2 text-[#5a7789]" style={serif}>
             Download every photo as a single album.
           </p>
           <button
@@ -371,7 +413,7 @@ export function WeddingAlbum({
               setPwError(null)
               setShowDownload(true)
             }}
-            className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#b08d57] px-7 py-3 text-[#8a6d3f] transition-colors hover:bg-[#f3e9d7]"
+            className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#5aa9e6] px-7 py-3 text-[#3f7fae] transition-colors hover:bg-[#eaf5fc]"
             style={serif}
           >
             <Download className="h-5 w-5" />
@@ -384,7 +426,7 @@ export function WeddingAlbum({
             <button
               onClick={doClear}
               disabled={clearing}
-              className="inline-flex items-center gap-2 text-sm text-[#b5544a]/80 hover:text-[#b5544a] disabled:opacity-60"
+              className="inline-flex items-center gap-2 text-sm text-[#c0564c]/80 hover:text-[#c0564c] disabled:opacity-60"
               style={serif}
             >
               {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -396,7 +438,7 @@ export function WeddingAlbum({
 
       {/* Footer credit — the ONLY Qwikker mark on the page */}
       <footer className="mt-20 flex flex-col items-center gap-2 opacity-60">
-        <span className="text-[10px] uppercase tracking-[0.3em] text-[#9a8d7e]" style={serif}>
+        <span className="text-[10px] uppercase tracking-[0.3em] text-[#8aa5b5]" style={serif}>
           Powered by
         </span>
         <Image
@@ -406,7 +448,7 @@ export function WeddingAlbum({
           height={24}
           className="h-5 w-auto"
         />
-        <span className="text-[10px] uppercase tracking-[0.3em] text-[#9a8d7e]" style={serif}>
+        <span className="text-[10px] uppercase tracking-[0.3em] text-[#8aa5b5]" style={serif}>
           Bournemouth
         </span>
       </footer>
@@ -415,16 +457,16 @@ export function WeddingAlbum({
       {showDownload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-[#2c4a5e]/40"
             onClick={() => {
               if (!downloading) setShowDownload(false)
             }}
           />
-          <div className="relative w-full max-w-sm rounded-2xl bg-[#fbf6ee] p-7 shadow-2xl">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f3e9d7]">
-              <Lock className="h-6 w-6 text-[#b08d57]" />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-7 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eaf5fc]">
+              <Lock className="h-6 w-6 text-[#5aa9e6]" />
             </div>
-            <h3 className="mt-4 text-center text-xl text-[#3a3330]" style={serif}>
+            <h3 className="mt-4 text-center text-xl text-[#2c4a5e]" style={serif}>
               Enter the album password
             </h3>
             <input
@@ -436,10 +478,10 @@ export function WeddingAlbum({
                 if (e.key === 'Enter' && password && !downloading) void doDownload()
               }}
               placeholder="Password"
-              className="mt-5 w-full rounded-xl border border-[#d8c6a8] bg-white px-4 py-3 text-center text-lg tracking-widest text-[#3a3330] outline-none focus:border-[#b08d57]"
+              className="mt-5 w-full rounded-xl border border-[#bfe0f2] bg-white px-4 py-3 text-center text-lg tracking-widest text-[#2c4a5e] outline-none focus:border-[#5aa9e6]"
             />
             {pwError && (
-              <p className="mt-3 text-center text-sm text-[#b5544a]" style={serif}>
+              <p className="mt-3 text-center text-sm text-[#c0564c]" style={serif}>
                 {pwError}
               </p>
             )}
@@ -452,7 +494,7 @@ export function WeddingAlbum({
                     setPwError(null)
                   }
                 }}
-                className="flex-1 rounded-full border border-[#d8c6a8] py-3 text-[#7a6d60] transition-colors hover:bg-[#f3e9d7]"
+                className="flex-1 rounded-full border border-[#bfe0f2] py-3 text-[#5a7789] transition-colors hover:bg-[#eaf5fc]"
                 style={serif}
               >
                 Cancel
@@ -460,7 +502,7 @@ export function WeddingAlbum({
               <button
                 onClick={() => void doDownload()}
                 disabled={!password || downloading}
-                className="flex-1 rounded-full bg-[#b08d57] py-3 font-medium text-white transition-colors hover:bg-[#9a7a48] disabled:opacity-60"
+                className="flex-1 rounded-full bg-[#5aa9e6] py-3 font-medium text-white transition-colors hover:bg-[#4a97cf] disabled:opacity-60"
                 style={serif}
               >
                 {downloading ? (
@@ -479,7 +521,7 @@ export function WeddingAlbum({
       {/* Lightbox */}
       {lightbox !== null && photos[lightbox] && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2c3f]/90 p-4"
           onClick={() => setLightbox(null)}
         >
           <button

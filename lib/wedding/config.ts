@@ -3,10 +3,18 @@
 // and only work on the Bournemouth subdomain. Add a new couple by adding an entry below.
 
 export const WEDDING_CITY = 'bournemouth'
-export const WEDDING_BUCKET = 'wedding-photos'
 
-// Per-file cap kept in sync with the storage bucket's file_size_limit (50 MB).
-export const WEDDING_MAX_FILE_BYTES = 52_428_800
+// Uploads reuse the existing Cloudinary account (unsigned preset), same as the dashboard.
+export const CLOUDINARY_CLOUD = 'dsh32kke7'
+export const CLOUDINARY_UNSIGNED_PRESET = 'unsigned_qwikker'
+
+export function weddingCloudinaryFolder(slug: string): string {
+  return `qwikker/weddings/${slug}`
+}
+
+// Client-side guard. Note: Cloudinary's FREE plan rejects images over 10MB; raise this if
+// your Cloudinary plan allows larger. Guest phone photos are typically 2-6MB.
+export const WEDDING_MAX_FILE_BYTES = 10_485_760 // 10 MB
 
 export interface WeddingConfig {
   slug: string
