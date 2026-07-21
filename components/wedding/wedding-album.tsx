@@ -40,6 +40,16 @@ interface WeddingAlbumProps {
 const serif = { fontFamily: 'var(--font-wedding-serif), Georgia, serif' }
 const script = { fontFamily: 'var(--font-wedding-script), cursive' }
 
+// Serve small, auto-optimised images to guests (saves Cloudinary bandwidth + loads fast on
+// mobile data) while the full original is only ever pulled for the couple's ZIP download.
+// f_auto also transparently converts HEIC/HEIF (iPhone) so every thumbnail renders.
+function cldTransform(url: string, transform: string): string {
+  if (!url.includes('/upload/')) return url
+  return url.replace('/upload/', `/upload/${transform}/`)
+}
+const thumbUrl = (u: string) => cldTransform(u, 'c_fill,g_auto,w_600,h_600,f_auto,q_auto')
+const fullUrl = (u: string) => cldTransform(u, 'c_limit,w_1600,h_1600,f_auto,q_auto')
+
 interface CloudinaryResult {
   url: string
   publicId: string | null
@@ -160,10 +170,14 @@ export function WeddingAlbum({
       setUploading(false)
       const succeeded = uploaded.length
       setJustUploaded(succeeded)
-      if (tooBig.length > 0) {
-        setUploadError(`${tooBig.length} photo(s) were too large (max 10MB each) and were skipped.`)
-      } else if (failed > 0) {
-        setUploadError(`${failed} photo(s) didn’t upload — please try those again.`)
+      if (failed > 0) {
+        setUploadError(
+          `Couldn’t upload ${failed} photo${failed !== 1 ? 's' : ''} right now. Don’t worry — keep them safe on your phone and try again in a little while.`
+        )
+      } else if (tooBig.length > 0) {
+        setUploadError(
+          `${tooBig.length} photo${tooBig.length !== 1 ? 's were' : ' was'} over 10MB and skipped — try sending ${tooBig.length !== 1 ? 'those' : 'that one'} a little smaller.`
+        )
       }
       await refreshPhotos()
       if (succeeded > 0) {
@@ -257,7 +271,7 @@ export function WeddingAlbum({
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 pb-24 pt-14 sm:pt-20">
+    <div className="mx-auto w-full max-w-5xl px-5 pb-28 pt-14 sm:pb-24 sm:pt-20">
       {/* Hero */}
       <header className="text-center">
         <p
@@ -312,7 +326,7 @@ export function WeddingAlbum({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#5aa9e6] px-8 py-3.5 text-base font-medium text-white shadow-sm transition-all hover:bg-[#4a97cf] disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#5aa9e6] px-8 py-4 text-lg font-medium text-white shadow-sm transition-all active:scale-[0.98] hover:bg-[#4a97cf] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-3.5 sm:text-base"
             style={serif}
           >
             {uploading ? (
@@ -327,6 +341,11 @@ export function WeddingAlbum({
               </>
             )}
           </button>
+
+          <p className="mx-auto mt-4 max-w-xs text-xs text-[#8aa5b5]" style={serif}>
+            Trouble uploading? Don’t worry — keep your photos safe on your phone and try again a
+            little later.
+          </p>
 
           <input
             ref={fileInputRef}
@@ -388,7 +407,7 @@ export function WeddingAlbum({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo.url}
+                  src={thumbUrl(photo.url)}
                   alt="Wedding moment"
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -452,6 +471,27 @@ export function WeddingAlbum({
           Bournemouth
         </span>
       </footer>
+
+      {/* Mobile floating "add photos" button — always within thumb reach while browsing */}
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#5aa9e6] px-6 py-3.5 text-base font-medium text-white shadow-lg shadow-[#5aa9e6]/40 transition-transform active:scale-95 disabled:opacity-70 sm:hidden"
+        style={serif}
+      >
+        {uploading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Uploading {progress.done}/{progress.total}…
+          </>
+        ) : (
+          <>
+            <Camera className="h-5 w-5" />
+            Add photos
+          </>
+        )}
+      </button>
 
       {/* Download password modal */}
       {showDownload && (
@@ -557,7 +597,7 @@ export function WeddingAlbum({
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photos[lightbox].url}
+            src={fullUrl(photos[lightbox].url)}
             alt="Wedding moment"
             className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
