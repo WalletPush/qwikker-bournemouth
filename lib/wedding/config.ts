@@ -23,6 +23,7 @@ export interface WeddingConfig {
   welcome: string // small line above the title
   intro: string // the playful invitation copy
   downloadPassword: string // gates the "Download album" ZIP + the hidden cleanup mode
+  heroImage?: string // optional framed photo of the couple (path under /public)
 }
 
 const WEDDINGS: Record<string, WeddingConfig> = {
@@ -33,6 +34,7 @@ const WEDDINGS: Record<string, WeddingConfig> = {
     welcome: 'Welcome to our special day — please share your moments',
     intro: 'We want it all — the kisses, the chaos, the cake. Show us what you saw.',
     downloadPassword: '28081969',
+    heroImage: '/wedding/hettyanddaymo.png',
   },
 }
 

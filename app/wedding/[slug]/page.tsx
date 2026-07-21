@@ -65,6 +65,7 @@ export default async function WeddingPage({
         title={wedding.title}
         welcome={wedding.welcome}
         intro={wedding.intro}
+        heroImage={wedding.heroImage ?? null}
         initialPhotos={photos}
         manage={manage}
       />

@@ -33,6 +33,7 @@ interface WeddingAlbumProps {
   title: string
   welcome: string
   intro: string
+  heroImage: string | null
   initialPhotos: Photo[]
   manage: boolean
 }
@@ -87,6 +88,7 @@ export function WeddingAlbum({
   title,
   welcome,
   intro,
+  heroImage,
   initialPhotos,
   manage,
 }: WeddingAlbumProps) {
@@ -274,6 +276,20 @@ export function WeddingAlbum({
     <div className="mx-auto w-full max-w-5xl px-5 pb-28 pt-14 sm:pb-24 sm:pt-20">
       {/* Hero */}
       <header className="text-center">
+        {heroImage && (
+          <div className="mx-auto mb-8 h-72 w-56 overflow-hidden rounded-[1.75rem] bg-white p-1.5 shadow-xl shadow-[#5aa9e6]/25 ring-1 ring-[#bfe0f2] sm:h-80 sm:w-64">
+            <div className="relative h-full w-full overflow-hidden rounded-[1.4rem]">
+              <Image
+                src={heroImage}
+                alt={coupleNames}
+                fill
+                priority
+                sizes="256px"
+                className="object-cover object-center"
+              />
+            </div>
+          </div>
+        )}
         <p
           className="text-[11px] uppercase tracking-[0.35em] text-[#4a97cf] sm:text-xs"
           style={serif}
