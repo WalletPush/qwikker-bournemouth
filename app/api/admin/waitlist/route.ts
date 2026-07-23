@@ -3,7 +3,8 @@ import { cookies } from 'next/headers'
 import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
+import { getFranchisePublicUrl } from '@/lib/utils/franchise-url'
 import type { EmailTemplate } from '@/lib/email/email-service'
 
 // Resend caps recipients per send; chunk BCC to stay well within limits and
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       .eq('city', city)
       .single()
     const displayName = cfgRow?.display_name || city.charAt(0).toUpperCase() + city.slice(1)
-    const template = buildLaunchEmail(displayName, `${getFranchiseBaseUrl(city)}/join`)
+    const template = buildLaunchEmail(displayName, `${getFranchisePublicUrl(city)}/join`)
     const { count: pending } = await supabase
       .from('city_waitlist')
       .select('id', { count: 'exact', head: true })
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
   }
 
   const displayName = cfgRow?.display_name || city.charAt(0).toUpperCase() + city.slice(1)
-  const joinUrl = `${getFranchiseBaseUrl(city)}/join`
+  const joinUrl = `${getFranchisePublicUrl(city)}/join`
   const template = buildLaunchEmail(displayName, joinUrl)
 
   // Only people who haven't been emailed yet.

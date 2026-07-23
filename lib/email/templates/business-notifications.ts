@@ -176,6 +176,9 @@ export interface ClaimInvitationEmailData {
   claimUrl: string
   forBusinessUrl: string
   supportEmail: string
+  /** Optional signed Present-Mode demo link — a live, interactive preview of
+   * their listing (offers, loyalty, AI, wallet pass, analytics) in their brand. */
+  demoUrl?: string | null
   /** Optional AI-drafted listing preview to show "look what we've built" content. */
   listingTeaser?: {
     tagline?: string | null
@@ -760,7 +763,12 @@ export function createClaimInvitationEmail(data: ClaimInvitationEmailData): Emai
       <div style="margin:28px 0 12px;text-align:center;">
         <a href="${data.claimUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">Claim My Listing</a>
       </div>
-      <p style="font-size:13px;line-height:1.6;color:#888;margin:0 0 28px;text-align:center;">Takes under 5 minutes &mdash; no need to search, this link opens your business directly.</p>
+      <p style="font-size:13px;line-height:1.6;color:#888;margin:0 0 ${data.demoUrl ? '20px' : '28px'};text-align:center;">Takes under 5 minutes &mdash; no need to search, this link opens your business directly.</p>
+      ${data.demoUrl ? `
+      <div style="margin:0 0 28px;text-align:center;">
+        <a href="${data.demoUrl}" style="display:inline-block;background:transparent;color:#00d083;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;border:1px solid #00d083;">See your listing come alive &rarr;</a>
+        <p style="font-size:13px;line-height:1.6;color:#888;margin:10px 0 0;">A live, interactive preview &mdash; your offers, loyalty stamp card, AI recommendations, wallet pass and analytics, all in your brand.</p>
+      </div>` : ''}
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:0 0 24px;">
         <h3 style="margin:0 0 12px;font-size:15px;color:#ffffff;">Why local businesses use QWIKKER</h3>
@@ -795,6 +803,7 @@ We've already built your listing from public information. Claim it (it's free) t
 ${hasSocialProof ? `\n★ ${rating} from ${reviewCount!.toLocaleString()} Google reviews — your reputation is already doing the work. QWIKKER puts it in front of nearby customers as they decide.\n` : ''}${hasTeaser ? `\nThe listing we've written for you:${teaser?.tagline ? `\n"${teaser.tagline}"` : ''}${teaser?.description ? `\n${teaser.description}` : ''}\n` : ''}${offers.length > 0 ? `\nOffers we've drafted for you:\n${offers.map((o) => `• ${o.name} — ${o.value}${o.rationale ? `\n  Why this works: ${o.rationale}` : ''}`).join('\n')}\n` : ''}
 Claim your listing: ${data.claimUrl}
 (Takes under 5 minutes — this link opens your business directly, no need to search.)
+${data.demoUrl ? `\nSee your listing come alive (live, interactive preview — offers, loyalty, AI, wallet pass & analytics, all in your brand): ${data.demoUrl}\n` : ''}
 
 Why local businesses use QWIKKER:
 • Intent-first discovery — customers arrive already looking for what you offer.

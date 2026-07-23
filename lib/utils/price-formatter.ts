@@ -22,8 +22,9 @@ export function formatPrice(
   const isBareNumber = /^\d+(\.\d{1,2})?$/.test(priceStr)
   if (!isBareNumber) return priceStr
 
-  // Bare number → prefix the franchise currency symbol.
-  return `${currencySymbol}${priceStr}`
+  // Bare number → normalise to 2 decimals ("4.5" -> "4.50", "12" -> "12.00")
+  // and prefix the franchise currency symbol.
+  return `${currencySymbol}${parseFloat(priceStr).toFixed(2)}`
 }
 
 /**

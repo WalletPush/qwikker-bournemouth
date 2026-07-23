@@ -1,4 +1,5 @@
 import type { Stage } from '@/lib/listing-engine/pipeline-stage'
+import type { ContactMethod } from '@/lib/listing-engine/contact-methods'
 
 export interface RowEnrichment {
   status: string
@@ -16,6 +17,16 @@ export interface PipelineRow {
   claimed: boolean
   email: string | null
   emailCandidates?: string[]
+  /** WhatsApp number (digits) — explicit link or a site mobile; never a landline/Google number. */
+  whatsapp?: string | null
+  /** True when `whatsapp` came from an explicit wa.me/WhatsApp link (vs an inferred mobile). */
+  whatsappVerified?: boolean
+  /** Phone on file (site tel: or Google) — WhatsApp fallback / manual call. */
+  phone?: string | null
+  /** Franchise country dialing code for normalizing national-format numbers. */
+  dialCode?: string
+  /** Unified outreach channels discovered on enrich (email/whatsapp/phone/socials). */
+  contactMethods?: ContactMethod[]
   rating: number | null
   reviewCount: number | null
   hasWebsite: boolean

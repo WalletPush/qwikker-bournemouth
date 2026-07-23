@@ -40,6 +40,10 @@ export interface WebsiteExtract {
   chars: number
   /** Candidate contact emails found on the page (mailto links + inline text). */
   emails: string[]
+  /** WhatsApp number (digits) from an explicit wa.me / api.whatsapp link, if any. */
+  whatsapp: string | null
+  /** Phone numbers found in tel: links (candidates for a WhatsApp fallback). */
+  phones: string[]
   /** Menu-like URLs we found but did NOT read as text (PDFs, images, off-origin). */
   menuLinks: string[]
   /** How many HTML menu sub-pages we actually read text from. */
@@ -49,8 +53,12 @@ export interface WebsiteExtract {
 const MAX_HOME_CHARS = 6000
 const MAX_MENU_CHARS = 4000
 const MAX_TOTAL_CHARS = 12000
-const HOME_TIMEOUT_MS = 8000
-const MENU_TIMEOUT_MS = 6000
+// Timeouts bumped Jul 2026: a slow menu/services sub-page that times out on one run
+// but loads on the next was a source of inconsistent featured-item counts. Giving
+// them more headroom makes extraction far more repeatable (small latency cost on
+// slow sites only — fast sites still return immediately).
+const HOME_TIMEOUT_MS = 10000
+const MENU_TIMEOUT_MS = 9000
 const MAX_MENU_PAGES = 3
 // PDF menu parsing (text-based PDFs only; scanned/photo PDFs yield ~nothing).
 const PDF_TIMEOUT_MS = 9000
@@ -139,6 +147,49 @@ function htmlToText(html: string): string {
       .replace(/\s+/g, ' ')
       .trim()
   )
+}
+
+/**
+ * Explicit WhatsApp numbers: wa.me/<number>, api.whatsapp.com/send?phone=<number>,
+ * whatsapp://send?phone=<number>. These are the ONLY reliable "this business is on
+ * WhatsApp" signal — a plain tel: number might be a landline.
+ */
+function extractWhatsappNumbers(html: string): string[] {
+  const out: string[] = []
+
+  // 1) Explicit click-to-chat links carrying the number:
+  //    wa.me/<n>, wa.me/message/…?phone=<n>, api.whatsapp.com/send?phone=<n>,
+  //    whatsapp://send?phone=<n>, and any …?phone=<n> inside a whatsapp URL.
+  const linkRe =
+    /(?:wa\.me\/(?:message\/[^"'\s?]*\?[^"'\s]*?phone=)?|api\.whatsapp\.com\/send\/?\?[^"'\s]*?phone=|whatsapp:\/\/send\/?\?[^"'\s]*?phone=|chat\.whatsapp\.com\/[^"'\s]*?phone=)\+?(\d{7,18})/gi
+  let m: RegExpExecArray | null
+  while ((m = linkRe.exec(html)) !== null && out.length < 10) out.push(m[1])
+
+  // 2) Text/markup that names WhatsApp right next to a phone number, e.g.
+  //    "WhatsApp: +44 7911 123456", "message us on WhatsApp 07911 123456",
+  //    aria-label="Chat on WhatsApp" ... 07911 123456. The number must appear
+  //    within a short window of the word so we don't grab an unrelated figure.
+  const nearRe =
+    /whats\s?app[^0-9+]{0,40}?(\+?\d[\d\s().-]{7,17}\d)/gi
+  while ((m = nearRe.exec(html)) !== null && out.length < 20) {
+    const digits = m[1].replace(/[^\d]/g, '')
+    if (digits.length >= 8 && digits.length <= 15) out.push(digits)
+  }
+
+  return out
+}
+
+/** Phone numbers from tel: links — candidates for a WhatsApp fallback / manual call. */
+function extractTelNumbers(html: string): string[] {
+  const out: string[] = []
+  const re = /href=["']tel:([^"']+)["']/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) !== null && out.length < 20) {
+    const num = decodeEntities(m[1].trim())
+    // Ignore obviously-bogus/short values.
+    if (num.replace(/[^\d]/g, '').length >= 7) out.push(num)
+  }
+  return out
 }
 
 /** Pull <a href> links with their visible text so we can spot menu pages. */
@@ -238,8 +289,10 @@ export async function fetchWebsiteText(
 
   let combinedText = homeOk ? htmlToText(html).slice(0, MAX_HOME_CHARS) : ''
   // Emails are gathered from every page we touch (homepage first for ranking),
-  // then de-duped/filtered once at the end.
+  // then de-duped/filtered once at the end. WhatsApp/phone numbers likewise.
   const emailCandidates: string[] = homeOk ? extractEmailsFromHtml(html) : []
+  const whatsappCandidates: string[] = homeOk ? extractWhatsappNumbers(html) : []
+  const phoneCandidates: string[] = homeOk ? extractTelNumbers(html) : []
 
   // ---- Hunt for menu + contact pages -------------------------------------
   let origin = ''
@@ -317,16 +370,20 @@ export async function fetchWebsiteText(
       : Promise.resolve([] as PromiseSettledResult<Awaited<ReturnType<typeof fetchDoc>>>[]),
   ])
 
-  // Contact/about pages: harvest emails only.
+  // Contact/about pages: harvest emails + WhatsApp/phone (the most likely place).
   for (const r of contactResults) {
     if (r.status !== 'fulfilled' || !r.value || !r.value.html) continue
     emailCandidates.push(...extractEmailsFromHtml(r.value.html))
+    whatsappCandidates.push(...extractWhatsappNumbers(r.value.html))
+    phoneCandidates.push(...extractTelNumbers(r.value.html))
   }
 
-  // Menu pages: append readable text for grounding AND harvest any emails.
+  // Menu pages: append readable text for grounding AND harvest any contacts.
   for (const r of menuResults) {
     if (r.status !== 'fulfilled' || !r.value || !r.value.html) continue
     emailCandidates.push(...extractEmailsFromHtml(r.value.html))
+    whatsappCandidates.push(...extractWhatsappNumbers(r.value.html))
+    phoneCandidates.push(...extractTelNumbers(r.value.html))
     if (combinedText.length >= MAX_TOTAL_CHARS) continue
     const menuText = htmlToText(r.value.html).slice(0, MAX_MENU_CHARS)
     if (menuText.length < 40) continue // a shell page with no real content
@@ -357,11 +414,15 @@ export async function fetchWebsiteText(
   }
 
   const emails = filterContactEmails(emailCandidates)
+  const whatsapp = whatsappCandidates.find((n) => n.replace(/[^\d]/g, '').length >= 8) || null
+  const phones = Array.from(new Set(phoneCandidates)).slice(0, 5)
 
   // Only give up if we truly recovered nothing useful. An extract with no body
-  // text but a real contact email (found on a /contact page when the homepage was
-  // blocked) is still valuable, so we keep it.
-  if (!combinedText && emails.length === 0 && menuLinks.size === 0) return null
+  // text but a real contact email/WhatsApp (found on a /contact page when the
+  // homepage was blocked) is still valuable, so we keep it.
+  if (!combinedText && emails.length === 0 && !whatsapp && phones.length === 0 && menuLinks.size === 0) {
+    return null
+  }
 
   return {
     url,
@@ -370,6 +431,8 @@ export async function fetchWebsiteText(
     text: combinedText,
     chars: combinedText.length,
     emails,
+    whatsapp,
+    phones,
     menuLinks: Array.from(menuLinks).slice(0, 5),
     menuPagesRead,
   }

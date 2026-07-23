@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { getApprovedBusinessesForQR, createQRCode, updateQRCodeTarget, updateQRCodeDetails, deleteQRCode as deleteQRCodeAction, fetchQRCodesForAdmin, QRBusiness } from '@/lib/actions/qr-management-actions'
 import { QRCodeCanvas as QRCode } from 'qrcode.react'
 import { useElegantModal } from '@/components/ui/elegant-modal'
-import { Download, Search, Filter, Eye } from 'lucide-react'
+import { Download, Search, Filter, Eye, ChevronRight } from 'lucide-react'
 
 interface Business {
   id: string
@@ -62,6 +62,8 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
   const [searchTerm, setSearchTerm] = useState('')
   const [businessSearch, setBusinessSearch] = useState('')
   const [showBusinessDropdown, setShowBusinessDropdown] = useState(false)
+  // Which business groups are expanded in the "Generated QR Codes" list.
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   
   // Edit functionality (URL + name + description)
   const [editingCode, setEditingCode] = useState<GeneratedQR | null>(null)
@@ -492,6 +494,34 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
       code.business_name?.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSection && matchesSearch
   })
+
+  // Group the visible codes by business so a franchise's many launch-pack /
+  // intent-routing codes collapse into one dropdown per business (instead of a
+  // long flat list). Codes with no business fall into "General / Unassigned".
+  const GENERAL_KEY = '__general__'
+  const groupedCodes = (() => {
+    const groups = new Map<string, { key: string; label: string; codes: GeneratedQR[] }>()
+    for (const code of filteredCodes) {
+      const key = code.business_id || (code.business_name ? `name:${code.business_name}` : GENERAL_KEY)
+      const label = code.business_name || 'General / Unassigned'
+      if (!groups.has(key)) groups.set(key, { key, label, codes: [] })
+      groups.get(key)!.codes.push(code)
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.key === GENERAL_KEY) return 1
+      if (b.key === GENERAL_KEY) return -1
+      return a.label.localeCompare(b.label)
+    })
+  })()
+
+  // Default-open: while searching, single-group sections, and the General bucket.
+  // Business groups start collapsed so the list stays a tidy set of dropdowns.
+  const isGroupExpanded = (key: string) =>
+    expandedGroups[key] ??
+    (searchTerm !== '' || key === GENERAL_KEY || groupedCodes.length === 1)
+
+  const toggleGroup = (key: string) =>
+    setExpandedGroups(prev => ({ ...prev, [key]: !isGroupExpanded(key) }))
 
   const filteredBusinesses = businesses.filter(business =>
     business.business_name.toLowerCase().includes(businessSearch.toLowerCase())
@@ -1102,8 +1132,28 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
               <p className="text-slate-400">No QR codes generated for this section yet.</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredCodes.map(code => (
+            <div className="space-y-3">
+              {groupedCodes.map(group => {
+                const expanded = isGroupExpanded(group.key)
+                const groupScans = group.codes.reduce((s, c) => s + (c.total_scans || 0), 0)
+                return (
+                  <div key={group.key} className="border border-slate-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => toggleGroup(group.key)}
+                      className="w-full flex items-center justify-between gap-3 p-4 bg-slate-800 hover:bg-slate-700/70 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <ChevronRight size={18} className={`text-slate-400 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`} />
+                        <span className="text-white font-semibold truncate">{group.label}</span>
+                        <Badge className="bg-slate-700 text-slate-200 shrink-0">
+                          {group.codes.length} code{group.codes.length === 1 ? '' : 's'}
+                        </Badge>
+                      </div>
+                      <span className="text-slate-400 text-xs shrink-0">{groupScans} total scans</span>
+                    </button>
+                    {expanded && (
+                      <div className="p-4 space-y-4 bg-slate-900/40">
+                        {group.codes.map(code => (
                 <div key={code.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -1172,7 +1222,12 @@ export function ComprehensiveQRDashboard({ city }: ComprehensiveQRDashboardProps
                     </div>
                   </div>
                 </div>
-              ))}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>

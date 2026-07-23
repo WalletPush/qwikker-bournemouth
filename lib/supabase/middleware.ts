@@ -107,7 +107,8 @@ export async function updateSession(request: NextRequest) {
     '/wallet-pass', // Wallet pass pages
     '/loyalty',     // Loyalty flows (earn, join, start) -- uses wallet_pass_id cookie
     '/partners',    // City partner landing page (public)
-    '/privacy-policy' // Privacy policy page
+    '/privacy-policy', // Privacy policy page
+    '/demo'         // Present Mode / prospecting demo (signed token gates access; noindex)
   ]
   
   // Check if current path matches any public path

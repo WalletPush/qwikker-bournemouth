@@ -4,6 +4,104 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## 🚀 Prospecting Present Mode + Acquisition Engine — SHIPPING TO MAIN (Jul 23, 2026)
+
+Big session finishing the door-to-door **Present Mode** demo and the enrichment → outreach pipeline. Committing `feat/ai-offer-engine` and **merging to `main` for production testing**. `next.config` already sets `typescript.ignoreBuildErrors` + `eslint.ignoreDuringBuilds`, so the pre-existing baseline TS/ESLint errors don't block the Vercel build.
+
+### Present Mode demo (`/demo/<token>` + admin "Present") — polished end-to-end
+- **Launch pack mockups** (`components/demo/demo-launch-pack.tsx`, `launch-artwork.tsx`, `demo-corner-pin.tsx`): photoreal blank product photos (table tent, window sticker, counter display, review card) with **print-ready SVG artwork** projected onto each product face via a `matrix3d` homography (`CornerPin`). Corners detected programmatically (`scripts/detect-tent-face.cjs`, `overlay-quad.cjs`, `crop-zoom.cjs`) for pixel-accurate fit; `ProductScene` measures the `<img>` (ResizeObserver + onLoad) so sizing is deterministic. Black + Qwikker-green branding; business name cleaned of trailing town (`lib/utils/clean-business-name.ts`).
+- **Review card** = "Rate your experience" NFC-style card (Google G + Qwikker logo) deep-linking to the Qwikker **What People Think / vibes** tab, then prompting "rate us on Google" (`user-business-detail-page.tsx` `?tab=` deep-link + `vibe-prompt-sheet.tsx` Google-review prompt using `google_place_id`). "View on Google" → "Rate us on Google".
+- **Launch-pack QR codes created at ENRICH time, not on demo launch** (`lib/listing-engine/ensure-launch-qr.ts`): idempotent, **one distinct tracked code per material** (each a different target URL), registered in the real `qr_codes` system and **grouped by business (collapsible) in QR Management** (`comprehensive-qr-dashboard.tsx`).
+- **AI chat mockup**: scroll-triggered typing-bubble → messages animate in (`globals.css` keyframes; respects `prefers-reduced-motion`). User question is now natural and tied to the answer's item (generalised, no exact dish name); killed the "in near me" grammar bug via `placePhrase`.
+- **Food-smart section**: retitled "When diners ask what to eat, the AI recommends you"; craving chips are now broad/human (category-based), not specific dish names.
+- **Two-phone "How you look on Qwikker"** section (`demo-profile-phones.tsx`): discover card + hero page, numbered steps, tidy captions. Long titles now wrap (removed `truncate`).
+- **Closer** reworked: "Everything is ready" → "already live with…" vs "when you claim today…" checklists → memorable line ("You're not starting from scratch. You're simply taking control.") → big **Claim my business** CTA. Dashboard section retitled "Everything in one place". Footer = completion statement.
+- Currency-aware featured prices (`£4.50`, not `4.5`); analytics animate on scroll; loyalty stamps pop in.
+
+### Claim email → Present Mode
+- "See your listing come alive" now opens the **demo / Present Mode** page, environment-aware via `getFranchiseBaseUrl` (localhost in dev, franchise subdomain in prod) — `send-claim-invite.ts`. Root cause of the "opens dashboard sign-in" bug was a **deploy gap** (the `/demo` route + middleware `publicPaths` weren't on prod yet) — fixed by this merge.
+
+### WhatsApp outreach hardened (Jul 23)
+- **Only real WhatsApp numbers**: an explicit `wa.me`/WhatsApp link (verified) or a **mobile scraped from the site** (likely) — **never a landline or the generic Google number** (`isLikelyMobile` per-country in `lib/utils/phone.ts`; `contact-methods.ts` drops the old phone→WhatsApp fallback; `generate-acquisition-draft.ts` selects explicit-or-site-mobile; `whatsappVerified` threaded through the pipeline route/card).
+- **Look harder**: `fetch-website.ts` `extractWhatsappNumbers` now also catches `wa.me/message?phone=`, `api.whatsapp.com`, `whatsapp://`, and **text-proximity** ("WhatsApp: 07…").
+- **Outreach UI**: shows the WhatsApp number as the headline with an honesty line (explicit vs mobile) and **collapses** the long pre-filled message behind a toggle (`acquisition-pipeline.tsx`).
+
+### Post-enrichment export
+- After enrichment in the import tool, download **everything** (CSV + JSON): listing, offers + rationale, contacts, socials, website, **individual QR URLs**, and the signed demo link — with an unsaved-export guard (`export-businesses.ts`, `enrich-progress-modal.tsx`, `import-client.tsx`; enrich API returns `qrUrls` + `demoUrl`).
+
+### Migrations to apply on prod (in order)
+1. `20260722120000_add_menu_preview_to_chat_views.sql`
+2. `20260722140000_add_contact_methods_to_business_profiles.sql`
+3. `20260722150000_add_notified_at_to_city_waitlist.sql`
+4. `20260723010000_backfill_system_category_from_google.sql`
+
+⚠️ **Re-enrich note:** businesses enriched before Jul 23 need a **re-enrich** to pick up the new WhatsApp (site-mobile) detection and the launch-pack QR codes.
+
+## 🔧 Acquisition Engine fixes — Jul 22, 2026 (featured items: price + AI visibility)
+
+Two bugs fixed in the enrichment → publish → chat pipeline:
+
+1. **Prices never captured on enriched featured items.** Draft schema had no `price`;
+   `publishListing()` hardcoded `price: ''`, so every scraped item showed no price.
+   - `lib/listing-engine/generate-acquisition-draft.ts`: added `price` to `FeaturedItem`,
+     LLM JSON schema + prompt now copy the price **verbatim** from source (never invent),
+     and a `sanitizePrice()` safety net drops any price whose digits don't appear in the
+     scraped source text. Empty when no price shown → listing hides it (no "£0.00").
+   - `lib/listing-engine/publish-listing.ts`: writes the real captured price to `menu_preview`.
+   - `components/admin/acquisition-draft-review.tsx`: shows the price in the review UI.
+   - Manually-entered prices already display via `hasDisplayablePrice()` — unchanged.
+
+2. **Enriched featured items invisible to AI chat (Tier 3 only).** `hybrid-chat.ts` already
+   injects `menu_preview`, but the **Tier 3** view (`business_profiles_ai_fallback_pool`,
+   unclaimed) didn't select it — so users asking for a listed dish got "can't find any in <city>".
+   (Pre-flight check 2026-07-22 confirmed Tier 1 `chat_eligible` and Tier 2 `lite_eligible`
+   ALREADY expose `menu_preview` — no change needed there.)
+   - Migration `20260722120000_add_menu_preview_to_chat_views.sql` adds `menu_preview` +
+     `featured_items_count` to the **Tier 3** view only. **Must be applied to prod.**
+   - NOTE: an unclaimed business still only enters chat when toggled **AI-eligible**
+     (`admin_chat_fallback_approved`) in admin. This fix makes its items searchable *once* eligible.
+
+## 📲 Acquisition Engine — WhatsApp outreach + live enrich progress (Jul 22, 2026)
+
+- **WhatsApp discovery:** `fetch-website.ts` now scrapes explicit WhatsApp links
+  (`wa.me`, `api.whatsapp.com/send?phone=`, `whatsapp://send?phone=`) and `tel:` numbers
+  from the homepage + contact/menu pages. Threaded through `AcquisitionResult.contact`
+  (`{ emails, whatsapp, phone }`; phone falls back to the Google number on file).
+- **Click-to-chat outreach:** Outreach step (step 3) now has a "Message on WhatsApp" block —
+  a `wa.me` link with a pre-filled, **editable** short message; the franchise taps send.
+  Prominent (emerald) when no email is on file; secondary otherwise. Uses the scraped
+  WhatsApp number if present, else normalizes the phone to international via
+  `lib/utils/phone.ts` (`dialCodeForCity` map, defaults UK +44).
+  - Compliance note: NO WhatsApp Business API / auto-send (cold sends need Meta approval +
+    opt-in). This is manual click-to-chat only — honest and zero-infra.
+- **Live enrich progress:** the "Generating rich content" modal now shows a per-business
+  checklist as each finishes — Website scanned ✓ · N menu/service items ✓ · Email found ✓/⚠️ ·
+  N reviews read. (Per-business granularity; would need server streaming for sub-steps within one.)
+- **Import UI polish:** "Import Selected" bar is now sticky while scrolling; removed the "📸 Photo" tag.
+- **Featured-item extraction consistency (Jul 22):** same business was yielding 3 items one run, 1 the next.
+  Root causes: LLM `temperature: 0.75` (random subset on a factual task) + menu sub-page fetch timeouts.
+  Fix: `temperature → 0.2` + fixed `seed: 42`, prompt now demands EXHAUSTIVE + repeatable extraction
+  ("same input → same items, up to 8"), and menu/home fetch timeouts bumped (6s→9s / 8s→10s) so a slow
+  sub-page no longer drops items. Offers stay tailored (specificity comes from the DATA, not temperature).
+  Also aligned the featured-item cap to the free-tier promise: extraction + publish now clamp to **5**
+  (was 8) to match "Up to 5 featured menu items" in `lib/utils/tier-limits.ts`. The live listing renders
+  all stored items with no cap, so 5 in = 5 shown.
+- **Confirm & publish → auto AI-eligible:** `publishListing()` now also sets `admin_chat_fallback_approved = true`,
+  so confirming a listing live drops it into the Tier 3 chat pool immediately (no separate AI-eligible toggle step).
+  Applies to single/bulk/send-bulk publish. Confirm UI carries a note + tooltip: "also makes the business & its
+  featured menu items discoverable by the Qwikker AI." Enrich progress checklist now also shows WhatsApp/Phone/Instagram/Facebook found.
+
+### Phase 1 — `contact_methods` keystone (Jul 22, 2026)
+Foundation for turning the Acquisition Engine into a "city launch OS" (prospect → multi-channel outreach → CRM). **Phase 1 only** (agreed); Phase 2 (outreach CRM status pipeline) and Phase 3 (multi-style AI drafts + AI channel fallback) are deferred.
+- **Unified model** `lib/listing-engine/contact-methods.ts`: `ContactMethod {type,value,url,verified,source}` for email/whatsapp/phone/instagram/facebook + `buildContactMethods()` + `scoreContactability()` (grounded "reach" score, NOT a fabricated response-rate).
+- **Storage:** additive JSONB column `business_profiles.contact_methods` (migration `20260722140000`, GIN-indexed). Existing email/phone/social columns untouched; contact_methods is derived, refreshed on each enrich. **Apply to prod.**
+- **Populated** in `generate-acquisition-draft` (adds instagram_handle/facebook_url to the select) and persisted by the enrich route.
+- **Cards** (`business-card.tsx`) now show channel chips (Web/Email/WhatsApp/IG/FB — WhatsApp shows "?" when it's an unconfirmed phone) + a `NN% reach` contactability pill → instant "easy wins" scan.
+- **Honesty guardrails:** `verified` is true only with a reliable signal (real email, explicit wa.me link, known social); a bare phone = UNverified WhatsApp candidate. No fake "WhatsApp Available".
+- **Bonus:** WhatsApp draft in the outreach step now embeds a **real one-tap claim link** (`/claim?business_id=…`) with the "already live, claim free + benefits" copy.
+
+Deferred (noted): owner-name discovery; WhatsApp verified-detection (needs Meta Business API); CRM statuses (Drafted/Opened auto, Sent/Replied manual, Claimed/Converted from system); multi-style drafts on demand.
+
 ## 🧪 TEST LIST — verify before deploy & before replying to Dennis (batch of Jul 7, 2026)
 
 > Nothing below is deployed yet — all local, batched so nothing ships half-finished. Tick each off with a real test, then it's safe to deploy + mention to Dennis.
@@ -27,6 +125,13 @@
   - **⭐ dennis‑15/08 DECISION (Jul 20) — split into two layers so old devices aren't stranded:** **Layer 1 = backend correctness + expiry, DEVICE/PASS‑AGNOSTIC, do independently of iOS 27:** enforce `offer_claim_amount` single/multiple server‑side, add UNIQUE(wallet_pass_id, offer_id) dedupe, actually write `claimed`/`redeemed`/`expired`, fix muddled "Add to wallet = redeemed" wording, implement self‑expiry (drop 12h→~1h + ticking countdown = the honour‑system anti‑abuse). Works on ALL devices/old pass styles because enforcement is server‑side + display is plain text. **Layer 2 = pass PRESENTATION (morphing face, geofenced surfacing) = couple with iOS 27 Poster Generic / Living Pass.** The redemption MODEL is already decided (Living Pass, Jul 14: "just show the pass" + short self‑expiry). So: backburner Layer 2 UX until iOS 27; Layer 1 is small groundwork worth doing anytime and de‑risks the iOS 27 work.
   - **NEXT (founder's chosen order, resume after Cursor update):** get the done Dennis batch tested + deployed (untangle from acquisition), then small wins (13/21/19 decision), then Events (02/09/14), then redemption/expiry Layer 1 (15/08), i18n (12) later.
 
+- **🟢 BUILT LOCALLY (Jul 22) — Prospecting "Present Mode" / door-to-door demo page (uncommitted, on `feat/ai-offer-engine`).** Full-screen, mobile/tablet-first demo of a business's own listing, launched in person or via a signed link.
+  - **Files:** `lib/listing-engine/demo-token.ts` (HMAC-signed, 30-day expiring token — service-role secret), `app/api/admin/offer-engine/present-token/route.ts` (admin-gated mint; **gated on enrichment status='ready'** — returns 409 `not_enriched` otherwise), `lib/listing-engine/get-demo-data.ts` (assembles the REAL grounded listing respecting the same decisions/edits as the claim email + example-preset from category), `app/demo/[token]/page.tsx` (`force-dynamic`, `robots noindex`, verifies token → `notFound()` on forged/malformed, friendly `DemoExpired` on expiry), `components/demo/present-mode.tsx` (two halves + **Presentation-Mode dropdown** Food-first/Services/General reordering sections + sticky Claim CTA), `components/demo/demo-expired.tsx`. `/demo` added to middleware `publicPaths`.
+  - **Claim = existing flow (decided Jul 22):** the sticky "Claim now" button deep-links to `getFranchisePublicUrl(city)/claim?business_id=…` — the SAME link as the claim email/WhatsApp. No new claim path.
+  - **Entry points:** (1) drawer header "▶ Present" button (enriched, unclaimed only); (2) **Present Mode toggle** at the top of the Acquisition Engine tab that flips the page into a search over ENRICHED businesses, each shown as a listing card with a big **PRESENT** button (`PresentPicker`). Opens `/demo/<token>` in a new tab on the current host (works on localhost / patchy door-to-door signal).
+  - **Honesty rule intact:** real listing content stays grounded; loyalty/analytics/push/wallet panels are badged **Example**. Effort as predicted (~medium). ⏳ Lint clean on all changed files; verify in-app then commit.
+  - **Real-data mockups (Jul 23):** the AI panel is a faithful **Qwikker AI chat** replica (same emerald/blue bubbles + avatar) asking a question built from their REAL signature item and answering with THEIR name + real offer. **Naming fix:** the chat concierge is labelled **"Qwikker AI"** (NOT Atlas — Atlas is the map mode; only "Directions via Atlas" in analytics keeps that name, correctly). `components/demo/demo-analytics.tsx` is a **faithful replica of the real Analytics dashboard** (`analytics-page-client.tsx`) — same stat cards, DailyChart, QR area chart, breakdown bars, AI Discovery / What People Asked — with seeded EXAMPLE data (stable per business) + a **"What you'd track here"** note under every section.
+  - **Realistic iPhone mockups (Jul 23):** `components/demo/phone-mockups.tsx` — a proper full-size **PhoneFrame** (dynamic island, status bar), **LockScreenPush** (lock screen + Qwikker notification banner with their offer), and **WalletPassPhone** recreating the REAL Qwikker wallet pass (Qwikker wordmark + **city name**, hero image, "YOUR CURRENT OFFER:", believable **QR code**, business name) inside the Apple Wallet view with stacked cards. Offers section now mirrors the real `offer-preview-card` (type badge, green value box, "at {business}", Add to Wallet) + the "why this works" line. **Geofence/proximity wording removed** (not shipped) — push is framed as "sent to their lock screen".
 - **⭐ SPEC'D (Jul 22) — Prospecting "Present Mode" / door-to-door demo page (the physical twin of the claim email).** Founder idea for franchisees going door-to-door: instead of a cold email, walk in and show the owner a **personalised, full demo of their own listing** on a phone/tablet — "what you see is what you get, claim it now". Directly answers **Philippe's "prospecting angle"** question. **~80% already exists:** the Acquisition Engine already generates the full grounded draft (`business_enrichments`: description, tagline, REAL featured items, 3 offers + rationale, Google rating + review_count) and we have **publish-on-claim** + the business detail page + claim flow — Present Mode is mostly a **business-facing reskin of that draft** + an "unlock" showcase.
   - **Two halves:** (A) *"This is you, right now"* = the real, grounded listing exactly as it'd go live, incl. the personal social-proof hook we designed (e.g. *"287 reviews mention your Sunday roast"*) + the 3 suggested offers with "why this works". (B) *"What you'd unlock"* = **their branding** with **clearly-labelled EXAMPLE data**: loyalty stamp card in their logo/colours, sample analytics (views/claims/repeat visits), a phone mock of an offer on the lock screen (ties to the Living Pass/geofence vision), and Free-vs-Spotlight/Trial tier framing. Then **one-tap Claim → existing claim flow → publish-on-claim = instant**.
   - **Access = BOTH (decided Jul 22):** (1) **admin-session** Present Mode launched from the acquisition pipeline (search/select business → full-screen "present"), for in-person; (2) **signed, expiring token link** `/demo/<token>` that can ALSO be dropped in the claim email + left behind. Both `noindex`, unguessable, auto-expire — never publicly findable.

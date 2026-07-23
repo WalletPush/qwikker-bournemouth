@@ -49,6 +49,15 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   const isDeepLinked = searchParams.get('highlight') === 'true'
   const [heroHighlight, setHeroHighlight] = useState(false)
   const heroRef = useRef<HTMLDivElement>(null)
+
+  // Deep link straight to a tab (e.g. review-card QR -> ?tab=reviews opens
+  // "What People Think" so users land on Qwikker Vibes + the Google review CTA).
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'reviews' || tab === 'menu' || tab === 'offers' || tab === 'overview') {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
   
   // 💚 Vibe Prompt State (triggered by post-visit actions only)
   const [showVibePrompt, setShowVibePrompt] = useState(false)
@@ -1141,12 +1150,12 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                     {business.google_place_id && (
                       <Button asChild size="sm" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
                         <a 
-                          href={`https://www.google.com/maps/place/?q=place_id:${business.google_place_id}`}
+                          href={`https://search.google.com/local/writereview?placeid=${business.google_place_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2"
                         >
-                          View on Google
+                          Rate us on Google
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -1303,6 +1312,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           businessId={business.id}
           businessName={business.name}
           walletPassId={walletPassId}
+          googleReviewUrl={business.google_place_id ? `https://search.google.com/local/writereview?placeid=${business.google_place_id}` : null}
           onClose={() => setShowVibePrompt(false)}
           onVibeSubmitted={(vibeRating) => {
             console.log(`💚 Vibe submitted: ${vibeRating} for ${business.name}`)

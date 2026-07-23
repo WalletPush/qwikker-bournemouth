@@ -3,10 +3,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import { coveredCitiesFor } from '@/lib/offer-engine/generate-offers'
 import { deriveStage, type Stage } from '@/lib/listing-engine/pipeline-stage'
+import { dialCodeForCity } from '@/lib/utils/phone'
 
 interface DraftShape {
   listing?: { business_description?: { value?: string } }
   offers?: unknown[]
+  contact?: {
+    whatsapp?: string | null
+    phone?: string | null
+    methods?: Array<{ type?: string; verified?: boolean }>
+  }
 }
 
 /**
@@ -32,7 +38,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('business_profiles')
       .select(
-        'id, business_name, business_town, city, owner_user_id, email, rating, review_count, google_place_id, website_url, system_category, business_type'
+        'id, business_name, business_town, city, owner_user_id, email, phone, contact_methods, rating, review_count, google_place_id, website_url, display_category, system_category, business_type'
       )
       .in('city', covered)
       .order('business_name', { ascending: true })
@@ -56,6 +62,8 @@ export async function GET(request: NextRequest) {
       flags: string[]
       sentAt: string | null
       reviewAction: string | null
+      whatsapp: string | null
+      whatsappVerified: boolean
     }
     const enrichmentMap = new Map<string, EnrichmentInfo>()
 
@@ -80,6 +88,9 @@ export async function GET(request: NextRequest) {
           flags: Array.isArray(cs.flags) ? cs.flags : [],
           sentAt: e.sent_at ?? null,
           reviewAction: e.review_action ?? null,
+          whatsapp: draft.contact?.whatsapp ?? null,
+          whatsappVerified:
+            draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
         })
       }
     }
@@ -102,11 +113,22 @@ export async function GET(request: NextRequest) {
         city: b.city,
         claimed,
         email: b.email || null,
+        // WhatsApp number for outreach — explicit link or a mobile scraped from the
+        // site only (never a landline/Google number). `whatsappVerified` marks the
+        // explicit-link case so the UI can be honest about confidence.
+        whatsapp: e?.whatsapp ?? null,
+        whatsappVerified: e?.whatsappVerified ?? false,
+        phone: b.phone || null,
+        dialCode: dialCodeForCity(city),
+        // Unified outreach channels (populated on enrich). Kept as-is for the cards.
+        contactMethods: Array.isArray(b.contact_methods) ? b.contact_methods : [],
         rating: b.rating,
         reviewCount: b.review_count,
         hasWebsite: !!b.website_url,
         hasPlaceId: !!b.google_place_id,
-        category: b.system_category || b.business_type || null,
+        // Show the customer-facing category (same as the live listing & demo hero),
+        // falling back to the internal bucket only if there's no display category.
+        category: b.display_category || b.system_category || b.business_type || null,
         stage,
         confidence: e?.confidence ?? null,
         flags: e?.flags ?? [],

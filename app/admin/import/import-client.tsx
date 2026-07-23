@@ -27,7 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ImportProgressModal } from '@/components/admin/import-progress-modal'
-import { EnrichProgressModal, type EnrichProgress } from '@/components/admin/enrich-progress-modal'
+import { EnrichProgressModal, type EnrichProgress, type EnrichStepResult } from '@/components/admin/enrich-progress-modal'
+import type { EnrichedExportBusiness } from '@/lib/utils/export-businesses'
 import { ImportMapPreview } from '@/components/admin/import-map-preview'
 import { ONBOARDING_CATEGORY_OPTIONS, type SystemCategory, SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
@@ -169,6 +170,11 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
   const [enrichComplete, setEnrichComplete] = useState(false)
   const [enrichCancelled, setEnrichCancelled] = useState(false)
   const enrichCancelRef = useRef(false)
+  // Full "mega" export of everything enrichment produced (rich content, contact,
+  // socials, suggested offers, individual QR URLs, demo link) — offered for
+  // download when the run finishes, mirroring the post-import export.
+  const [enrichExportData, setEnrichExportData] = useState<EnrichedExportBusiness[]>([])
+  const [enrichCompletedAt, setEnrichCompletedAt] = useState<string | null>(null)
 
   // Helper: Extract cuisine tags from Google types
   const getCuisineTags = (googleTypes?: string[]): string[] => {
@@ -441,18 +447,23 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
     setEnrichCancelled(false)
     setEnrichComplete(false)
     setShowEnrichModal(true)
+    setEnrichExportData([])
+    setEnrichCompletedAt(null)
     const include = includeFields
     let done = 0
     let failed = 0
-    setEnrichProgress({ current: 0, total: businesses.length, done, failed, currentBusiness: businesses[0]?.name || '' })
+    const results: EnrichStepResult[] = []
+    const exportRows: EnrichedExportBusiness[] = []
+    setEnrichProgress({ current: 0, total: businesses.length, done, failed, currentBusiness: businesses[0]?.name || '', results })
 
     for (let i = 0; i < businesses.length; i++) {
       if (enrichCancelRef.current) {
+        setEnrichCompletedAt(new Date().toISOString())
         setEnrichCancelled(true)
         return
       }
       const b = businesses[i]
-      setEnrichProgress({ current: i, total: businesses.length, done, failed, currentBusiness: b.name })
+      setEnrichProgress({ current: i, total: businesses.length, done, failed, currentBusiness: b.name, results: [...results] })
       try {
         const res = await fetch('/api/admin/offer-engine/enrich', {
           method: 'POST',
@@ -460,13 +471,82 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
           body: JSON.stringify({ businessId: b.id, include }),
         })
         if (!res.ok) throw new Error('enrich failed')
+        const data = await res.json().catch(() => ({}))
+        const methods: Array<{ type?: string; value?: string; verified?: boolean }> = data?.result?.contact?.methods || []
+        const hasMethod = (t: string) => methods.some((m) => m?.type === t)
+        const methodValue = (t: string) => methods.find((m) => m?.type === t)?.value ?? null
+        results.push({
+          name: b.name,
+          usedWebsite: !!data?.result?.signals?.usedWebsite,
+          menuCount: data?.result?.listing?.featured_items?.length || 0,
+          emailFound: !!data?.savedEmail || (data?.emailCandidates?.length || 0) > 0,
+          reviewsUsed: data?.result?.signals?.reviewsUsed || 0,
+          // WhatsApp only counts as "found" when it's an explicit, verified link.
+          whatsappFound: methods.some((m) => m?.type === 'whatsapp' && m?.verified),
+          phoneFound: hasMethod('phone'),
+          instagramFound: hasMethod('instagram'),
+          facebookFound: hasMethod('facebook'),
+        })
+
+        // Capture the full enrichment record for the "mega" export.
+        const r = data?.result
+        exportRows.push({
+          businessId: b.id,
+          name: r?.business?.name || b.name,
+          category: r?.business?.category ?? null,
+          systemCategory: r?.business?.systemCategory ?? null,
+          town: r?.business?.town ?? null,
+          city: r?.business?.city ?? null,
+          rating: r?.business?.rating ?? null,
+          reviewCount: r?.business?.reviewCount ?? null,
+          website: r?.business?.websiteUrl ?? null,
+          claimed: r?.business?.claimed ?? undefined,
+          confidence: typeof data?.confidence === 'number' ? data.confidence : null,
+          flags: Array.isArray(data?.flags) ? data.flags : [],
+          tagline: r?.listing?.business_tagline?.value ?? null,
+          description: r?.listing?.business_description?.value ?? null,
+          featuredItems: Array.isArray(r?.listing?.featured_items)
+            ? r.listing.featured_items.map((it: { name?: string; description?: string; price?: string; source?: string }) => ({
+                name: String(it?.name ?? ''),
+                description: it?.description ?? '',
+                price: it?.price ?? '',
+                source: it?.source ?? '',
+              }))
+            : [],
+          offers: Array.isArray(r?.offers)
+            ? r.offers.map((o: { offer_name?: string; offer_type?: string; offer_value?: string; offer_terms?: string; rationale?: string }) => ({
+                name: String(o?.offer_name ?? ''),
+                type: o?.offer_type ?? '',
+                value: String(o?.offer_value ?? ''),
+                terms: o?.offer_terms ?? '',
+                rationale: o?.rationale ?? null,
+              }))
+            : [],
+          primaryEmail: data?.savedEmail ?? (r?.contact?.emails?.[0] ?? null),
+          emails: Array.isArray(r?.contact?.emails) ? r.contact.emails : [],
+          phone: r?.contact?.phone ?? null,
+          whatsapp: r?.contact?.whatsapp ?? methodValue('whatsapp'),
+          instagram: methodValue('instagram'),
+          facebook: methodValue('facebook'),
+          contactMethods: methods.map((m) => ({ type: String(m?.type ?? ''), value: String(m?.value ?? ''), verified: m?.verified })),
+          insightSummary: r?.insight?.summary ?? null,
+          signatureItems: Array.isArray(r?.insight?.signature_items) ? r.insight.signature_items : [],
+          strengths: Array.isArray(r?.insight?.strengths) ? r.insight.strengths : [],
+          qr: data?.qrUrls ?? null,
+          demoUrl: data?.demoUrl ?? null,
+        })
+        setEnrichExportData([...exportRows])
         done++
       } catch {
+        results.push({ name: b.name, usedWebsite: false, menuCount: 0, emailFound: false, reviewsUsed: 0, failed: true })
+        exportRows.push({ businessId: b.id, name: b.name, failed: true })
+        setEnrichExportData([...exportRows])
         failed++
       }
-      setEnrichProgress({ current: i + 1, total: businesses.length, done, failed, currentBusiness: b.name })
+      setEnrichProgress({ current: i + 1, total: businesses.length, done, failed, currentBusiness: b.name, results: [...results] })
     }
 
+    setEnrichCompletedAt(new Date().toISOString())
     if (!enrichCancelRef.current) setEnrichComplete(true)
     else setEnrichCancelled(true)
   }
@@ -985,8 +1065,8 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
               )}
             </div>
 
-            {/* Selection Summary */}
-            <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            {/* Selection Summary — sticky so the Import button stays reachable while scrolling the list */}
+            <div className="sticky top-2 z-30 flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800 shadow-lg">
               <div>
                 <p className="font-semibold text-blue-900 dark:text-blue-100">
                   {selectedResults.length} businesses selected
@@ -1115,11 +1195,6 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
                             {tag}
                           </Badge>
                         ))}
-                        {result.hasPhoto && (
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            📸 Photo
-                          </Badge>
-                        )}
                         {result.status === 'ready' ? (
                           <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
                             ✓ Ready to import
@@ -1171,6 +1246,9 @@ export default function AdminImportClient({ city: defaultCity, countryName, disp
         isCancelled={enrichCancelled}
         onCancel={handleCancelEnrich}
         onGoToConfirm={handleGoToConfirm}
+        exportData={enrichExportData}
+        completedAt={enrichCompletedAt}
+        city={city}
       />
     </div>
   )

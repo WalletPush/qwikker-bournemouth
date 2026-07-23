@@ -4,6 +4,9 @@ import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import { coveredCitiesFor } from '@/lib/offer-engine/generate-offers'
 import { generateAcquisitionDraft } from '@/lib/listing-engine/generate-acquisition-draft'
 import { scoreConfidence } from '@/lib/listing-engine/score-confidence'
+import { ensureLaunchPackQrCodes, buildLaunchLinks, type LaunchQrUrls } from '@/lib/listing-engine/ensure-launch-qr'
+import { signDemoToken } from '@/lib/listing-engine/demo-token'
+import { getFranchisePublicUrl } from '@/lib/utils/franchise-url'
 
 /**
  * Generate an Acquisition draft for ONE business and persist it to
@@ -90,6 +93,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Saved draft failed: ${upsertError.message}` }, { status: 500 })
     }
 
+    // Register (idempotently) this business's launch-pack QR codes in the REAL QR
+    // system NOW that it's enriched — so they appear in the admin QR management
+    // tab (named + linked to the business) and their scans are tracked. Doing it
+    // here (not on every demo open) means one stable set of codes per business.
+    // Best-effort: never fail the enrich if QR registration hiccups. The codes +
+    // a signed demo link are returned so the post-enrichment export can include
+    // the individual, print-ready scan URLs.
+    let qrUrls: LaunchQrUrls | null = null
+    let demoUrl: string | null = null
+    try {
+      const bizCity = result.business.city || city
+      const links = buildLaunchLinks({
+        id: businessId,
+        business_name: result.business.name,
+        city: bizCity,
+      })
+      qrUrls = await ensureLaunchPackQrCodes(supabase, {
+        businessId,
+        businessName: result.business.name || 'Your business',
+        city: bizCity || '',
+        publicBase: links.publicBase,
+        listingUrl: links.listingUrl,
+        reviewUrl: links.reviewUrl,
+      })
+      demoUrl = `${getFranchisePublicUrl(bizCity || '')}/demo/${signDemoToken(businessId, bizCity || '')}`
+    } catch (e) {
+      console.warn('enrich: launch-pack QR registration skipped', e)
+    }
+
     // Discover contact email while we already have the site scanned — so outreach
     // is a single click later. Auto-save the best candidate ONLY if the business
     // has no email on file (never overwrite a real one). Candidates are returned
@@ -113,6 +145,17 @@ export async function POST(request: NextRequest) {
       console.warn('enrich: email auto-save skipped', e)
     }
 
+    // Persist the unified contact-methods list (derived/enrichment-owned data) so
+    // the pipeline cards + future AI channel-selection can read it directly.
+    try {
+      await supabase
+        .from('business_profiles')
+        .update({ contact_methods: result.contact?.methods || [] })
+        .eq('id', businessId)
+    } catch (e) {
+      console.warn('enrich: contact_methods save skipped', e)
+    }
+
     return NextResponse.json({
       success: true,
       result,
@@ -120,6 +163,10 @@ export async function POST(request: NextRequest) {
       emailCandidates: candidates,
       confidence: confidence.score,
       flags: confidence.flags,
+      // Individual, tracked launch-pack scan URLs + the signed Present-Mode demo
+      // link, so the post-enrichment export can capture everything in one file.
+      qrUrls,
+      demoUrl,
     })
   } catch (error) {
     console.error('enrich error:', error)

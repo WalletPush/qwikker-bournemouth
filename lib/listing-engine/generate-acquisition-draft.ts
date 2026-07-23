@@ -27,6 +27,8 @@ import {
   playbookFor,
   type GeneratedOffer,
 } from '@/lib/offer-engine/generate-offers'
+import { buildContactMethods, type ContactMethod } from '@/lib/listing-engine/contact-methods'
+import { dialCodeForCity, isLikelyMobile } from '@/lib/utils/phone'
 import OpenAI from 'openai'
 
 export type FieldSource = 'website' | 'google' | 'ai_inferred'
@@ -39,6 +41,8 @@ export interface SourcedText {
 export interface FeaturedItem {
   name: string
   description: string
+  /** Exact price copied from the source (e.g. "£8.50"). Empty when the source shows no price. Never invented. */
+  price: string
   source: FieldSource
 }
 
@@ -76,7 +80,15 @@ export interface AcquisitionResult {
   listing: ListingDraft
   offers: GeneratedOffer[]
   /** Contact details discovered while scanning the website (for outreach). */
-  contact: { emails: string[] }
+  contact: {
+    emails: string[]
+    /** Explicit WhatsApp number (digits) found on the site — reliable "on WhatsApp" signal. */
+    whatsapp: string | null
+    /** Best phone number for a WhatsApp fallback / manual call (site tel: or Google). */
+    phone: string | null
+    /** Unified, normalized outreach channels (see lib/listing-engine/contact-methods). */
+    methods: ContactMethod[]
+  }
   meta: { model: string; costEstimateUsd: number }
 }
 
@@ -96,7 +108,8 @@ export async function generateAcquisitionDraft(
     .select(
       `id, business_name, owner_user_id, city, business_town,
        system_category, business_type, business_category, display_category,
-       rating, review_count, google_place_id, website_url,
+       rating, review_count, google_place_id, website_url, phone,
+       instagram_handle, facebook_url,
        business_description, business_tagline, menu_preview`
     )
     .eq('id', businessId)
@@ -192,7 +205,8 @@ FEATURED ITEMS RULES (critical — read carefully):
 - featured_items are REAL, specific things the business actually offers — for a FOOD venue that's dishes/drinks; for a SPA/SALON/BARBER/CLINIC/GYM/GARAGE etc. it's TREATMENTS or SERVICES (e.g. "Swedish Massage", "Gel Manicure", "MOT & Service"). Treat a services/treatments/price-list page exactly like a menu.
 - ONLY include an item if its name appears in the WEBSITE TEXT (including the [MENU / SERVICES] section) or in existing_menu_items. Its "source" MUST be "website" or "google" — NEVER "ai_inferred".
 - DO NOT invent, guess, or infer items. Do NOT list "typical" dishes or "typical" treatments for the category. If the data doesn't name specific items/services, return an EMPTY featured_items array. An empty list is the correct, expected answer for many businesses.
-- Never invent prices.
+- BE EXHAUSTIVE AND CONSISTENT: include EVERY distinct real item/dish/service you can find named anywhere in the DATA (up to 5; if there are more, pick the 5 most prominent/signature). Do NOT return a random handful — the SAME input must always produce the SAME items. Scan the entire [MENU / SERVICES] text, not just the first few lines.
+- PRICE: populate the "price" field ONLY if a price is clearly shown next to that exact item in the source text. Copy it VERBATIM including the currency symbol (e.g. "£8.50", "£12"). If no price is shown for that item, return an empty string "". NEVER guess, round, estimate, average, or invent a price. A missing price is always better than a wrong one.
 
 OFFERS RULES:
 - ONE-OFF promotional offers ONLY. NEVER loyalty schemes, stamp cards, points, or "collect/passport" mechanics — loyalty is a separate Qwikker system.
@@ -233,13 +247,13 @@ Return JSON in EXACTLY this shape:
   "listing": {
     "business_description": { "value": "<=500 chars, natural, specific, grounded", "source": "website|google|ai_inferred" },
     "business_tagline": { "value": "<=60 chars", "source": "website|google|ai_inferred" },
-    "featured_items": [ { "name": "string", "description": "<=120 chars", "source": "website|google|ai_inferred" } ]
+    "featured_items": [ { "name": "string", "description": "<=120 chars", "price": "exact price from source e.g. £8.50, or empty string if none shown", "source": "website|google|ai_inferred" } ]
   },
   "offers": [ { "offer_name": "string", "offer_type": "discount|two_for_one|freebie|buy_x_get_y|percentage_off|fixed_amount_off|other", "offer_value": "string", "offer_claim_amount": "single|multiple", "offer_terms": "string", "rationale": "string" } ]
 }
 
 Guidance:
-- featured_items: ONLY real items/services named in the website text (incl. [MENU / SERVICES]) or existing_menu_items, with source "website" or "google". For non-food businesses these are treatments/services, not dishes. If no specific items are named in the DATA, return an empty array []. Never invent items or use source "ai_inferred" here.
+- featured_items: ONLY real items/services named in the website text (incl. [MENU / SERVICES]) or existing_menu_items, with source "website" or "google". For non-food businesses these are treatments/services, not dishes. If no specific items are named in the DATA, return an empty array []. Never invent items or use source "ai_inferred" here. Include "price" ONLY when it is shown verbatim next to the item in the source; otherwise leave it "". Never invent a price. Be EXHAUSTIVE: list every distinct real item you can find (up to 5), and return the SAME items every time for the same input — do not output a random subset.
 - offers: TAILOR to THIS business using its real signals (featured_items, review_highlights, cuisine/speciality, rating, town). Don't output the same generic three offers you'd give any restaurant. When you have item/review signal, at least 2 of the 3 offers must reference something concrete about this business. Never name a specific product unless it appears in the DATA.
 - exactly 3 offers, each a genuinely different mechanic AND angle.
 
@@ -252,7 +266,12 @@ ${JSON.stringify(payload, null, 2)}`
       { role: 'system', content: system },
       { role: 'user', content: instruction },
     ],
-    temperature: 0.75,
+    // Low temperature + fixed seed = consistent extraction. Featured items are a
+    // FACTUAL task (which real dishes/services are named on the site) — high
+    // randomness made the same business yield 3 items one run and 1 the next.
+    // Offers stay tailored because their specificity comes from the DATA, not heat.
+    temperature: 0.2,
+    seed: 42,
     max_tokens: 2400,
     response_format: { type: 'json_object' },
   })
@@ -263,7 +282,7 @@ ${JSON.stringify(payload, null, 2)}`
     listing?: {
       business_description?: { value?: string; source?: string }
       business_tagline?: { value?: string; source?: string }
-      featured_items?: Array<{ name?: string; description?: string; source?: string }>
+      featured_items?: Array<{ name?: string; description?: string; price?: string; source?: string }>
     }
     offers?: GeneratedOffer[]
   }
@@ -286,6 +305,20 @@ ${JSON.stringify(payload, null, 2)}`
   ]
     .join(' \n ')
     .toLowerCase()
+
+  // Price safety net: even though the model is told to copy prices verbatim and
+  // never invent them, we independently verify the numeric part actually appears
+  // in the source text. If we can't confirm it, we drop the price (the item still
+  // shows, just without a price) — a missing price beats a wrong one.
+  const haystackDigits = groundingHaystack.replace(/[^0-9.,]/g, '')
+  const sanitizePrice = (raw: unknown): string => {
+    if (typeof raw !== 'string') return ''
+    const p = raw.trim().slice(0, 20)
+    if (!p || !/\d/.test(p)) return ''
+    const digits = p.replace(/[^0-9.,]/g, '')
+    if (digits && haystackDigits.includes(digits)) return p
+    return ''
+  }
 
   const isGrounded = (name: string): boolean => {
     const n = name.toLowerCase().trim()
@@ -316,10 +349,13 @@ ${JSON.stringify(payload, null, 2)}`
           .map((it) => ({
             name: it.name!.trim(),
             description: (it.description || '').trim().slice(0, 120),
+            price: sanitizePrice(it.price),
             source: coerceSource(it.source),
           }))
           .filter((it) => it.source !== 'ai_inferred' && isGrounded(it.name))
-          .slice(0, 8)
+          // Free-tier listings advertise "Up to 5 featured menu items" — keep the
+          // enrichment cap aligned with that promise (see lib/utils/tier-limits.ts).
+          .slice(0, 5)
       : [],
   }
 
@@ -354,7 +390,36 @@ ${JSON.stringify(payload, null, 2)}`
     },
     listing,
     offers,
-    contact: { emails: website?.emails || [] },
+    contact: (() => {
+      const dialCode = dialCodeForCity(biz.city || requestCity)
+      const emails = website?.emails || []
+      const sitePhones = website?.phones || []
+      const googlePhone = typeof biz.phone === 'string' ? biz.phone : null
+
+      // WhatsApp contact — HONEST about what's on WhatsApp:
+      //  1. an explicit wa.me/WhatsApp link on the site (verified), else
+      //  2. a MOBILE number scraped from the site (likely, unverified).
+      // We never use a landline or the generic Google number: those aren't
+      // WhatsApp-capable and would make a dead chat link.
+      const explicitWhatsapp = website?.whatsapp || null
+      const siteMobile = sitePhones.find((p) => isLikelyMobile(p, dialCode)) || null
+      const whatsapp = explicitWhatsapp || siteMobile
+
+      // Primary phone for tel:/manual call (site number first, else Google).
+      const phone = sitePhones[0] || googlePhone || null
+      const methods = buildContactMethods({
+        emails,
+        whatsapp: explicitWhatsapp,
+        whatsappCandidate: siteMobile,
+        phone,
+        instagramHandle: typeof biz.instagram_handle === 'string' ? biz.instagram_handle : null,
+        facebookUrl: typeof biz.facebook_url === 'string' ? biz.facebook_url : null,
+        dialCode,
+        emailSource: 'website',
+        phoneSource: sitePhones[0] ? 'website' : 'google',
+      })
+      return { emails, whatsapp, phone, methods }
+    })(),
     meta: { model: 'gpt-4o', costEstimateUsd: costEstimate },
   }
 }

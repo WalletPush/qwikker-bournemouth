@@ -538,6 +538,46 @@ pre, code {
   opacity: 0;
 }
 
+/* Chat mockup: bubbles pop in, typing indicator dots bounce */
+@keyframes chat-bubble-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-chat-in {
+  animation: chat-bubble-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.typing-dot {
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-chat-in {
+    animation: none;
+  }
+  .typing-dot {
+    animation: none;
+  }
+}
+
 /* Simplified Onboarding Animations */
 .animate-slide-in-forward {
   animation: slideInForward 0.5s ease-out forwards;
@@ -620,6 +660,70 @@ pre, code {
 
 .animation-delay-600 {
   animation-delay: 600ms;
+}
+
+/* ---- Present Mode: realistic push-notification arrival --------------------- */
+
+/* The banner drops in from the top, settles with a tiny bounce, holds, then
+   the cycle repeats (looped while the phone is on-screen). */
+@keyframes qwikker-push-arrive {
+  0% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.94);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.01);
+  }
+  12% {
+    transform: translateY(0) scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  96% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.94);
+  }
+}
+
+/* The whole phone gives a short haptic-style wobble exactly as the push lands. */
+@keyframes qwikker-phone-wobble {
+  0%,
+  6%,
+  100% {
+    transform: rotate(0deg);
+  }
+  1.5% {
+    transform: rotate(-1.1deg);
+  }
+  3% {
+    transform: rotate(0.9deg);
+  }
+  4.5% {
+    transform: rotate(-0.5deg);
+  }
+}
+
+.animate-qwikker-push {
+  animation: qwikker-push-arrive 5.5s ease-in-out infinite;
+}
+
+.animate-qwikker-wobble {
+  animation: qwikker-phone-wobble 5.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-qwikker-push,
+  .animate-qwikker-wobble {
+    animation: none;
+  }
 }
 
 /* Marketing Site Animations */

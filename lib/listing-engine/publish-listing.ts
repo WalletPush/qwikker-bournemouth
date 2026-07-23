@@ -55,7 +55,7 @@ export async function publishListing(
     listing?: {
       business_tagline?: { value?: string }
       business_description?: { value?: string }
-      featured_items?: Array<{ name?: string; description?: string }>
+      featured_items?: Array<{ name?: string; description?: string; price?: string }>
     }
   }
   const decisions = (enrichment.decisions || {}) as Record<string, string>
@@ -81,9 +81,14 @@ export async function publishListing(
     .filter((x) => !x.declined && x.it?.name?.trim())
     .map((x) => ({
       name: String(x.it.name).trim(),
-      price: '',
+      // Real price captured during enrichment (verbatim from source, verified
+      // against the source text). Empty when the source showed no price — the
+      // listing hides empty prices rather than rendering "£0.00".
+      price: (typeof x.it.price === 'string' ? x.it.price.trim() : ''),
       description: (x.it.description || '').trim(),
     }))
+    // Free-tier promise is "Up to 5 featured menu items" (lib/utils/tier-limits.ts).
+    .slice(0, 5)
   if (featured.length > 0) {
     businessUpdate.menu_preview = featured
     published.featuredItems = featured.length
@@ -92,6 +97,12 @@ export async function publishListing(
   if (Object.keys(businessUpdate).length === 0) {
     return { ok: false, status: 400, error: 'Nothing to publish — all listing fields were declined or empty.' }
   }
+
+  // Publishing a listing live also makes it (and its featured items) discoverable by
+  // the Qwikker AI: it enters the Tier 3 chat fallback pool
+  // (business_profiles_ai_fallback_pool requires admin_chat_fallback_approved = true).
+  // No point publishing rich content the AI can't surface.
+  businessUpdate.admin_chat_fallback_approved = true
 
   const { error: updateError } = await supabase
     .from('business_profiles')

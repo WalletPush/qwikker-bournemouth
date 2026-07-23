@@ -344,6 +344,9 @@ export function AcquisitionDraftReview({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-slate-100">{item.name}</span>
+                          {item.price && (
+                            <span className="text-xs font-semibold text-[#00d083] shrink-0">{item.price}</span>
+                          )}
                           <SourceBadge source={item.source} />
                         </div>
                         {item.description && <p className="text-xs text-slate-400 mt-0.5">{item.description}</p>}

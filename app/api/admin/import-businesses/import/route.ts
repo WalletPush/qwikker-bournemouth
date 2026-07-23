@@ -583,16 +583,23 @@ export async function POST(request: NextRequest) {
 
             const simpleTagline = `${formattedCategory} • ${townName}`
 
-            // Create business profile (use systemCategory from admin form)
+            // Create business profile.
+            // IMPORTANT: store the Google-derived system_category (computed above via
+            // mapGoogleTypesToSystemCategory) — NOT the admin's import bucket. The admin
+            // bucket only gates WHICH businesses get imported; Google's primary type is
+            // the authoritative classification for what the business actually IS. Using
+            // the bucket here is what caused e.g. a "bar_and_grill" to be stored as
+            // "cafe" (wrong placeholder image + wrong AI category), while display_category
+            // (from Google) correctly showed "Bar and grill".
             const { data: insertedRow, error: insertError } = await supabase
               .from('business_profiles')
               .insert({
                 business_name: place.displayName?.text || 'Unknown',
-                system_category: resolvedCategory,
+                system_category: system_category,
                 display_category: formattedCategory,
                 google_types: googleTypes,
                 google_primary_type: googlePrimaryType,
-                business_type: resolvedCategory,
+                business_type: system_category,
                 business_town: townName, // Use extracted town name
                 city: city.toLowerCase(),
                 business_address: place.formattedAddress || '', // ✅ FIXED: Use correct column name
@@ -611,7 +618,7 @@ export async function POST(request: NextRequest) {
                 google_photo_name: place.photos?.[0]?.name || null,
                 business_tagline: simpleTagline, // Simple format: "Category • Location"
                 tagline_source: 'generated', // Mark as auto-generated
-                placeholder_variant: hashVariant(placeId, getImageCountForCategory(resolvedCategory)),
+                placeholder_variant: hashVariant(placeId, getImageCountForCategory(system_category)),
                 status: 'unclaimed',
                 visibility: 'discover_only',
                 auto_imported: true,

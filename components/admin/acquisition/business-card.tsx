@@ -3,6 +3,28 @@
 import { Button } from '@/components/ui/button'
 import type { PipelineRow } from './types'
 import type { JourneyStep } from './journey-steps'
+import { scoreContactability, type ContactMethod, type ContactType } from '@/lib/listing-engine/contact-methods'
+
+/** One compact channel chip: emerald when present, amber "?" when unverified, grey when absent. */
+function ChannelChip({ on, maybe, label }: { on: boolean; maybe?: boolean; label: string }) {
+  if (maybe && !on) return <span className="text-amber-400/80" title="Number found — WhatsApp not confirmed">{label}?</span>
+  return <span className={on ? 'text-emerald-400' : 'text-slate-600'}>{label}</span>
+}
+
+/** Contactability pill — a grounded "how reachable" score, not a response-rate promise. */
+function ReachPill({ score, label }: { score: number; label: 'High' | 'Medium' | 'Low' }) {
+  const cls =
+    label === 'High'
+      ? 'text-emerald-300 border-emerald-700 bg-emerald-950/40'
+      : label === 'Medium'
+        ? 'text-amber-300 border-amber-700 bg-amber-950/40'
+        : 'text-slate-400 border-slate-700'
+  return (
+    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded border ${cls}`} title={`Contactability: ${score}%`}>
+      {score}% reach
+    </span>
+  )
+}
 
 /**
  * Plain-language confidence so non-technical admins aren't reading raw scores.
@@ -43,6 +65,30 @@ export function BusinessCard({
   const conf = confidencePlain(row.confidence)
   const enrichedReady = row.enrichment?.status === 'ready'
 
+  // Outreach channels. Prefer the unified contact_methods (populated on enrich);
+  // before enrich, fall back to the row's email/whatsapp/phone so cards still read.
+  const cm = row.contactMethods || []
+  const hasType = (t: ContactType) => cm.some((m) => m.type === t)
+  const verifiedType = (t: ContactType) => cm.some((m) => m.type === t && m.verified)
+  // WhatsApp is only ever an explicit link (verified) or a site mobile (maybe) —
+  // a landline/Google phone never counts as WhatsApp.
+  const chan = {
+    email: hasType('email') || !!row.email,
+    whatsapp: verifiedType('whatsapp') || (!!row.whatsapp && !!row.whatsappVerified),
+    whatsappMaybe:
+      (hasType('whatsapp') && !verifiedType('whatsapp')) || (!!row.whatsapp && !row.whatsappVerified),
+    instagram: hasType('instagram'),
+    facebook: hasType('facebook'),
+  }
+  const scoringMethods: ContactMethod[] = cm.length
+    ? cm
+    : ([
+        ...(row.email ? [{ type: 'email', value: '', verified: true }] : []),
+        ...(row.whatsapp ? [{ type: 'whatsapp', value: '', verified: !!row.whatsappVerified }] : []),
+        ...(row.phone ? [{ type: 'phone', value: '', verified: true }] : []),
+      ] as ContactMethod[])
+  const reach = scoreContactability(scoringMethods)
+
   return (
     <div
       className={`rounded-xl border p-3 transition-all ${
@@ -76,19 +122,25 @@ export function BusinessCard({
         {mode === 'invite' && row.enrichment?.published && <span className="shrink-0 text-xs text-sky-400">Live</span>}
       </div>
 
+      {/* Channels: which ways we can reach this business + a contactability score */}
       <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
         {row.rating != null && <span className="text-amber-400">★ {row.rating}</span>}
-        <span className={row.hasWebsite ? 'text-emerald-400' : 'text-slate-600'}>
-          {row.hasWebsite ? '🌐 Website' : 'No website'}
-        </span>
-        <span className={row.email ? 'text-emerald-400' : 'text-slate-600'}>
-          {row.email ? '✉ Email' : 'No email'}
-        </span>
-        {enrichedReady && mode !== 'enrich' && (
-          <span className="text-slate-400">📋 {row.enrichment?.offersCount ?? 0} offers</span>
-        )}
-        {row.sentAt && <span className="text-sky-400">Invited ✓</span>}
+        <ChannelChip on={row.hasWebsite} label="Web" />
+        <ChannelChip on={chan.email} label="Email" />
+        <ChannelChip on={chan.whatsapp} maybe={chan.whatsappMaybe} label="WhatsApp" />
+        <ChannelChip on={chan.instagram} label="IG" />
+        <ChannelChip on={chan.facebook} label="FB" />
+        <ReachPill score={reach.score} label={reach.label} />
       </div>
+
+      {(enrichedReady && mode !== 'enrich') || row.sentAt ? (
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px]">
+          {enrichedReady && mode !== 'enrich' && (
+            <span className="text-slate-400">📋 {row.enrichment?.offersCount ?? 0} offers</span>
+          )}
+          {row.sentAt && <span className="text-sky-400">Invited ✓</span>}
+        </div>
+      ) : null}
 
       {isEnriching ? (
         <div className="mt-2 text-xs text-amber-400 animate-pulse">Generating content…</div>
@@ -135,6 +187,7 @@ export function BusinessCard({
                   <button
                     onClick={() => onConfirm(row.id)}
                     disabled={confirming}
+                    title="Publishes the listing live AND makes the business + its featured menu items discoverable by the Qwikker AI."
                     className="h-7 px-2 text-xs rounded bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
                   >
                     {confirming ? '…' : 'Confirm'}

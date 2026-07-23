@@ -9,8 +9,10 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
+import { sendFranchiseEmail, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
+import { getFranchisePublicUrl, getFranchiseBaseUrl } from '@/lib/utils/franchise-url'
 import { createClaimInvitationEmail } from '@/lib/email/templates/business-notifications'
+import { signDemoToken } from '@/lib/listing-engine/demo-token'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -83,13 +85,21 @@ export async function getInviteContent(supabaseAdmin: AdminClient, businessId: s
 
 /** Build the branded claim-invitation email (pure — no side effects). */
 export function buildClaimTemplate(business: InviteBusiness, city: string, content: InviteContent) {
-  const baseUrl = getFranchiseBaseUrl(city)
+  // Recipient-facing links must always resolve to the live franchise subdomain
+  // (never localhost / admin host), so a business never receives a dead link.
+  const baseUrl = getFranchisePublicUrl(city)
   const supportEmail = getFranchiseSupportEmail(city)
+  // Signed, expiring (30-day) Present-Mode preview link, unguessable + noindex.
+  // Env-aware host: in production this is the live franchise subdomain; in dev it
+  // resolves to localhost so the /demo route is testable against the running dev
+  // server (the production subdomain won't have this route until deployed).
+  const demoUrl = `${getFranchiseBaseUrl(city)}/demo/${signDemoToken(business.id, city)}`
   return createClaimInvitationEmail({
     businessName: business.business_name || 'your business',
     city,
     claimUrl: `${baseUrl}/claim?business_id=${business.id}`,
     forBusinessUrl: `${baseUrl}/for-business`,
+    demoUrl,
     supportEmail,
     listingTeaser: content.listingTeaser,
     offers: content.offers,

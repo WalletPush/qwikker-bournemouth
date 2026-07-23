@@ -9,6 +9,9 @@ import { JourneySteps, type JourneyStep } from '@/components/admin/acquisition/j
 import { BusinessCard } from '@/components/admin/acquisition/business-card'
 import type { PipelineRow, RowEnrichment } from '@/components/admin/acquisition/types'
 import { deriveStage, HIGH_CONFIDENCE } from '@/lib/listing-engine/pipeline-stage'
+import { buildWhatsappLink, normalizeWhatsappNumber } from '@/lib/utils/phone'
+import { getFranchisePublicUrl } from '@/lib/utils/franchise-url'
+import { MessageCircle } from 'lucide-react'
 
 type Step = 1 | 2 | 3
 
@@ -113,6 +116,10 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
   const [publishing, setPublishing] = useState(false)
   const [publishedAt, setPublishedAt] = useState<string | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [presentMode, setPresentMode] = useState(false)
+  const [presentSearch, setPresentSearch] = useState('')
+  const [presentingId, setPresentingId] = useState<string | null>(null)
+  const [presentError, setPresentError] = useState<string | null>(null)
   const [confirmingAll, setConfirmingAll] = useState(false)
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set())
   const patchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -482,6 +489,32 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     }
   }
 
+  // Launch Present Mode (prospecting demo) for a business in a new tab.
+  // Mints a signed token server-side (gated on enrichment) then opens /demo/<token>
+  // on the CURRENT host so it works in-person even on localhost / patchy signal.
+  const presentBusinessById = async (businessId: string) => {
+    setPresentingId(businessId)
+    setPresentError(null)
+    // Open a tab synchronously so mobile Safari doesn't block the async popup.
+    const tab = typeof window !== 'undefined' ? window.open('', '_blank') : null
+    try {
+      const res = await fetch('/api/admin/offer-engine/present-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not start Present Mode')
+      if (tab) tab.location.href = data.path
+      else if (typeof window !== 'undefined') window.location.href = data.path
+    } catch (e) {
+      if (tab) tab.close()
+      setPresentError(e instanceof Error ? e.message : 'Could not start Present Mode')
+    } finally {
+      setPresentingId(null)
+    }
+  }
+
   const markRowPublished = (id: string) => {
     setRows((prev) =>
       prev.map((r) => (r.id === id && r.enrichment ? { ...r, enrichment: { ...r.enrichment, published: true } } : r))
@@ -735,6 +768,50 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
         {/* Campaign overview (KPIs) */}
         <CampaignOverview counts={counts} cityDisplayName={cityDisplayName} />
 
+        {/* Present Mode toggle — flips the whole tab into an in-person demo launcher */}
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-2.5">
+          <div>
+            <p className="text-sm font-medium text-slate-200">{presentMode ? 'Present Mode' : 'Pipeline'}</p>
+            <p className="text-xs text-slate-500">
+              {presentMode
+                ? 'Search an enriched business and open its full-screen demo to show in person.'
+                : 'Import, enrich, confirm & invite. Flip to Present Mode for door-to-door demos.'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setPresentMode((v) => !v)
+              setOpenBucket(null)
+              setPresentError(null)
+            }}
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              presentMode
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'border border-emerald-700 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/40'
+            }`}
+          >
+            {presentMode ? '← Back to pipeline' : '▶ Present Mode'}
+          </button>
+        </div>
+
+        {presentError && (
+          <div className="rounded-lg border border-red-900 bg-red-950/50 text-red-300 px-4 py-3 text-sm">
+            {presentError}
+          </div>
+        )}
+
+        {presentMode && (
+          <PresentPicker
+            rows={rows}
+            search={presentSearch}
+            onSearch={setPresentSearch}
+            presentingId={presentingId}
+            onPresent={presentBusinessById}
+          />
+        )}
+
+        {!presentMode && (
+        <>
         {/* Journey steps */}
         <JourneySteps
           step={journeyStep}
@@ -887,6 +964,7 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
                       variant="secondary"
                       onClick={() => confirmAllHighConfidence(publishable.map((r) => r.id))}
                       disabled={confirmingAll}
+                      title="Publishes each listing live AND makes the business + its featured menu items discoverable by the Qwikker AI."
                     >
                       {confirmingAll ? 'Confirming…' : `Confirm & publish all (${publishable.length})`}
                     </Button>
@@ -964,6 +1042,8 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
             })}
           </div>
         )}
+        </>
+        )}
       </div>
 
       {/* Full-width review (fills the tab; the admin sidebar stays visible) */}
@@ -972,10 +1052,24 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
           <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-100">{drawer.name}</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold text-slate-100">{drawer.name}</h2>
+                  {/* Present Mode: only meaningful once enriched (needs the draft to be worth showing) */}
+                  {!drawer.claimed && drawerResult && (
+                    <button
+                      onClick={() => presentBusinessById(drawer.id)}
+                      disabled={presentingId === drawer.id}
+                      title="Open a personalised, full-screen demo of this listing to show the owner in person. Claim happens through the normal claim flow."
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-950/40 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-50"
+                    >
+                      {presentingId === drawer.id ? 'Opening…' : '▶ Present'}
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500">
                   {[drawer.town, drawer.category, drawer.claimed ? 'Claimed' : 'Unclaimed'].filter(Boolean).join(' · ')}
                 </p>
+                {presentError && <p className="text-xs text-red-400 mt-1">{presentError}</p>}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {(() => {
@@ -1046,7 +1140,8 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
                 {publishedAt ? (
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-sm text-emerald-300">
-                      ✓ Confirmed — the listing is <span className="font-semibold">live</span> on the public profile.
+                      ✓ Confirmed — the listing is <span className="font-semibold">live</span> on the public profile
+                      and <span className="font-semibold">discoverable by the Qwikker AI</span>.
                     </p>
                     <div className="flex items-center gap-2">
                       {step !== 3 && (
@@ -1064,9 +1159,15 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
                     <p className="text-sm text-slate-300">
                       <span className="font-semibold text-slate-100">Confirm</span> to publish the accepted listing
                       (description, tagline &amp; featured items) live now.{' '}
+                      <span className="text-emerald-400/90">This also makes the business &amp; its featured menu items discoverable by the Qwikker AI.</span>{' '}
                       <span className="text-slate-500">Offers stay as drafts for the owner to approve at claim.</span>
                     </p>
-                    <Button onClick={publishListing} disabled={publishing} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Button
+                      onClick={publishListing}
+                      disabled={publishing}
+                      title="Publishes the listing live AND makes the business + its featured menu items discoverable by the Qwikker AI."
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
                       {publishing ? 'Confirming…' : 'Confirm & publish live'}
                     </Button>
                   </div>
@@ -1114,6 +1215,13 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
               <OutreachStep
                 claimed={drawer.claimed}
                 hasWebsite={drawer.hasWebsite}
+                businessId={drawer.id}
+                businessName={drawer.name}
+                city={drawer.city}
+                whatsapp={drawer.whatsapp ?? null}
+                whatsappVerified={drawer.whatsappVerified ?? false}
+                phone={drawer.phone ?? null}
+                dialCode={drawer.dialCode}
                 emailValue={emailValue}
                 setEmailValue={(v) => {
                   setEmailValue(v)
@@ -1177,6 +1285,95 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
   )
 }
 
+/**
+ * In-person launcher. Flips the tab into a search over ENRICHED businesses
+ * (a draft is required — Present Mode needs it to be worth showing) and renders
+ * each as a listing card with a big PRESENT button that opens /demo/<token>.
+ */
+function PresentPicker({
+  rows,
+  search,
+  onSearch,
+  presentingId,
+  onPresent,
+}: {
+  rows: PipelineRow[]
+  search: string
+  onSearch: (v: string) => void
+  presentingId: string | null
+  onPresent: (id: string) => void
+}) {
+  // Eligible = enriched (draft ready) and not yet claimed.
+  const eligible = rows.filter((r) => !r.claimed && r.enrichment?.status === 'ready')
+  const q = search.trim().toLowerCase()
+  const list = q
+    ? eligible.filter((r) =>
+        [r.name, r.town, r.category].filter(Boolean).some((f) => String(f).toLowerCase().includes(q))
+      )
+    : eligible
+
+  return (
+    <div className="space-y-4">
+      <input
+        value={search}
+        onChange={(e) => onSearch(e.target.value)}
+        placeholder="Search an enriched business to present…"
+        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-600 focus:outline-none"
+      />
+
+      {eligible.length === 0 ? (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 py-12 text-center text-sm text-slate-500">
+          No enriched businesses yet. Enrich a business first — Present Mode needs its AI draft
+          (description, dishes &amp; offers) to be worth showing.
+        </div>
+      ) : list.length === 0 ? (
+        <div className="py-10 text-center text-slate-500">No matches for “{search}”.</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {list.map((r) => (
+            <div key={r.id} className="flex flex-col rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate font-semibold text-slate-100">{r.name}</h3>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {[r.town, r.category].filter(Boolean).join(' · ') || 'Local business'}
+                  </p>
+                </div>
+                {r.rating != null && (
+                  <span className="shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-xs font-medium text-amber-300">
+                    ★ {r.rating.toFixed(1)}
+                    {r.reviewCount != null ? ` (${r.reviewCount})` : ''}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+                {r.enrichment?.published && (
+                  <span className="rounded-full bg-emerald-950/60 px-2 py-0.5 text-emerald-300">Published</span>
+                )}
+                {r.enrichment?.offersCount ? (
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-300">
+                    {r.enrichment.offersCount} offer{r.enrichment.offersCount !== 1 ? 's' : ''}
+                  </span>
+                ) : null}
+                {r.hasWebsite && <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-300">Website</span>}
+              </div>
+
+              <button
+                onClick={() => onPresent(r.id)}
+                disabled={presentingId === r.id}
+                className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {presentingId === r.id ? 'Opening…' : '▶ Present'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BulkSendModal({
   recipients,
   sending,
@@ -1227,9 +1424,36 @@ function BulkSendModal({
   )
 }
 
+/** Short, warm WhatsApp opener — casual/brief, with a real one-tap claim link. */
+function defaultWhatsappMessage(name: string, city: string | null, claimUrl: string): string {
+  const place = city ? `Qwikker ${city.charAt(0).toUpperCase()}${city.slice(1)}` : 'Qwikker'
+  return (
+    `Hi 👋 This is ${place} — the local discovery app people here use to find great places to eat, drink & visit.\n\n` +
+    `I've just added ${name} to Qwikker. Your listing is already LIVE and can be claimed for FREE. Claiming lets you:\n` +
+    `✅ Add offers\n` +
+    `✅ Edit your info\n` +
+    `✅ Appear in AI recommendations\n` +
+    `✅ Set up loyalty rewards\n\n` +
+    (claimUrl ? `Claim it here (takes 2 mins):\n${claimUrl}` : `Want the link to claim it (free)? 🙌`)
+  )
+}
+
+/** Display a WhatsApp number in a readable international form (e.g. +447911123456). */
+function formatWaNumber(raw: string, dialCode?: string): string {
+  const norm = normalizeWhatsappNumber(raw, dialCode)
+  return norm ? `+${norm}` : raw
+}
+
 function OutreachStep(props: {
   claimed: boolean
   hasWebsite: boolean
+  businessId: string
+  businessName: string
+  city: string | null
+  whatsapp: string | null
+  whatsappVerified: boolean
+  phone: string | null
+  dialCode?: string
   emailValue: string
   setEmailValue: (v: string) => void
   emailSaved: boolean
@@ -1249,12 +1473,30 @@ function OutreachStep(props: {
   outreachError: string | null
 }) {
   const {
-    claimed, hasWebsite, emailValue, setEmailValue, emailSaved, emailPicked, foundEmails, findingEmail, onFind, onPick,
+    claimed, hasWebsite, businessId, businessName, city, whatsapp, whatsappVerified, dialCode,
+    emailValue, setEmailValue, emailSaved, emailPicked, foundEmails, findingEmail, onFind, onPick,
     savingEmail, onSave, preview, previewing, onPreview, sending, onSend, sentTo, outreachError,
   } = props
 
   // Local toggle to reveal the raw email editor ("wrong address? edit").
   const [editing, setEditing] = useState(false)
+
+  // WhatsApp outreach: a click-to-chat link with a pre-filled, editable message the
+  // franchise sends by hand (compliant — no WhatsApp Business API / cold-send needed).
+  // We ONLY use a real WhatsApp number here (explicit wa.me link or a mobile scraped
+  // from the site) — never a landline or the generic Google number, which aren't on
+  // WhatsApp and would open a dead chat.
+  const waNumberRaw = whatsapp
+  const waNumberDisplay = waNumberRaw ? formatWaNumber(waNumberRaw, dialCode) : null
+  // Claim link must point at the LIVE franchise subdomain (e.g. bournemouth.qwikker.com),
+  // never window.location.origin — the admin often runs on localhost or an admin host,
+  // and this URL is sent to a real business.
+  const claimUrl = `${getFranchisePublicUrl(city || '')}/claim?business_id=${businessId}`
+  const [waMessage, setWaMessage] = useState(() => defaultWhatsappMessage(businessName, city, claimUrl))
+  // The message is collapsed by default — the number is the headline; open to edit.
+  const [waMessageOpen, setWaMessageOpen] = useState(false)
+  const waLink = waNumberRaw ? buildWhatsappLink(waNumberRaw, waMessage, dialCode) : null
+  const hasEmailOnFile = !!emailValue.trim() || foundEmails.length > 0
 
   if (claimed) {
     return (
@@ -1361,6 +1603,71 @@ function OutreachStep(props: {
           )}
         </div>
       )}
+
+      {/* WhatsApp outreach — ideal for door-to-door and when there's no email.
+          A click-to-chat link opens WhatsApp with a pre-filled, editable message;
+          the franchise taps send. Nothing is ever messaged automatically. */}
+      <div className={`rounded-lg border px-4 py-3 space-y-3 ${!hasEmailOnFile ? 'border-emerald-800 bg-emerald-950/30' : 'border-slate-800 bg-slate-900'}`}>
+        <div className="flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="text-sm font-medium text-slate-200">
+            {!hasEmailOnFile ? 'No email? Message them on WhatsApp' : 'Or reach them on WhatsApp'}
+          </p>
+        </div>
+
+        {waLink ? (
+          <>
+            {/* Headline: the number we'll message + how confident we are it's WhatsApp. */}
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">WhatsApp number</p>
+                <p className="text-sm font-semibold text-slate-100 tabular-nums truncate">{waNumberDisplay}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {whatsappVerified
+                    ? '✓ Explicit WhatsApp link on their site'
+                    : 'Mobile from their site — likely on WhatsApp, confirm before sending'}
+                </p>
+              </div>
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 shrink-0"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Open WhatsApp
+              </a>
+            </div>
+
+            {/* Message is collapsed by default — expand to review/edit before sending. */}
+            <button
+              type="button"
+              onClick={() => setWaMessageOpen((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
+            >
+              {waMessageOpen ? '▾ Hide message' : '▸ Preview / edit message'}
+            </button>
+            {waMessageOpen && (
+              <>
+                <textarea
+                  value={waMessage}
+                  onChange={(e) => setWaMessage(e.target.value)}
+                  rows={6}
+                  className="w-full text-sm rounded-md bg-slate-950 border border-slate-700 text-slate-100 p-3 resize-y focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                />
+                <p className="text-xs text-slate-500">
+                  Opens WhatsApp with the message pre-filled — you tap send. Qwikker never messages anyone automatically.
+                </p>
+              </>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-slate-500">
+            No WhatsApp number found yet. We only use an explicit WhatsApp link or a mobile scraped from their site — never a
+            landline or the Google number. Enrich this business to search their site for one.
+          </p>
+        )}
+      </div>
 
       {/* Auto-built preview + single guarded send */}
       {readyToSend && (
