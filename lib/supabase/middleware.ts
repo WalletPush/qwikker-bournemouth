@@ -108,7 +108,8 @@ export async function updateSession(request: NextRequest) {
     '/loyalty',     // Loyalty flows (earn, join, start) -- uses wallet_pass_id cookie
     '/partners',    // City partner landing page (public)
     '/privacy-policy', // Privacy policy page
-    '/demo'         // Present Mode / prospecting demo (signed token gates access; noindex)
+    '/demo',        // Present Mode / prospecting demo (signed token gates access; noindex)
+    '/wedding'      // Private guest photo-share pages (Bournemouth-only, unlisted)
   ]
   
   // Check if current path matches any public path
