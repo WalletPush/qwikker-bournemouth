@@ -49,6 +49,7 @@ export function AdminBusinessPreview({ business, onClose }: AdminBusinessPreview
               businessId={business.id}
               systemCategory={systemCategory}
               placeholderVariant={business.placeholder_variant}
+              customPlaceholderUrl={business.placeholder_custom_url}
               showUnclaimedBadge={false}
               className="h-full w-full"
             />

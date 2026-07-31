@@ -67,6 +67,7 @@ export default async function AdminPage() {
       system_category,
       display_category,
       placeholder_variant,
+      placeholder_custom_url,
       business_town,
       business_address,
       business_postcode,

@@ -142,7 +142,7 @@ export function BusinessCard({
               <img 
                 src={business.images && business.images.length > 0 && business.images[0] !== '/placeholder-business.jpg' 
                   ? business.images[0] 
-                  : getPlaceholderVariationWithOverride(systemCategory, business.id, business.placeholder_variant).url}
+                  : (business.placeholder_custom_url || getPlaceholderVariationWithOverride(systemCategory, business.id, business.placeholder_variant).url)}
                 alt={business.name}
                 style={{ 
                   display: 'block',
@@ -352,6 +352,7 @@ export function BusinessCard({
                 businessId={business.id}
                 systemCategory={systemCategory}
                 placeholderVariant={business.placeholder_variant}
+                customPlaceholderUrl={business.placeholder_custom_url}
                 showUnclaimedBadge={true}
                 className="h-full w-full"
                 onBadgeHover={(isHovering) => setShowTooltip(isHovering)}

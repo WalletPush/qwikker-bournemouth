@@ -120,6 +120,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       google_place_id,
       website_url,
       placeholder_variant,
+      placeholder_custom_url,
       business_offers!left(
         id,
         offer_name,
@@ -249,7 +250,8 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       website: business.website_url || null,
       status: business.status, // Pass status for conditional rendering
       google_place_id: business.google_place_id, // For placeholder hash
-      placeholder_variant: business.placeholder_variant // Admin override
+      placeholder_variant: business.placeholder_variant, // Admin override
+      placeholder_custom_url: business.placeholder_custom_url // Admin custom image
     }
   })
   

@@ -63,14 +63,62 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<ProcessedPDF> 
 }
 
 /**
+ * Hard upper bound on a single chunk's size, independent of the semantic
+ * maxChunkSize. text-embedding-ada-002 caps at 8192 tokens (~4 chars/token in
+ * English, less for numbers/other languages), so we stay well under that. NO
+ * chunk may ever exceed this or the embedding request 400s and the upload fails.
+ */
+const EMBED_SAFE_CHARS = 6000
+
+/**
+ * Guarantee no piece exceeds `maxSize` by splitting on word boundaries (and, for
+ * a single pathological word, by characters). This is the safety net that stops
+ * a newline-free PDF blob from producing one enormous, unembeddable chunk.
+ */
+function splitToMaxChars(text: string, maxSize: number): string[] {
+  const words = text.split(/\s+/)
+  const out: string[] = []
+  let cur = ''
+  for (const w of words) {
+    if (!w) continue
+    if (w.length > maxSize) {
+      if (cur.trim()) { out.push(cur.trim()); cur = '' }
+      for (let i = 0; i < w.length; i += maxSize) out.push(w.slice(i, i + maxSize))
+      continue
+    }
+    if (cur.length + w.length + 1 > maxSize) {
+      if (cur.trim()) out.push(cur.trim())
+      cur = ''
+    }
+    cur += (cur ? ' ' : '') + w
+  }
+  if (cur.trim()) out.push(cur.trim())
+  return out
+}
+
+/** Post-process chunks so every one is <= maxSize (drops empties). */
+function enforceMaxChars(chunks: string[], maxSize: number): string[] {
+  const out: string[] = []
+  for (const c of chunks) {
+    const t = (c || '').trim()
+    if (!t) continue
+    if (t.length <= maxSize) out.push(t)
+    else out.push(...splitToMaxChars(t, maxSize))
+  }
+  return out
+}
+
+/**
  * Clean and chunk text for better embeddings - MENU AWARE
  * Preserves complete menu items, prices, and logical sections
  */
 export function chunkText(text: string, maxChunkSize: number = 1000): string[] {
-  // Clean the text but preserve important structure
+  // Clean the text but preserve important structure.
+  // IMPORTANT: only collapse spaces/tabs — NOT newlines — otherwise section and
+  // line splitting below can't find any boundaries and we emit one huge chunk.
   const cleanText = text
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with double newline (section breaks)
+    .replace(/[ \t]+/g, ' ') // collapse runs of spaces/tabs, keep line breaks
+    .replace(/\n{3,}/g, '\n\n') // 3+ newlines -> section break
     .trim()
 
   if (cleanText.length <= maxChunkSize) {
@@ -137,13 +185,20 @@ export function chunkText(text: string, maxChunkSize: number = 1000): string[] {
     chunks.push(currentChunk.trim())
   }
 
-  return chunks.length > 0 ? chunks : [cleanText]
+  // Safety net: never return a chunk larger than the embedding limit.
+  return enforceMaxChars(chunks.length > 0 ? chunks : [cleanText], maxChunkSize)
 }
 
 /**
- * Specialized chunking for menu PDFs - preserves pricing and menu items
+ * Specialized chunking for menu PDFs - preserves pricing and menu items.
+ * Public wrapper enforces the embedding size cap on whatever the semantic
+ * splitter returns (a huge menu blob would otherwise fail to embed).
  */
 export function chunkMenuText(text: string, maxChunkSize: number = 1200): string[] {
+  return enforceMaxChars(chunkMenuTextInternal(text, maxChunkSize), EMBED_SAFE_CHARS)
+}
+
+function chunkMenuTextInternal(text: string, maxChunkSize: number = 1200): string[] {
   // Clean text while preserving menu structure
   const cleanText = text
     .replace(/\s+/g, ' ')

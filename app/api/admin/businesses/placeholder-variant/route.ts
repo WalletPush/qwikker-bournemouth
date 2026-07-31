@@ -9,7 +9,7 @@ import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
  * - Only admins can access
  * - Only unclaimed businesses can have placeholder overrides
  * - Franchise-scoped (admin can only modify businesses in their city)
- * - Variant must be an integer 0-10 (DB constraint)
+ * - Variant must be an integer 0-19 (DB constraint)
  */
 export async function POST(req: Request) {
   try {
@@ -23,9 +23,9 @@ export async function POST(req: Request) {
       )
     }
 
-    if (typeof placeholderVariant !== 'number' || !Number.isInteger(placeholderVariant) || placeholderVariant < 0 || placeholderVariant > 10) {
+    if (typeof placeholderVariant !== 'number' || !Number.isInteger(placeholderVariant) || placeholderVariant < 0 || placeholderVariant > 19) {
       return NextResponse.json(
-        { error: 'placeholderVariant must be an integer between 0 and 10' },
+        { error: 'placeholderVariant must be an integer between 0 and 19' },
         { status: 400 }
       )
     }

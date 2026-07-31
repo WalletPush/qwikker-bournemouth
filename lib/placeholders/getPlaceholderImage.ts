@@ -10,17 +10,33 @@
  * always renders identically across page loads.
  */
 
+// Real on-disk counts (public/placeholders/<cat>/NN.webp). High-volume food/drink
+// categories carry more variants so a busy grid doesn't repeat.
+// NOTE: health, tours_activities, grocery are pending generation — omitted here so
+// they gracefully fall back (see CATEGORY_FALLBACKS) until their art exists.
 const IMAGE_COUNTS: Record<string, number> = {
-  restaurant: 6,
-  bar: 6,
-  tattoo: 6,
-  bakery: 5,
-  dessert: 5,
-  cafe: 4,
-  barber: 4,
-  wellness: 4,
-  pub: 3,
-  salon: 3,
+  restaurant: 16,
+  cafe: 14,
+  bar: 12,
+  pub: 10,
+  bakery: 10,
+  dessert: 10,
+  takeaway: 10,
+  fast_food: 10,
+  salon: 8,
+  barber: 8,
+  tattoo: 8,
+  wellness: 8,
+  entertainment: 8,
+  fitness: 8,
+  hotel: 8,
+  other: 8,
+  professional: 8,
+  retail: 8,
+  sports: 8,
+  venue: 8,
+  rental: 8,
+  automotive: 8,
   default: 1,
 }
 
@@ -67,17 +83,12 @@ function imageCount(category: string): number {
   return IMAGE_COUNTS[category] ?? 0
 }
 
+// Only needed for categories that don't yet have their own art. Everything else
+// now has a real folder, so resolveCategory returns it directly.
 const CATEGORY_FALLBACKS: Record<string, string[]> = {
-  fast_food: ['restaurant', 'cafe'],
-  takeaway: ['restaurant', 'cafe'],
-  entertainment: ['bar', 'pub'],
-  venue: ['bar', 'pub'],
-  fitness: ['wellness'],
-  sports: ['wellness'],
-  hotel: ['restaurant', 'cafe'],
-  retail: ['cafe', 'bakery'],
-  professional: ['cafe'],
-  other: ['restaurant', 'cafe', 'bar'],
+  health: ['wellness', 'salon'],
+  tours_activities: ['entertainment', 'venue'],
+  grocery: ['retail', 'bakery'],
   default: ['restaurant', 'cafe', 'bar'],
 }
 

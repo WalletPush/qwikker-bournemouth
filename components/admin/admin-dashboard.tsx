@@ -101,6 +101,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [placeholderBusiness, setPlaceholderBusiness] = useState<any>(null)
   // Local overrides for placeholder variants (updated after admin saves, without needing a full page refresh)
   const [placeholderOverrides, setPlaceholderOverrides] = useState<Record<string, number>>({})
+  // Local overrides for custom placeholder image URLs (null = cleared back to the pool)
+  const [placeholderCustomOverrides, setPlaceholderCustomOverrides] = useState<Record<string, string | null>>({})
 
   // Real claims data from database (will be loaded via API)
   const [mockClaims, setMockClaims] = useState([])
@@ -671,6 +673,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       status: src.status,
       google_place_id: src.google_place_id,
       placeholder_variant: placeholderOverrides[src.id] ?? src.placeholder_variant,
+      placeholder_custom_url: src.id in placeholderCustomOverrides
+        ? placeholderCustomOverrides[src.id]
+        : src.placeholder_custom_url ?? null,
     }
   }
 
@@ -2028,6 +2033,7 @@ Qwikker Admin Team`
                                     status: business.status || 'unclaimed',
                                     systemCategory: resolveSystemCategory(cardProps),
                                     placeholderVariant: placeholderOverrides[business.id] ?? cardProps.placeholder_variant ?? null,
+                                    customUrl: cardProps.placeholder_custom_url ?? null,
                                   })
                                 }}
                                 className="px-2 py-1 text-[10px] font-medium bg-slate-800/90 hover:bg-slate-700 backdrop-blur-sm text-white rounded-md border border-slate-600/50 transition-colors"
@@ -3857,6 +3863,10 @@ Qwikker Admin Team`
                 status={placeholderBusiness.status}
                 systemCategory={placeholderBusiness.systemCategory}
                 placeholderVariant={placeholderBusiness.placeholderVariant}
+                customUrl={placeholderBusiness.customUrl}
+                onCustomChange={(url) => {
+                  setPlaceholderCustomOverrides(prev => ({ ...prev, [placeholderBusiness.id]: url }))
+                }}
                 onSave={async (variant: number) => {
                   try {
                     const res = await fetch('/api/admin/businesses/placeholder-variant', {

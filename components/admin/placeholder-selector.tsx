@@ -14,7 +14,11 @@ type Props = {
   status: string
   systemCategory: SystemCategory
   placeholderVariant: number | null
+  /** Current admin-uploaded custom placeholder URL (null if using the pool). */
+  customUrl?: string | null
   onSave: (variant: number) => Promise<void>
+  /** Fired after a custom image is saved or cleared, so the parent can refresh its cards. */
+  onCustomChange?: (url: string | null) => void
 }
 
 function getVariantsForCategory(category: SystemCategory): Array<{ id: number; label: string }> {
@@ -32,23 +36,27 @@ export function PlaceholderSelector({
   status,
   systemCategory,
   placeholderVariant,
+  customUrl,
   onSave,
+  onCustomChange,
 }: Props) {
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [selectedVariant, setSelectedVariant] = useState(placeholderVariant ?? 0)
+  const [currentCustomUrl, setCurrentCustomUrl] = useState<string | null>(customUrl ?? null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isUnclaimed = status === 'unclaimed'
   const variants = useMemo(() => getVariantsForCategory(systemCategory), [systemCategory])
 
-  // Preview URL
+  // Preview URL — a saved custom image wins over the generated variant.
   const previewUrl = useMemo(() => {
+    if (currentCustomUrl) return currentCustomUrl
     const resolved = resolveCategory(systemCategory)
     const variantStr = selectedVariant.toString().padStart(2, '0')
     return `/placeholders/${resolved}/${variantStr}.webp`
-  }, [systemCategory, selectedVariant])
+  }, [systemCategory, selectedVariant, currentCustomUrl])
 
   async function handleSave() {
     try {
@@ -79,17 +87,24 @@ export function PlaceholderSelector({
       setIsUploading(true)
       setUploadMessage(null)
 
-      // Upload to Cloudinary
+      // 1) Upload to Cloudinary
       const uploadedUrl = await uploadToCloudinary(file, `placeholders/${systemCategory}`)
 
-      // TODO: Save this URL to the database as a custom placeholder
-      // For now, just show success message
-      setUploadMessage({
-        type: 'success',
-        text: 'Image uploaded! Custom placeholders coming soon.',
+      // 2) Persist as this business's custom placeholder
+      const res = await fetch('/api/admin/businesses/placeholder-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, url: uploadedUrl }),
       })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to save custom placeholder')
+      }
 
-      console.log('📸 Uploaded placeholder to:', uploadedUrl)
+      setCurrentCustomUrl(uploadedUrl)
+      onCustomChange?.(uploadedUrl)
+      setUploadMessage({ type: 'success', text: 'Custom image saved — now shown across this listing.' })
+      console.log('📸 Saved custom placeholder:', uploadedUrl)
     } catch (error) {
       console.error('Upload error:', error)
       setUploadMessage({
@@ -101,6 +116,32 @@ export function PlaceholderSelector({
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+    }
+  }
+
+  async function handleRemoveCustom() {
+    try {
+      setIsUploading(true)
+      setUploadMessage(null)
+      const res = await fetch('/api/admin/businesses/placeholder-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, url: null }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to remove custom placeholder')
+      }
+      setCurrentCustomUrl(null)
+      onCustomChange?.(null)
+      setUploadMessage({ type: 'success', text: 'Custom image removed — back to the generated pool.' })
+    } catch (error) {
+      setUploadMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Remove failed',
+      })
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -145,13 +186,29 @@ export function PlaceholderSelector({
         <div className="text-xs">
           <div className="text-slate-200 font-medium">{systemCategory}</div>
           <div className="text-slate-400">
-            Variant {selectedVariant.toString().padStart(2, '0')}
+            {currentCustomUrl ? 'Custom uploaded image' : `Variant ${selectedVariant.toString().padStart(2, '0')}`}
           </div>
           <Badge variant="outline" className="mt-1 text-[10px]">
-            {selectedVariant === 0 ? 'Default' : `Variant ${selectedVariant}`}
+            {currentCustomUrl ? 'Custom' : selectedVariant === 0 ? 'Default' : `Variant ${selectedVariant}`}
           </Badge>
         </div>
       </div>
+
+      {/* Active custom image → offer a way back to the generated pool */}
+      {currentCustomUrl && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+          <span>A custom image is active and overrides the variants below.</span>
+          <Button
+            onClick={handleRemoveCustom}
+            disabled={isUploading}
+            size="sm"
+            variant="outline"
+            className="shrink-0 h-7 text-[11px]"
+          >
+            {isUploading ? '...' : 'Remove'}
+          </Button>
+        </div>
+      )}
 
       {/* Dropdown */}
       <div className="space-y-2">

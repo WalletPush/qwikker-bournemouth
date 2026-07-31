@@ -313,12 +313,18 @@ export function getBusinessImage(
   systemCategory?: string | null,
   businessId?: string | null,
   placeholderVariant?: number | null,
+  customPlaceholderUrl?: string | null,
 ): {
   image: string | null
   logo: string | null
 } {
   if (businessImages && businessImages.length > 0) {
     return { image: businessImages[0], logo }
+  }
+
+  // Admin-picked custom placeholder wins over the generated pool.
+  if (customPlaceholderUrl) {
+    return { image: customPlaceholderUrl, logo }
   }
 
   if (systemCategory && businessId) {

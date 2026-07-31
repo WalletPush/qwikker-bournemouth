@@ -9,6 +9,7 @@ interface BusinessCardImageProps {
   systemCategory: SystemCategory
   heroImage?: string | null
   placeholderVariant?: number | null
+  customPlaceholderUrl?: string | null
   showUnclaimedBadge?: boolean
   className?: string
   onBadgeHover?: (isHovering: boolean) => void
@@ -21,6 +22,7 @@ export function BusinessCardImage({
   systemCategory,
   heroImage,
   placeholderVariant,
+  customPlaceholderUrl,
   showUnclaimedBadge = true,
   className = '',
   onBadgeHover,
@@ -47,9 +49,15 @@ export function BusinessCardImage({
     )
   }
 
-  // Unclaimed businesses: deterministic placeholder with visual variation
-  // When placeholderVariant is set by admin, it overrides the hash-based selection
-  const { url, imgClass, overlayClass } = getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant)
+  // Unclaimed businesses: deterministic placeholder with visual variation.
+  // When placeholderVariant is set by admin, it overrides the hash-based selection.
+  // An admin-uploaded custom placeholder wins outright (shown as-is, no crop/tint).
+  const variation = getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant)
+  const url = customPlaceholderUrl
+    ? (optimizeCloudinaryUrl(customPlaceholderUrl, 1200) || customPlaceholderUrl)
+    : variation.url
+  const imgClass = customPlaceholderUrl ? 'object-cover w-full h-full' : variation.imgClass
+  const overlayClass = customPlaceholderUrl ? null : variation.overlayClass
   
   return (
     <div className={`relative ${className} overflow-hidden`}>

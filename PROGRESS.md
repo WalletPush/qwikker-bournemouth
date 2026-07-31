@@ -4,6 +4,16 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## 🐛 KNOWN ISSUE (Jul 27, 2026) — AI chat can't find businesses by dish or partial name
+
+**Reported:** the AI didn't recognise "wonderful kitchen" or "crispy aromatic duck" — yet asking "Chinese restaurant" returned **Wonderful Kitchen Lounge & Garden** *with* its featured items + prices (Aromatic Crispy Duck £13.50…).
+
+**Not a data/save bug** — `menu_preview` is saved and injected correctly (that's why the items show once the business is found). It's a **retrieval** gap:
+- `lib/ai/relevance-scorer.ts` scores on category / business_name / KB content / vibe_tags / KB-semantic **only** — it never matches `menu_preview` item names/descriptions, so a **dish query scores 0** and returns "couldn't find". `menu_preview` is only used to *decorate* the answer after a business is selected (`hybrid-chat.ts` ~1664), never to *find* it.
+- **No cold "find business by partial name" path** — the name/detail lock (`hybrid-chat.ts` ~935) only fires as a *follow-up* when a business is already in context (`lastSlug`), so a cold "tell me about wonderful kitchen" never resolves.
+
+**Fix (chat retrieval only — no DB/migration, no re-enrich):** (A) score `menu_preview` item names/descriptions against query keywords/cuisine terms; (B) add a cold, fuzzy business-name lookup across all 3 tiers. Critical for the Acquisition Engine value prop (enriched listings must be findable by dish + name). Tracked in roadmap as **`ai-chat-menu-item-retrieval`**. **NOT YET BUILT.**
+
 ## 🚀 Prospecting Present Mode + Acquisition Engine — SHIPPING TO MAIN (Jul 23, 2026)
 
 Big session finishing the door-to-door **Present Mode** demo and the enrichment → outreach pipeline. Committing `feat/ai-offer-engine` and **merging to `main` for production testing**. `next.config` already sets `typescript.ignoreBuildErrors` + `eslint.ignoreDuringBuilds`, so the pre-existing baseline TS/ESLint errors don't block the Vercel build.

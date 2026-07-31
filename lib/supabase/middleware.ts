@@ -111,6 +111,12 @@ export async function updateSession(request: NextRequest) {
     '/demo',        // Present Mode / prospecting demo (signed token gates access; noindex)
     '/wedding'      // Private guest photo-share pages (Bournemouth-only, unlisted)
   ]
+
+  // Local-only dev tooling (e.g. /dev/placeholders-review). Public in development
+  // so it's viewable without a login; stays auth-gated in production.
+  if (process.env.NODE_ENV !== 'production') {
+    publicPaths.push('/dev')
+  }
   
   // Check if current path matches any public path
   const isPublicPath = publicPaths.some(path => 

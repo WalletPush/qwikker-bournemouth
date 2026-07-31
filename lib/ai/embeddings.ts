@@ -25,11 +25,21 @@ export async function generateEmbedding(text: string, city: string): Promise<num
     apiKey: franchiseKeys.openai_api_key,
   })
 
+  // Safety cap: ada-002 accepts <=8192 tokens (~4 chars/token in English, fewer
+  // for numbers/other scripts). Callers should chunk far below this; truncating
+  // here is a last-resort guard so an oversized input can never 400 the request.
+  const MAX_EMBED_CHARS = 20000
+  const cleaned = text.replace(/\n/g, ' ')
+  const input = cleaned.length > MAX_EMBED_CHARS ? cleaned.slice(0, MAX_EMBED_CHARS) : cleaned
+  if (cleaned.length > MAX_EMBED_CHARS) {
+    console.warn(`⚠️ Embedding input truncated ${cleaned.length} -> ${MAX_EMBED_CHARS} chars (should have been chunked upstream)`)
+  }
+
   try {
     const response = await Promise.race([
       openai.embeddings.create({
         model: 'text-embedding-ada-002',
-        input: text.replace(/\n/g, ' '), // Clean up text
+        input,
       }),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Embedding timeout after 10 seconds')), 10000)

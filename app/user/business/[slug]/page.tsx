@@ -123,6 +123,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       booking_preference,
       google_place_id,
       placeholder_variant,
+      placeholder_custom_url,
       auto_imported,
       business_offers!left(
         id,
@@ -234,6 +235,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       google_primary_type: business.google_primary_type,
       google_place_id: business.google_place_id,
       placeholder_variant: business.placeholder_variant, // Admin placeholder override
+      placeholder_custom_url: business.placeholder_custom_url, // Admin custom image
       auto_imported: business.auto_imported,
       tags: [
         business.display_category || business.business_category, // Use new field with fallback
