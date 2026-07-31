@@ -126,6 +126,12 @@ function QRScanAreaChart({ data }: { data: Day[] }) {
           className="transition-opacity duration-700 ease-out motion-reduce:transition-none"
           style={{ opacity: inView ? 1 : 0, transitionDelay: '400ms' }}
         />
+        {/* Draw the line in left-to-right via dashoffset. NOTE: no
+            vectorEffect="non-scaling-stroke" here — Safari miscomputes
+            stroke-dasharray + pathLength when the stroke is non-scaling under
+            preserveAspectRatio="none", leaving a permanent gap at the end. The
+            wide 600×180 viewBox already keeps scaling near-uniform so the stroke
+            stays even without it. */}
         <path
           d={linePath}
           fill="none"
@@ -133,7 +139,6 @@ function QRScanAreaChart({ data }: { data: Day[] }) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
           pathLength={1}
           className="transition-[stroke-dashoffset] duration-[1200ms] ease-out motion-reduce:transition-none"
           style={{ strokeDasharray: 1, strokeDashoffset: inView ? 0 : 1 }}
