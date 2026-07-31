@@ -4,7 +4,7 @@ import { getAdminById, isAdminForCity } from '@/lib/utils/admin-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { getSystemCategoryFromDisplayLabel, isValidSystemCategory } from '@/lib/constants/system-categories'
-import { getMaxOffers } from '@/lib/utils/tier-limits'
+import { getMaxOffers, getTierFeatures } from '@/lib/utils/tier-limits'
 import { sendFranchiseEmail, getFranchiseBaseUrl, getFranchiseSupportEmail } from '@/lib/email/send-franchise-email'
 import { createChangeRejectionEmail } from '@/lib/email/templates/business-notifications'
 
@@ -374,7 +374,7 @@ export async function POST(request: NextRequest) {
         // Get franchise Resend config
         const { data: franchiseConfig } = await supabaseAdmin
           .from('franchise_crm_configs')
-          .select('resend_api_key, resend_from_email, resend_from_name, display_name')
+          .select('resend_api_key, resend_from_email, resend_from_name, display_name, default_trial_tier, founding_member_trial_days')
           .eq('city', claim.business.city)
           .single()
 
@@ -386,7 +386,17 @@ export async function POST(request: NextRequest) {
 
           const fromName = franchiseConfig.resend_from_name || 'QWIKKER'
           const cityDisplayName = franchiseConfig.display_name || claim.business.city
-          
+
+          // Trial-aware content. Mirrors approve_business_with_trial: the tier and
+          // length come from the franchise config (default_trial_tier +
+          // founding_member_trial_days), and the feature bullets come from the
+          // shared getTierFeatures() so this email always matches the real tier.
+          const trialTierCode = (franchiseConfig.default_trial_tier || 'featured').toLowerCase()
+          const trialTierLabel = trialTierCode.charAt(0).toUpperCase() + trialTierCode.slice(1)
+          const trialDays = franchiseConfig.founding_member_trial_days || 30
+          const trialFeatureItems = getTierFeatures(trialTierCode)
+            .map((f) => `<li style="margin: 6px 0;">${escapeHtml(f)}</li>`)
+            .join('')
           const citySubdomain = claim.business.city.toLowerCase()
           const baseUrl = `https://${citySubdomain}.qwikker.com`
           const loginUrl = `${baseUrl}/auth/login`
@@ -397,7 +407,9 @@ export async function POST(request: NextRequest) {
           await sendWithRetry(resend, {
             from: `${fromName} <${fromEmail}>`,
             to: claim.business_email,
-            subject: `Your QWIKKER listing is approved`,
+            subject: isTrialClaim
+              ? `Your ${trialTierLabel} trial is live`
+              : `Your QWIKKER listing is approved`,
             html: `
               <!DOCTYPE html>
               <html>
@@ -442,6 +454,27 @@ export async function POST(request: NextRequest) {
                       </a>
                     </div>
                     
+                    ${isTrialClaim ? `
+                    <!-- Trial Info -->
+                    <div style="background: #f0fdf4; border: 1px solid #00d083; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
+                      <p style="color: #0a0a0a; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                        ✓ Your ${escapeHtml(trialTierLabel)} trial is live — free for ${trialDays} days
+                      </p>
+                      <ul style="margin: 0; padding-left: 20px; color: #525252; font-size: 14px;">
+                        ${trialFeatureItems}
+                      </ul>
+                    </div>
+                    
+                    <!-- What happens after the trial -->
+                    <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                      <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
+                        What happens after your trial
+                      </p>
+                      <p style="color: #525252; margin: 0; font-size: 14px;">
+                        When your ${trialDays}-day trial ends, your listing stays live on the free plan unless you choose to continue on ${escapeHtml(trialTierLabel)}. No card required now — you can manage or change your plan anytime from your dashboard.
+                      </p>
+                    </div>
+                    ` : `
                     <!-- Free Tier Info -->
                     <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 0 0 32px 0;">
                       <p style="color: #525252; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">
@@ -472,6 +505,7 @@ export async function POST(request: NextRequest) {
                         Upgrade anytime from your dashboard.
                       </p>
                     </div>
+                    `}
                     
                   </div>
                   
