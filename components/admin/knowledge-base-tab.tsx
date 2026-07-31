@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { storeKnowledgeWithEmbedding } from '@/lib/ai/embeddings'
 import { createEventKnowledge } from '@/lib/actions/knowledge-base-actions'
 import {
@@ -219,6 +219,26 @@ export function KnowledgeBaseTab({ city, cityDisplayName, adminId }: KnowledgeBa
     }
   }
 
+  // Delete every chunk of a grouped PDF in one action
+  const handleDeleteGroup = async (title: string, ids: string[]) => {
+    if (!confirm(`Remove "${title}" and all ${ids.length} parts from the knowledge base?`)) return
+    let deleted = 0
+    for (const id of ids) {
+      try {
+        const res = await fetch('/api/admin/knowledge/entries', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        })
+        const data = await res.json()
+        if (data.success) deleted++
+      } catch { /* continue */ }
+    }
+    const idSet = new Set(ids)
+    setEntries((prev) => prev.filter((e) => !idSet.has(e.id)))
+    setTotalEntries((prev) => Math.max(0, prev - deleted))
+  }
+
   // Submit text knowledge
   const handleSubmitText = async () => {
     if (!textTitle.trim() || !textContent.trim()) return
@@ -394,6 +414,99 @@ export function KnowledgeBaseTab({ city, cityDisplayName, adminId }: KnowledgeBa
   const hasCityKnowledge = entries.some((e) => e.tags?.includes('city_knowledge'))
 
   const selectedBusinessName = eligibleBusinesses.find((b) => b.id === selectedTarget)?.business_name
+
+  // Collapse multi-part PDF uploads into a single row (grouped by source file /
+  // stripped title) so a 40-chunk PDF shows as one entry, not 40. Everything else
+  // renders as an individual entry, preserving the original date ordering.
+  type DisplayItem =
+    | { kind: 'entry'; entry: KBEntry }
+    | { kind: 'pdfGroup'; key: string; title: string; parts: KBEntry[]; createdAt: string }
+
+  const chunkIndexOf = (e: KBEntry): number => {
+    const idx = (e.metadata as Record<string, unknown> | null)?.chunk_index
+    return typeof idx === 'number' ? idx : 0
+  }
+
+  const groupedItems = useMemo<DisplayItem[]>(() => {
+    const items: DisplayItem[] = []
+    const groups = new Map<string, KBEntry[]>()
+    for (const e of entries) {
+      const meta = (e.metadata || {}) as Record<string, unknown>
+      const fileName = typeof meta.originalFileName === 'string' ? meta.originalFileName : null
+      const totalChunks = typeof meta.total_chunks === 'number' ? meta.total_chunks : null
+      const partMatch = e.title.match(/^(.*?)\s*\((?:Part|Chunk)\s+\d+\)\s*$/i)
+      const baseTitle = fileName
+        ? fileName.replace(/\.pdf$/i, '')
+        : (partMatch ? partMatch[1].trim() : null)
+      const isMultiPartPdf =
+        e.knowledge_type === 'pdf_document' &&
+        !!baseTitle &&
+        (totalChunks != null ? totalChunks > 1 : !!partMatch)
+
+      if (isMultiPartPdf && baseTitle) {
+        const key = `pdf:${e.business_id || 'general'}:${baseTitle.toLowerCase()}`
+        let parts = groups.get(key)
+        if (!parts) {
+          parts = []
+          groups.set(key, parts)
+          items.push({ kind: 'pdfGroup', key, title: baseTitle, parts, createdAt: e.created_at })
+        }
+        parts.push(e)
+      } else {
+        items.push({ kind: 'entry', entry: e })
+      }
+    }
+    return items
+  }, [entries])
+
+  const renderPdfGroup = (group: Extract<DisplayItem, { kind: 'pdfGroup' }>) => {
+    const isOpen = expandedEntry === group.key
+    const ordered = [...group.parts].sort((a, b) => chunkIndexOf(a) - chunkIndexOf(b))
+    const ids = ordered.map((p) => p.id)
+    const totalChars = ordered.reduce((n, p) => n + (p.content?.length || 0), 0)
+    return (
+      <div key={group.key} className="group">
+        <div
+          className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700/30 cursor-pointer transition-colors"
+          onClick={() => setExpandedEntry(isOpen ? null : group.key)}
+        >
+          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 ${TYPE_COLORS.pdf_document}`}>
+            PDF
+          </span>
+          <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+          <span className="text-sm text-white truncate flex-1 min-w-0">{group.title}</span>
+          <span className="text-[10px] text-slate-400 shrink-0 bg-slate-700/50 px-2 py-0.5 rounded-full">
+            {group.parts.length} parts
+          </span>
+          <span className="text-xs text-slate-500 shrink-0">
+            {new Date(group.createdAt).toLocaleDateString()}
+          </span>
+          {isOpen ? (
+            <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+          )}
+        </div>
+
+        {isOpen && (
+          <div className="px-4 pb-4 bg-slate-800/30">
+            <p className="text-xs text-slate-500 mb-2">
+              {group.parts.length} chunks · {totalChars.toLocaleString()} characters · stored as embeddings for AI retrieval
+            </p>
+            <pre className="text-xs text-slate-400 whitespace-pre-wrap overflow-y-auto bg-slate-900/50 rounded-lg p-3 mb-3 font-mono leading-relaxed max-h-60">
+              {ordered.map((p) => p.content).join('\n\n')}
+            </pre>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.title, ids) }}
+              className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Remove PDF ({group.parts.length} parts)
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -577,7 +690,9 @@ export function KnowledgeBaseTab({ city, cityDisplayName, adminId }: KnowledgeBa
               }
             </div>
           ) : (
-            entries.map((entry) => {
+            groupedItems.map((item) => {
+              if (item.kind === 'pdfGroup') return renderPdfGroup(item)
+              const entry = item.entry
               const isDraft = entry.status === 'draft'
               const hasWarning = entry.metadata && (entry.metadata as Record<string, unknown>).warning === 'possible_business_mention'
               const isEditing = editingDraft === entry.id
