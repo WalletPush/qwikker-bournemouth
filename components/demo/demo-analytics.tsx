@@ -96,8 +96,12 @@ function DailyChart({ data }: { data: Day[] }) {
 
 function QRScanAreaChart({ data }: { data: Day[] }) {
   const maxVal = Math.max(...data.map((d) => d.scans), 1)
-  const width = 100
-  const height = 100
+  // Wide viewBox that roughly matches the rendered container aspect (~full width
+  // × CHART_HEIGHT). With preserveAspectRatio="none" a square 100×100 box was
+  // stretched ~7× horizontally vs ~2× vertically, spiking the line and turning
+  // the dots into ovals. A ~3.3:1 box keeps scaling close to uniform.
+  const width = 600
+  const height = CHART_HEIGHT
   const points = data.map((day, i) => ({
     x: (i / (data.length - 1)) * width,
     y: height - (day.scans / maxVal) * (height * 0.85),
@@ -126,9 +130,10 @@ function QRScanAreaChart({ data }: { data: Day[] }) {
           d={linePath}
           fill="none"
           stroke="#a855f7"
-          strokeWidth="0.8"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
           pathLength={1}
           className="transition-[stroke-dashoffset] duration-[1200ms] ease-out motion-reduce:transition-none"
           style={{ strokeDasharray: 1, strokeDashoffset: inView ? 0 : 1 }}
@@ -138,7 +143,7 @@ function QRScanAreaChart({ data }: { data: Day[] }) {
             key={i}
             cx={p.x}
             cy={p.y}
-            r="1.2"
+            r="3"
             fill="#a855f7"
             className="transition-opacity duration-300 ease-out motion-reduce:transition-none"
             style={{ opacity: inView ? 0.8 : 0, transitionDelay: `${600 + i * 25}ms` }}

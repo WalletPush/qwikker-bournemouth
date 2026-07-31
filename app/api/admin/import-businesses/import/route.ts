@@ -11,8 +11,6 @@ import {
 } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
 import { validatePlace } from '@/lib/import/validate-place'
-import { getImageCountForCategory } from '@/lib/placeholders/getPlaceholderImage'
-
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
   placeIds: string[]
@@ -621,7 +619,12 @@ export async function POST(request: NextRequest) {
                 google_photo_name: place.photos?.[0]?.name || null,
                 business_tagline: simpleTagline, // Simple format: "Category • Location"
                 tagline_source: 'generated', // Mark as auto-generated
-                placeholder_variant: hashVariant(placeId, getImageCountForCategory(system_category)),
+                // Leave null so the discover feed hashes across the FULL live image
+                // pool at render time (see getPlaceholderVariation). Storing a fixed
+                // variant here pinned every business to one image and stopped them
+                // from redistributing when we expand the placeholder art library.
+                // Admins can still pin a specific image via the "Change image" UI.
+                placeholder_variant: null,
                 status: 'unclaimed',
                 visibility: 'discover_only',
                 auto_imported: true,
@@ -761,14 +764,5 @@ export async function POST(request: NextRequest) {
       'Connection': 'keep-alive',
     },
   })
-}
-
-function hashVariant(str: string, max: number): number {
-  if (max <= 1) return 0
-  let hash = 5381
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i)
-  }
-  return Math.abs(hash) % max
 }
 
