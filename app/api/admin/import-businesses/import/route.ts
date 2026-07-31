@@ -478,7 +478,10 @@ export async function POST(request: NextRequest) {
               },
               {
                 categoryConfig: skipCategoryGate ? undefined : (categoryConfig || undefined),
-                excludeLodging: resolvedCategory !== 'hotel',
+                // Name-searched businesses are hand-picked by the admin, so we trust
+                // the intent and skip the lodging filter too (denylist + closed still
+                // apply). Otherwise only allow lodging when importing the hotel category.
+                excludeLodging: skipCategoryGate ? false : resolvedCategory !== 'hotel',
               }
             )
 
