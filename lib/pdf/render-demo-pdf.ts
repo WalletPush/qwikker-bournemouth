@@ -54,18 +54,33 @@ async function resolveLocalChrome(): Promise<string> {
     }
   }
 
+  // Fallback: Chrome for Testing under the default puppeteer cache
+  // (installed via `pnpm dlx @puppeteer/browsers install chrome`).
   try {
-    const { getInstalledBrowsers } = (await import('@puppeteer/browsers')) as {
-      getInstalledBrowsers: (opts: { cacheDir: string }) => Promise<
-        Array<{ browser: string; executablePath: string }>
-      >
-    }
     const cacheDir =
       process.env.PUPPETEER_CACHE_DIR || path.join(os.homedir(), '.cache', 'puppeteer')
-    const installed = await getInstalledBrowsers({ cacheDir })
-    const chrome = installed.find((b) => b.browser === 'chrome' || b.browser === 'chromium')
-    if (chrome?.executablePath && fs.existsSync(chrome.executablePath)) {
-      return chrome.executablePath
+    const chromeRoot = path.join(cacheDir, 'chrome')
+    if (fs.existsSync(chromeRoot)) {
+      const versions = fs.readdirSync(chromeRoot).filter((d) => !d.endsWith('.zip'))
+      for (const ver of versions) {
+        const candidates = [
+          path.join(
+            chromeRoot,
+            ver,
+            'chrome-mac-arm64',
+            'Google Chrome for Testing.app',
+            'Contents',
+            'MacOS',
+            'Google Chrome for Testing'
+          ),
+          path.join(chromeRoot, ver, 'chrome-mac-x64', 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+          path.join(chromeRoot, ver, 'chrome-linux64', 'chrome'),
+          path.join(chromeRoot, ver, 'chrome-win64', 'chrome.exe'),
+        ]
+        for (const c of candidates) {
+          if (fs.existsSync(c)) return c
+        }
+      }
     }
   } catch {
     // fall through
