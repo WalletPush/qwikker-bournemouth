@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useInView } from '@/components/demo/use-in-view'
+import { useInView, isPdfMode } from '@/components/demo/use-in-view'
 
 const ACCENT = '#00d083'
 
@@ -189,7 +189,7 @@ export function QrPlaceholder({ size = 112, seed = 'qwikker' }: { size?: number;
 
 export function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-[270px] sm:w-[300px]">
+    <div className="pdf-avoid-break mx-auto w-[270px] sm:w-[300px]">
       <div
         className="relative overflow-hidden rounded-[3rem] border-[10px] border-slate-950 bg-black shadow-2xl ring-1 ring-slate-800"
         style={{ aspectRatio: '9 / 19.5' }}
@@ -218,6 +218,12 @@ export function LockScreenPush({
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    // PDF/print: reveal the push banner immediately (the wobble/drop animation
+    // is frozen by CSS) so the capture isn't a blank lock screen.
+    if (isPdfMode()) {
+      setInView(true)
+      return
+    }
     const io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), {
       threshold: 0.35,
       rootMargin: '0px 0px -18% 0px',
@@ -395,7 +401,9 @@ export function ChatPhone({
     const reduced =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (reduced) {
+    // PDF/print (or reduced motion): jump straight to the fully-revealed
+    // conversation instead of running the timed reveal sequence.
+    if (reduced || isPdfMode()) {
       setPhase(finalPhase)
       return
     }

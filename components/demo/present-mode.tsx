@@ -27,7 +27,7 @@ import { DemoProfilePhones } from '@/components/demo/demo-profile-phones'
 import { DemoLaunchPack } from '@/components/demo/demo-launch-pack'
 import { cleanBusinessName } from '@/lib/utils/clean-business-name'
 import { LockScreenPush, WalletPassPhone, ChatPhone } from '@/components/demo/phone-mockups'
-import { useInView } from '@/components/demo/use-in-view'
+import { useInView, isPdfMode } from '@/components/demo/use-in-view'
 import { formatPrice, hasDisplayablePrice } from '@/lib/utils/price-formatter'
 import { Tag } from 'lucide-react'
 
@@ -121,7 +121,7 @@ function StampCard({
 }) {
   const { ref, inView } = useInView<HTMLDivElement>(0.35)
   return (
-    <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg,#0f172a,#1e293b)' }}>
+    <div className="pdf-avoid-break rounded-2xl p-5" style={{ background: 'linear-gradient(135deg,#0f172a,#1e293b)' }}>
       <div className="flex items-center gap-3">
         <BrandMark logo={logo} placeholder={placeholder} name={name} size={40} />
         <div>
@@ -193,6 +193,7 @@ function Section({
   subtitle,
   example,
   wide,
+  breakBefore,
   children,
 }: {
   eyebrow?: string
@@ -200,10 +201,16 @@ function Section({
   subtitle?: string
   example?: boolean
   wide?: boolean
+  /** Start this section on a fresh PDF page (major chapters only). */
+  breakBefore?: boolean
   children?: React.ReactNode
 }) {
+  // No pdf-avoid-break on whole sections — they're taller than a page and
+  // Chromium then ignores the rule and splits mid-card. Break smaller units.
   return (
-    <section className="border-b border-slate-900 px-5 py-10 sm:px-8 sm:py-12">
+    <section
+      className={`border-b border-slate-900 px-5 py-10 sm:px-8 sm:py-12 ${breakBefore ? 'pdf-break-before' : ''}`}
+    >
       <div className={`mx-auto ${wide ? 'max-w-5xl' : 'max-w-2xl'}`}>
         <div className="mb-6">
           {eyebrow && (
@@ -264,9 +271,55 @@ function BrandMark({
 
 // ---- main component ---------------------------------------------------------
 
-export function PresentMode({ data, claimUrl }: { data: DemoData; claimUrl: string }) {
-  const [preset, setPreset] = useState<DemoPreset>(data.defaultPreset)
+export function PresentMode({
+  data,
+  claimUrl,
+  pdfMode = false,
+  forcedPreset,
+  capture = false,
+}: {
+  data: DemoData
+  claimUrl: string
+  /** Rendered for PDF/print: freezes animations + shows a Save-as-PDF button. */
+  pdfMode?: boolean
+  /** When set (from ?preset=), locks the presentation preset for the PDF. */
+  forcedPreset?: DemoPreset
+  /** Headless server capture — omit presenter chrome from the DOM entirely. */
+  capture?: boolean
+}) {
+  const [preset, setPreset] = useState<DemoPreset>(forcedPreset ?? data.defaultPreset)
+  const [pdfDownloading, setPdfDownloading] = useState(false)
   const { business, listing, offers, insight, reviewHighlights, currencySymbol, listingUrl, reviewUrl, walletTryUrl, qrUrls } = data
+
+  /** One-click download via the token-gated PDF API (same engine as the pipeline). */
+  const downloadPdf = async () => {
+    setPdfDownloading(true)
+    try {
+      const parts = window.location.pathname.split('/').filter(Boolean)
+      const token = parts[parts.length - 1]
+      if (!token) throw new Error('Missing demo token')
+      const res = await fetch(`/api/demo/${encodeURIComponent(token)}/pdf?preset=${preset}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Could not generate PDF')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const safe = (business.name || 'Qwikker listing').replace(/[^\w\s-]/g, '').trim() || 'Qwikker listing'
+      a.download = `${safe} - Qwikker.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (e) {
+      console.error(e)
+      window.alert(e instanceof Error ? e.message : 'Could not generate PDF')
+    } finally {
+      setPdfDownloading(false)
+    }
+  }
 
   const featured = useMemo(() => {
     if (preset === 'food') return { title: 'Your signature dishes', sub: 'The dishes people rave about — pulled from your menu & reviews, so diners crave before they arrive.' }
@@ -421,26 +474,59 @@ export function PresentMode({ data, claimUrl }: { data: DemoData; claimUrl: stri
   }, [preset, primaryItem])
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-28 text-white">
-      {/* Presenter control bar — sticky at top */}
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/90 px-4 py-2.5 backdrop-blur">
-        <div className="flex min-w-0 items-center gap-2">
-          <BrandMark logo={business.logo} placeholder={business.placeholderImage} name={business.name} size={28} />
-          <span className="truncate text-sm font-medium text-slate-200">{business.name}</span>
+    <div className={`min-h-screen bg-slate-950 pb-28 text-white ${pdfMode ? 'pdf-mode' : ''}`}>
+      {/* Presenter chrome — omitted entirely for headless capture so it never
+          appears in the generated PDF (CSS hide alone was unreliable). */}
+      {!capture && (
+        <div className="pdf-hide sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/90 px-4 py-2.5 backdrop-blur print:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            <BrandMark logo={business.logo} placeholder={business.placeholderImage} name={business.name} size={28} />
+            <span className="truncate text-sm font-medium text-slate-200">{business.name}</span>
+          </div>
+          {pdfMode ? (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="shrink-0 rounded-md px-3 py-1.5 text-xs font-bold text-black"
+              style={{ background: ACCENT }}
+            >
+              Save as PDF
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="hidden sm:inline">Present as</span>
+                <select
+                  value={preset}
+                  onChange={(e) => setPreset(e.target.value as DemoPreset)}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-100 focus:outline-none"
+                >
+                  <option value="food">Food-first</option>
+                  <option value="services">Services / Treatments</option>
+                  <option value="general">General</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => void downloadPdf()}
+                disabled={pdfDownloading}
+                className="shrink-0 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 disabled:opacity-60"
+              >
+                {pdfDownloading ? 'Generating…' : 'Download PDF'}
+              </button>
+            </div>
+          )}
         </div>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="hidden sm:inline">Present as</span>
-          <select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value as DemoPreset)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-100 focus:outline-none"
-          >
-            <option value="food">Food-first</option>
-            <option value="services">Services / Treatments</option>
-            <option value="general">General</option>
-          </select>
-        </label>
-      </div>
+      )}
+
+      {/* PDF hint bar — browser print path only (never in headless capture). */}
+      {pdfMode && !capture && (
+        <div className="pdf-hide border-b border-slate-800 bg-emerald-400/10 px-4 py-2.5 text-center text-xs leading-relaxed text-emerald-200 print:hidden">
+          <span className="font-semibold">Save as PDF:</span> click below (or ⌘/Ctrl&nbsp;+&nbsp;P) → in the dialog tick{' '}
+          <span className="font-semibold">“Print backgrounds”</span>, then set the destination /{' '}
+          <span className="font-semibold">PDF</span> menu to <span className="font-semibold">“Save as PDF”</span>.
+        </div>
+      )}
 
       {sections.map((key) => {
         switch (key) {
@@ -534,7 +620,7 @@ export function PresentMode({ data, claimUrl }: { data: DemoData; claimUrl: stri
               <Section key={key} eyebrow="Real — from your menu & reviews" title={featured.title} subtitle={featured.sub}>
                 <div className="space-y-3">
                   {listing.featuredItems.map((it, i) => (
-                    <div key={i} className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+                    <div key={i} className="pdf-avoid-break rounded-xl border border-slate-800 bg-slate-900/50 p-4">
                       <div className="flex items-baseline justify-between gap-3">
                         <h3 className="font-semibold text-white">{it.name}</h3>
                         {hasDisplayablePrice(it.price) && (
@@ -938,8 +1024,10 @@ export function PresentMode({ data, claimUrl }: { data: DemoData; claimUrl: stri
         }
       })}
 
-      {/* Sticky Claim CTA — the existing claim flow */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 px-4 py-3 backdrop-blur">
+      {/* Sticky Claim CTA — omitted in headless capture (closer + sign-off
+          already carry the claim call-to-action). */}
+      {!capture && (
+      <div className="pdf-hide fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 px-4 py-3 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">Claim {business.name}</p>
@@ -954,6 +1042,7 @@ export function PresentMode({ data, claimUrl }: { data: DemoData; claimUrl: stri
           </a>
         </div>
       </div>
+      )}
 
       {/* End-of-journey sign-off — the completion of the story, not a footnote. */}
       <div className="px-5 pb-28 pt-12 text-center">

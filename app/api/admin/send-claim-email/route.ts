@@ -10,6 +10,10 @@ import {
   sendClaimInvite,
 } from '@/lib/listing-engine/send-claim-invite'
 
+// Sending renders the Present Mode PDF attachment in headless Chrome.
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 /**
  * Admin action: send (or preview) a branded "claim your listing" outreach email
  * to an UNCLAIMED business. The CTA deep-links straight into the claim flow

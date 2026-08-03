@@ -211,7 +211,7 @@ function TrendUp({ value }: { value: number }) {
 
 function StatCard({ title, value, subtitle, trend }: { title: string; value: string; subtitle?: string; trend?: number }) {
   return (
-    <Card className="bg-slate-800/50 border-slate-700">
+    <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium text-gray-400">{title}</CardTitle>
       </CardHeader>
@@ -316,7 +316,7 @@ export function DemoAnalytics({
 
       {/* Performance trends + top offers */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Performance Trends</CardTitle>
             <p className="text-xs text-slate-400">Last 30 days — profile views and offer claims</p>
@@ -326,7 +326,7 @@ export function DemoAnalytics({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Top Performing Offers</CardTitle>
           </CardHeader>
@@ -355,7 +355,7 @@ export function DemoAnalytics({
 
       {/* Peak days + visitor type */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Peak Days</CardTitle>
             <p className="text-xs text-slate-400">When people visit your listing</p>
@@ -369,7 +369,7 @@ export function DemoAnalytics({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Visitor Type</CardTitle>
             <p className="text-xs text-slate-400">First-time vs returning visitors</p>
@@ -393,7 +393,7 @@ export function DemoAnalytics({
 
       {/* AI discovery */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +417,7 @@ export function DemoAnalytics({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700 border-l-4 border-l-purple-500/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,7 +445,7 @@ export function DemoAnalytics({
 
       {/* QR scan trend + engagement */}
       <div className="mt-6">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">QR Scan Trend</CardTitle>
             <p className="text-xs text-slate-400">Last 30 days — scans from your linked QR codes</p>
@@ -456,7 +456,7 @@ export function DemoAnalytics({
         </Card>
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Engagement Summary</CardTitle>
             <p className="text-xs text-slate-400">How people interact with your listing</p>
@@ -471,7 +471,7 @@ export function DemoAnalytics({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/50 border-slate-700">
+        <Card className="pdf-avoid-break bg-slate-800/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">QR Scan Activity</CardTitle>
             <p className="text-xs text-slate-400">When people scan your codes</p>

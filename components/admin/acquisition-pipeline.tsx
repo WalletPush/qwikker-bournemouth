@@ -119,6 +119,7 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
   const [presentMode, setPresentMode] = useState(false)
   const [presentSearch, setPresentSearch] = useState('')
   const [presentingId, setPresentingId] = useState<string | null>(null)
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null)
   const [presentError, setPresentError] = useState<string | null>(null)
   const [confirmingAll, setConfirmingAll] = useState(false)
   const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set())
@@ -515,6 +516,36 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     }
   }
 
+  // One-click download: server renders /demo/<token>?pdf=1 in headless Chrome and
+  // streams back a real PDF (looks exactly like the demo). Takes a few seconds.
+  const downloadPdfById = async (businessId: string, name?: string | null) => {
+    setPdfBusyId(businessId)
+    setPresentError(null)
+    try {
+      const res = await fetch(
+        `/api/admin/offer-engine/present-pdf?businessId=${encodeURIComponent(businessId)}`
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Could not generate PDF')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const safe = (name || 'Qwikker listing').replace(/[^\w\s-]/g, '').trim() || 'Qwikker listing'
+      a.download = `${safe} - Qwikker.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (e) {
+      setPresentError(e instanceof Error ? e.message : 'Could not generate PDF')
+    } finally {
+      setPdfBusyId(null)
+    }
+  }
+
   const markRowPublished = (id: string) => {
     setRows((prev) =>
       prev.map((r) => (r.id === id && r.enrichment ? { ...r, enrichment: { ...r.enrichment, published: true } } : r))
@@ -807,6 +838,8 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
             onSearch={setPresentSearch}
             presentingId={presentingId}
             onPresent={presentBusinessById}
+            pdfBusyId={pdfBusyId}
+            onDownloadPdf={downloadPdfById}
           />
         )}
 
@@ -1056,14 +1089,24 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
                   <h2 className="text-xl font-bold text-slate-100">{drawer.name}</h2>
                   {/* Present Mode: only meaningful once enriched (needs the draft to be worth showing) */}
                   {!drawer.claimed && drawerResult && (
-                    <button
-                      onClick={() => presentBusinessById(drawer.id)}
-                      disabled={presentingId === drawer.id}
-                      title="Open a personalised, full-screen demo of this listing to show the owner in person. Claim happens through the normal claim flow."
-                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-950/40 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-50"
-                    >
-                      {presentingId === drawer.id ? 'Opening…' : '▶ Present'}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => presentBusinessById(drawer.id)}
+                        disabled={presentingId === drawer.id}
+                        title="Open a personalised, full-screen demo of this listing to show the owner in person. Claim happens through the normal claim flow."
+                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-950/40 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-50"
+                      >
+                        {presentingId === drawer.id ? 'Opening…' : '▶ Present'}
+                      </button>
+                      <button
+                        onClick={() => downloadPdfById(drawer.id, drawer.name)}
+                        disabled={pdfBusyId === drawer.id}
+                        title="Generate and download this demo as a PDF (looks exactly like the live demo)."
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {pdfBusyId === drawer.id ? 'Generating…' : '⬇ PDF'}
+                      </button>
+                    </>
                   )}
                 </div>
                 <p className="text-xs text-slate-500">
@@ -1296,12 +1339,16 @@ function PresentPicker({
   onSearch,
   presentingId,
   onPresent,
+  pdfBusyId,
+  onDownloadPdf,
 }: {
   rows: PipelineRow[]
   search: string
   onSearch: (v: string) => void
   presentingId: string | null
   onPresent: (id: string) => void
+  pdfBusyId: string | null
+  onDownloadPdf: (id: string, name?: string | null) => void
 }) {
   // Eligible = enriched (draft ready) and not yet claimed.
   const eligible = rows.filter((r) => !r.claimed && r.enrichment?.status === 'ready')
@@ -1359,13 +1406,23 @@ function PresentPicker({
                 {r.hasWebsite && <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-300">Website</span>}
               </div>
 
-              <button
-                onClick={() => onPresent(r.id)}
-                disabled={presentingId === r.id}
-                className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
-              >
-                {presentingId === r.id ? 'Opening…' : '▶ Present'}
-              </button>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => onPresent(r.id)}
+                  disabled={presentingId === r.id}
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {presentingId === r.id ? 'Opening…' : '▶ Present'}
+                </button>
+                <button
+                  onClick={() => onDownloadPdf(r.id, r.name)}
+                  disabled={pdfBusyId === r.id}
+                  title="Generate and download this demo as a PDF (looks exactly like the live demo)."
+                  className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {pdfBusyId === r.id ? '…' : '⬇ PDF'}
+                </button>
+              </div>
             </div>
           ))}
         </div>

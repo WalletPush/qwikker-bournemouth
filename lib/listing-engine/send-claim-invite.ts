@@ -109,13 +109,38 @@ export function buildClaimTemplate(business: InviteBusiness, city: string, conte
 }
 
 /**
+ * Render the Present Mode demo to a PDF and package it as an email attachment.
+ * Best-effort: returns undefined (and logs) on any failure so a render problem
+ * never stops the invitation from going out.
+ */
+async function buildClaimPdfAttachment(
+  business: InviteBusiness,
+  city: string
+): Promise<Array<{ filename: string; content: Buffer }> | undefined> {
+  try {
+    const { renderDemoPdf } = await import('@/lib/pdf/render-demo-pdf')
+    const token = signDemoToken(business.id, city, 30)
+    const demoUrl = `${getFranchiseBaseUrl(city)}/demo/${token}?pdf=1&capture=1`
+    const pdf = await renderDemoPdf(demoUrl)
+    const safe =
+      (business.business_name || 'Qwikker listing').replace(/[^\w\s-]/g, '').trim() ||
+      'Qwikker listing'
+    return [{ filename: `${safe} - Qwikker.pdf`, content: pdf }]
+  } catch (e) {
+    console.warn(`send-claim-invite: PDF attach failed for ${business.id} (sending without)`, e)
+    return undefined
+  }
+}
+
+/**
  * Send ONE claim invite and record sent_at. Returns a per-business outcome so a
  * bulk caller can report which succeeded. Guards claimed/no-email defensively.
  */
 export async function sendClaimInvite(
   supabaseAdmin: AdminClient,
   business: InviteBusiness,
-  adminId: string
+  adminId: string,
+  opts?: { attachPdf?: boolean }
 ): Promise<{ ok: boolean; to?: string; error?: string }> {
   if (!business.email) return { ok: false, error: 'No email on file' }
   if (isAlreadyClaimed(business)) return { ok: false, error: 'Already claimed' }
@@ -124,10 +149,15 @@ export async function sendClaimInvite(
   const content = await getInviteContent(supabaseAdmin, business.id)
   const template = buildClaimTemplate(business, city, content)
 
+  // Best-effort: attach the Present Mode PDF so the owner can see their full
+  // listing offline. Never blocks the invite — if rendering fails we send plain.
+  const attachments = opts?.attachPdf === false ? undefined : await buildClaimPdfAttachment(business, city)
+
   const emailResult = await sendFranchiseEmail({
     city,
     to: business.email,
     template,
+    attachments,
     tags: [{ name: 'type', value: 'claim_invitation' }],
   })
 

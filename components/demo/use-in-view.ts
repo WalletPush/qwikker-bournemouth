@@ -3,6 +3,21 @@
 import { useEffect, useRef, useState } from 'react'
 
 /**
+ * True when the page is being rendered for PDF/print (`?pdf=1`). In that mode
+ * every scroll-triggered reveal must show its FINAL state immediately (and all
+ * looping animations are frozen via CSS) so a headless/browser capture is never
+ * blank or mid-animation. Safe on the server (returns false).
+ */
+export function isPdfMode(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return new URLSearchParams(window.location.search).get('pdf') === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
  * Flips to `true` once the element scrolls into view, then disconnects.
  * Used by the demo charts / loyalty stamps to animate from zero -> target the
  * first time they're seen. Respects prefers-reduced-motion (reveals instantly,
@@ -24,7 +39,7 @@ export function useInView<T extends HTMLElement>(
     const reduced =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (reduced || typeof IntersectionObserver === 'undefined') {
+    if (reduced || isPdfMode() || typeof IntersectionObserver === 'undefined') {
       setInView(true)
       return
     }

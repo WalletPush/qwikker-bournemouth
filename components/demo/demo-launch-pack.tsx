@@ -103,7 +103,7 @@ function ProductScene({ product, children }: { product: ProductKey; children: Re
   }, [p.img])
 
   return (
-    <div className="relative isolate overflow-hidden rounded-2xl border border-slate-800 shadow-lg">
+    <div className="pdf-avoid-break relative isolate overflow-hidden rounded-2xl border border-slate-800 shadow-lg">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}
@@ -135,7 +135,7 @@ function ProductScene({ product, children }: { product: ProductKey; children: Re
 
 function Mockup({ caption, title, children }: { caption: string; title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="pdf-avoid-break">
       {children}
       <p className="mt-2.5 text-sm font-semibold text-white">{title}</p>
       <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{caption}</p>
@@ -234,7 +234,7 @@ export function DemoLaunchPack({
       </p>
 
       {/* ── Try it now ── */}
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="pdf-avoid-break flex flex-col items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <RealQr value={walletTryUrl} size={92} padding={6} />
           <div>
@@ -256,7 +256,7 @@ export function DemoLaunchPack({
       </div>
 
       {/* ── Generated-on-claim statement ── */}
-      <div className="flex flex-col items-center gap-2">
+      <div className="pdf-avoid-break flex flex-col items-center gap-2">
         <div className="inline-flex items-center gap-2 rounded-xl border border-[#00d083]/30 bg-[#00d083]/10 px-5 py-3 text-sm font-bold text-[#00d083]">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
           Your marketing pack is generated when you claim your listing.

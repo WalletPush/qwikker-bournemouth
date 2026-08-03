@@ -726,6 +726,68 @@ pre, code {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Present Mode → PDF / capture
+   `.pdf-mode` freezes animations. Server PDF is a SINGLE continuous page
+   (full scroll height) — no A4 slicing — so we don't fight Chromium page breaks.
+   `.pdf-hide` / capture mode omit presenter chrome from the DOM.
+--------------------------------------------------------------------------- */
+.pdf-mode *,
+.pdf-mode *::before,
+.pdf-mode *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Release the iOS `html, body { height: 100% }` cap when Present Mode is in
+   PDF capture so scrollHeight equals the full document. */
+html:has(.pdf-mode),
+html:has(.pdf-mode) body {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.pdf-mode .pdf-hide {
+  display: none !important;
+}
+
+.pdf-mode {
+  min-height: 0 !important;
+  padding-bottom: 2rem !important;
+}
+
+@page {
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #020617 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .pdf-mode {
+    min-height: 0 !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 /* Marketing Site Animations */
 @keyframes fade-in {
   from {

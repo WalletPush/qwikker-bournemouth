@@ -29,6 +29,8 @@ interface FranchiseEmailOptions {
   template: EmailTemplate
   replyTo?: string
   tags?: Array<{ name: string; value: string }>
+  /** Optional file attachments (e.g. the Present Mode PDF). */
+  attachments?: Array<{ filename: string; content: Buffer | string }>
 }
 
 interface FranchiseResendConfig {
@@ -132,7 +134,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
   messageId?: string
   error?: string
 }> {
-  const { city, to, bcc, template, replyTo, tags = [] } = options
+  const { city, to, bcc, template, replyTo, tags = [], attachments } = options
 
   const franchiseConfig = await getFranchiseResendConfig(city)
 
@@ -162,6 +164,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
         subject: template.subject,
         html: template.html,
         text: template.text,
+        ...(attachments && attachments.length ? { attachments } : {}),
         tags: allTags
       })
 
@@ -190,6 +193,7 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
       subject: template.subject,
       html: template.html,
       text: template.text,
+      ...(attachments && attachments.length ? { attachments } : {}),
       tags: allTags
     })
 

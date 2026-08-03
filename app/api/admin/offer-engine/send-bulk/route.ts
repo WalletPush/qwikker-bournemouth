@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      const outcome = await sendClaimInvite(supabase, business, adminId)
+      // Bulk sends skip the (slow) headless-Chrome PDF attachment so a large
+      // batch can't blow the serverless time limit. Single "Send" attaches it.
+      const outcome = await sendClaimInvite(supabase, business, adminId, { attachPdf: false })
       if (outcome.ok) {
         sent++
         results.push({ businessId: id, ok: true, sent: true })

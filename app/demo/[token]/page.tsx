@@ -4,6 +4,7 @@ import { verifyDemoToken } from '@/lib/listing-engine/demo-token'
 import { getDemoData } from '@/lib/listing-engine/get-demo-data'
 import { getFranchisePublicUrl } from '@/lib/utils/franchise-url'
 import { PresentMode } from '@/components/demo/present-mode'
+import type { DemoPreset } from '@/lib/listing-engine/get-demo-data'
 import { DemoExpired } from '@/components/demo/demo-expired'
 
 // Always dynamic (token verify + fresh draft) and never cached.
@@ -17,10 +18,19 @@ export const metadata: Metadata = {
 
 interface DemoPageProps {
   params: Promise<{ token: string }>
+  searchParams: Promise<{ pdf?: string; preset?: string; capture?: string }>
 }
 
-export default async function DemoPage({ params }: DemoPageProps) {
+const VALID_PRESETS: DemoPreset[] = ['food', 'services', 'general']
+
+export default async function DemoPage({ params, searchParams }: DemoPageProps) {
   const { token } = await params
+  const { pdf, preset, capture } = await searchParams
+  const pdfMode = pdf === '1'
+  const captureMode = capture === '1'
+  const forcedPreset = VALID_PRESETS.includes(preset as DemoPreset)
+    ? (preset as DemoPreset)
+    : undefined
 
   const verified = verifyDemoToken(token)
 
@@ -40,5 +50,13 @@ export default async function DemoPage({ params }: DemoPageProps) {
   const city = verified.city || data.business.city
   const claimUrl = `${getFranchisePublicUrl(city)}/claim?business_id=${data.business.id}`
 
-  return <PresentMode data={data} claimUrl={claimUrl} />
+  return (
+    <PresentMode
+      data={data}
+      claimUrl={claimUrl}
+      pdfMode={pdfMode}
+      forcedPreset={forcedPreset}
+      capture={captureMode}
+    />
+  )
 }

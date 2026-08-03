@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
       fullUrl: false, // Don't log full URLs
     },
   },
+  // Keep the headless-Chrome PDF deps out of the bundle — they load their own
+  // native binary / files at runtime and must stay external on the server.
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
   // Removed compiler config to avoid styled-jsx issues
   images: {
     remotePatterns: [
