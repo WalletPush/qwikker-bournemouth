@@ -17,15 +17,10 @@ const nextConfig: NextConfig = {
   },
   // Keep PDF Chromium deps external — they load binaries at runtime and must
   // not be relocated by the bundler. Production uses @sparticuz/chromium-min
-  // (remote pack); local uses a system Chrome via PUPPETEER_EXECUTABLE_PATH.
+  // (remote pack downloaded into /tmp); local uses system Chrome.
+  // NOTE: do NOT use outputFileTracingIncludes for these — pnpm's symlinked
+  // node_modules makes Vercel reject the deploy package ("symlinked directories").
   serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min'],
-  // Ensure the (tiny) chromium-min package is traced into the PDF routes.
-  outputFileTracingIncludes: {
-    '/api/admin/offer-engine/present-pdf/**/*': [
-      './node_modules/@sparticuz/chromium-min/**/*',
-    ],
-    '/api/demo/**/*': ['./node_modules/@sparticuz/chromium-min/**/*'],
-  },
   // Removed compiler config to avoid styled-jsx issues
   images: {
     remotePatterns: [
