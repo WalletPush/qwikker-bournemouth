@@ -10,7 +10,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:partners": "tsx --test lib/partners/partners-core.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

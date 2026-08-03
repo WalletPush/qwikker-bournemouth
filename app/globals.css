@@ -8,6 +8,27 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
+/*
+  Partners sticky scroll sections need sticky to work.
+  `overflow-x: hidden` on html/body creates a containing block that
+  breaks position:sticky in Safari/Chrome — use clip instead on this page.
+*/
+html:has(.partners-root),
+html:has(.partners-root) body {
+  overflow-x: clip;
+}
+
+@keyframes partnersVisionIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Safe area utilities for iOS notch / home indicator */
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
@@ -207,6 +228,25 @@ body {
   to {
     transform: translate(-50%, -50%) rotate(360deg);
   }
+}
+
+/* Partners hero — soft space wash */
+.partners-nebula {
+  background:
+    radial-gradient(ellipse 50% 40% at 78% 38%, rgba(0, 196, 106, 0.07), transparent 70%),
+    radial-gradient(ellipse 35% 30% at 60% 70%, rgba(255, 255, 255, 0.03), transparent 70%);
+}
+
+/* Subtle green glow behind globe — diffuse, not a hard ring */
+.partners-globe-glow {
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(0, 196, 106, 0.28) 0%,
+    rgba(0, 196, 106, 0.1) 42%,
+    transparent 72%
+  );
+  filter: blur(40px);
+  opacity: 0.9;
 }
 
 .animate-gradient-x {

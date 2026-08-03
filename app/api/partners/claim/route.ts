@@ -1,191 +1,226 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { createPartnerClaimEmail } from '@/lib/email/templates/partner-emails'
+import { createPartnerVerifyEmail } from '@/lib/email/templates/partner-emails'
 import { Resend } from 'resend'
 import { sendWithRetry } from '@/lib/email/send-franchise-email'
+import { slugifyCityName } from '@/lib/partners/availability'
+import { writeClaimAudit } from '@/lib/partners/claim-transitions'
+import { checkCityAvailability } from '@/app/api/partners/cities/route'
+import { randomBytes } from 'crypto'
+import { z } from 'zod'
+
+const claimSchema = z.object({
+  city_name: z.string().min(2).max(120),
+  city_slug: z.string().min(2).max(120).optional(),
+  country: z.string().max(120).optional().nullable(),
+  region: z.string().max(120).optional().nullable(),
+  place_id: z.string().max(256).optional().nullable(),
+  full_name: z.string().min(2).max(120),
+  email: z.string().email().max(254),
+  marketing_opt_in: z.boolean().optional().default(false),
+  enquiry_consent: z.literal(true),
+  website: z.string().max(0).optional(), // honeypot — must be empty
+  place_types: z.array(z.string()).optional(),
+})
+
+const RATE_WINDOW_MS = 60_000
+const RATE_MAX = 8
+const rateMap = new Map<string, { count: number; reset: number }>()
+
+function rateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = rateMap.get(key)
+  if (!entry || now > entry.reset) {
+    rateMap.set(key, { count: 1, reset: now + RATE_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_MAX) return false
+  entry.count += 1
+  return true
+}
+
+function looksLikeLocality(placeTypes?: string[]): boolean {
+  if (!placeTypes || placeTypes.length === 0) return true // text fallback — validated elsewhere
+  const allowed = new Set([
+    'locality',
+    'postal_town',
+    'administrative_area_level_1',
+    'administrative_area_level_2',
+    'colloquial_area',
+    'political',
+  ])
+  const blocked = ['establishment', 'point_of_interest', 'premise', 'street_address', 'route', 'subpremise']
+  if (placeTypes.some((t) => blocked.includes(t))) return false
+  return placeTypes.some((t) => allowed.has(t))
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { city_name, city_slug, country, place_id, full_name, email } = await request.json()
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (!rateLimit(`claim:${ip}`)) {
+      return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429 })
+    }
 
-    if (!city_name || !city_slug || !full_name || !email) {
+    const body = await request.json()
+    const parsed = claimSchema.safeParse(body)
+    if (!parsed.success) {
+      // Generic — avoid leaking field details that enable enumeration tricks
+      return NextResponse.json({ error: 'Invalid enquiry details' }, { status: 400 })
+    }
+
+    const data = parsed.data
+    if (data.website) {
+      // Honeypot tripped — pretend success
+      return NextResponse.json({ success: true, verification_required: true })
+    }
+
+    if (!looksLikeLocality(data.place_types)) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Please select a city or region, not a business or address.' },
         { status: 400 }
       )
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email address' },
-        { status: 400 }
-      )
+    const cityName = data.city_name.trim()
+    const slug = (data.city_slug || slugifyCityName(cityName)).toLowerCase()
+    if (slug.length < 2 || /\d{4,}/.test(cityName)) {
+      return NextResponse.json({ error: 'Please enter a valid city name.' }, { status: 400 })
     }
 
+    const email = data.email.toLowerCase().trim()
     const supabase = createServiceRoleClient()
-    const slug = city_slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
-    // Check if city is already live or reserved
-    const { data: existingFranchise } = await supabase
-      .from('franchise_crm_configs')
-      .select('city, status')
-      .eq('city', slug)
-      .maybeSingle()
+    const availability = await checkCityAvailability(slug)
 
-    if (existingFranchise) {
-      const label = existingFranchise.status === 'active' ? 'live' : 'reserved'
+    if (availability === 'owned' || availability === 'waitlist_only') {
       return NextResponse.json(
-        { error: `This city is already ${label}` },
+        { error: 'This territory is not available for reservation', waitlist: true },
+        { status: 409 }
+      )
+    }
+    if (availability === 'reserved') {
+      return NextResponse.json(
+        { error: 'This territory is already reserved', waitlist: true },
         { status: 409 }
       )
     }
 
-    // Check for active (non-expired) claim on this city
-    const { data: existingClaim } = await supabase
+    const { data: emailClaims } = await supabase
       .from('partner_claims')
-      .select('id, full_name, email, expires_at')
+      .select('city_slug, status, email')
+      .eq('email', email)
+
+    const activeForEmail = (emailClaims || []).filter((h) =>
+      ['submitted', 'email_verified', 'held', 'claimed'].includes(h.status)
+    )
+    if (activeForEmail.length > 0) {
+      return NextResponse.json(
+        { error: 'You already have an active territory enquiry' },
+        { status: 409 }
+      )
+    }
+
+    // Same-city rejected block until HQ releases
+    const { data: rejectedSame } = await supabase
+      .from('partner_claims')
+      .select('id')
       .eq('city_slug', slug)
-      .eq('status', 'claimed')
-      .gte('expires_at', new Date().toISOString())
+      .eq('email', email)
+      .eq('status', 'rejected')
+      .limit(1)
       .maybeSingle()
 
-    if (existingClaim) {
+    if (rejectedSame) {
       return NextResponse.json(
-        { error: 'This city has already been claimed', waitlist: true },
+        { error: 'This territory enquiry cannot be resubmitted at this time' },
         { status: 409 }
       )
     }
 
-    // Check for duplicate claim by same email (any city)
-    const { data: emailClaim } = await supabase
-      .from('partner_claims')
-      .select('id, city_name')
-      .eq('email', email.toLowerCase().trim())
-      .eq('status', 'claimed')
-      .gte('expires_at', new Date().toISOString())
-      .maybeSingle()
-
-    if (emailClaim) {
-      return NextResponse.json(
-        { error: `You already have an active claim on ${emailClaim.city_name}` },
-        { status: 409 }
-      )
-    }
-
-    const claimedAt = new Date()
-    const expiresAt = new Date(claimedAt.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const token = randomBytes(32).toString('hex')
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
     const { data: claim, error } = await supabase
       .from('partner_claims')
       .insert({
-        city_name,
+        city_name: cityName,
         city_slug: slug,
-        country: country || null,
-        place_id: place_id || null,
-        full_name: full_name.trim(),
-        email: email.toLowerCase().trim(),
-        status: 'claimed',
-        claimed_at: claimedAt.toISOString(),
-        expires_at: expiresAt.toISOString(),
+        country: data.country || null,
+        region: data.region || null,
+        place_id: data.place_id || null,
+        full_name: data.full_name.trim(),
+        email,
+        status: 'submitted',
+        claimed_at: new Date().toISOString(),
+        expires_at: null,
+        marketing_opt_in: !!data.marketing_opt_in,
+        verification_token: token,
+        verification_expires_at: verificationExpires,
+        is_founding_eligible: true,
       })
-      .select()
+      .select('id, city_name')
       .single()
 
     if (error) {
       console.error('Failed to create partner claim:', error)
-      return NextResponse.json(
-        { error: 'Failed to create claim' },
-        { status: 500 }
-      )
+      if (error.code === '23505') {
+        return NextResponse.json({ error: 'An active enquiry already exists' }, { status: 409 })
+      }
+      return NextResponse.json({ error: 'Failed to submit enquiry' }, { status: 500 })
     }
 
-    // Send confirmation email with retry
-    // Uses HQ Resend key (not franchise-specific — this is a global partner claim)
+    await writeClaimAudit({
+      claimId: claim.id,
+      actor: 'public',
+      fromStatus: null,
+      toStatus: 'submitted',
+      note: 'Enquiry submitted — awaiting email verification',
+    })
+
+    const partnersOrigin =
+      process.env.NEXT_PUBLIC_PARTNERS_URL ||
+      (process.env.VERCEL_ENV === 'production'
+        ? 'https://partners.qwikker.com'
+        : request.headers.get('origin') || 'http://localhost:3000')
+    const verifyPath =
+      partnersOrigin.includes('partners.qwikker.com') || partnersOrigin.includes('partners.localhost')
+        ? '/verify'
+        : '/partners/verify'
+    const verifyUrl = `${partnersOrigin.replace(/\/$/, '')}${verifyPath}?token=${token}`
+
     try {
       const resendApiKey = process.env.RESEND_API_KEY
       if (resendApiKey) {
         const resendClient = new Resend(resendApiKey)
-        const template = createPartnerClaimEmail({ full_name, city_name })
+        const template = createPartnerVerifyEmail({
+          full_name: data.full_name.trim(),
+          city_name: cityName,
+          verifyUrl,
+        })
         const fromAddress = process.env.EMAIL_FROM || 'QWIKKER <no-reply@qwikker.com>'
-
-        const result = await sendWithRetry(resendClient, {
+        await sendWithRetry(resendClient, {
           from: fromAddress,
-          to: email.toLowerCase().trim(),
+          to: email,
           subject: template.subject,
           html: template.html,
           text: template.text,
           tags: [
             { name: 'service', value: 'qwikker' },
-            { name: 'type', value: 'partner-claim' },
-          ]
+            { name: 'type', value: 'partner-verify' },
+          ],
         })
-
-        if (result.error) {
-          console.error('❌ Partner claim email failed:', result.error)
-        } else {
-          console.log(`✅ Partner claim email sent to ${email} for ${city_name}`)
-        }
-      } else {
-        console.error('❌ RESEND_API_KEY not set — partner claim email not sent')
       }
     } catch (err) {
-      console.error('Failed to send claim confirmation email:', err)
+      console.error('Failed to send verify email:', err)
     }
-
-    // Send Slack notification (non-blocking)
-    sendPartnerSlackNotification({
-      type: 'claim',
-      city_name,
-      full_name,
-      email,
-    }).catch(err => console.error('Failed to send Slack notification:', err))
 
     return NextResponse.json({
       success: true,
-      claim: {
-        id: claim.id,
-        city_name: claim.city_name,
-        expires_at: claim.expires_at,
-      }
+      verification_required: true,
+      // Do not echo email for enumeration safety beyond what user typed
     })
   } catch (error) {
     console.error('Partner claim API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
-
-async function sendPartnerSlackNotification(data: {
-  type: 'claim' | 'waitlist'
-  city_name: string
-  full_name: string
-  email: string
-}) {
-  const webhookUrl = process.env.HQ_SLACK_WEBHOOK_URL || process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL
-  if (!webhookUrl) return
-
-  const emoji = data.type === 'claim' ? ':cityscape:' : ':hourglass_flowing_sand:'
-  const action = data.type === 'claim' ? 'claimed' : 'joined the waitlist for'
-
-  const message = {
-    text: `${emoji} ${data.full_name} ${action} *${data.city_name}*`,
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `${emoji} *New Partner ${data.type === 'claim' ? 'Claim' : 'Waitlist'}*\n\n*City:* ${data.city_name}\n*Name:* ${data.full_name}\n*Email:* ${data.email}`
-        }
-      }
-    ]
-  }
-
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(message),
-  })
 }

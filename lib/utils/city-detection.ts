@@ -107,10 +107,9 @@ export async function getCityFromHostname(
     throw new Error(`Access denied: No franchise subdomain provided (${cleanHost})`)
   }
 
-  // Main subdomains are NOT franchise cities (www/app/api)
-  if (['www', 'app', 'api'].includes(subdomain)) {
-    if (allowUnsafeFallbacks) return defaultCity
-    throw new Error(`Access denied: Main host not allowed for city routes (${subdomain}.${parts.slice(1).join('.')})`)
+  // Main / platform subdomains are NOT franchise cities (partners.qwikker.com, hq, etc.)
+  if (['www', 'app', 'api', 'partners', 'hq', 'admin', 'franchise'].includes(subdomain)) {
+    return defaultCity
   }
 
   // ✅ Real city subdomain must exist in DB

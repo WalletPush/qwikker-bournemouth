@@ -9,10 +9,19 @@ interface PartnerClaim {
   country: string | null
   full_name: string
   email: string
-  status: 'claimed' | 'converted' | 'expired' | 'released'
+  status:
+    | 'submitted'
+    | 'email_verified'
+    | 'held'
+    | 'claimed'
+    | 'converted'
+    | 'expired'
+    | 'released'
+    | 'rejected'
   claimed_at: string
-  expires_at: string
+  expires_at: string | null
   converted_at: string | null
+  verified_at?: string | null
   notes: string | null
   created_at: string
 }
@@ -27,21 +36,52 @@ interface WaitlistEntry {
   created_at: string
 }
 
+interface PartnerMarket {
+  id: string
+  city_name: string
+  city_slug: string
+  country: string | null
+  status: 'owned' | 'reserved' | 'available'
+  tier: 'hub' | 'partner'
+  blocked: boolean
+  manual_review_only: boolean
+  lat: number | null
+  lng: number | null
+  notes: string | null
+}
+
+interface FoundingMeta {
+  secured: number
+  converted: number
+  total: number
+  open: boolean
+}
+
 export function PartnerClaimsPage() {
   const [claims, setClaims] = useState<PartnerClaim[]>([])
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
+  const [markets, setMarkets] = useState<PartnerMarket[]>([])
+  const [founding, setFounding] = useState<FoundingMeta | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'claims' | 'waitlist'>('claims')
+  const [activeTab, setActiveTab] = useState<'claims' | 'waitlist' | 'markets'>('claims')
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
   const [notesValue, setNotesValue] = useState('')
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/hq/partners')
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const [partnersRes, marketsRes] = await Promise.all([
+        fetch('/api/hq/partners'),
+        fetch('/api/hq/partners/markets'),
+      ])
+      if (!partnersRes.ok) throw new Error('Failed to fetch')
+      const data = await partnersRes.json()
       setClaims(data.claims || [])
       setWaitlist(data.waitlist || [])
+      if (data.founding) setFounding(data.founding)
+      if (marketsRes.ok) {
+        const m = await marketsRes.json()
+        setMarkets(m.markets || [])
+      }
     } catch (error) {
       console.error('Failed to fetch partner data:', error)
     } finally {
@@ -51,30 +91,41 @@ export function PartnerClaimsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const handleAction = useCallback(async (id: string, action: string, notes?: string) => {
+  const handleAction = useCallback(async (id: string, action: string, notes?: string, extra?: Record<string, unknown>) => {
     try {
       const res = await fetch('/api/hq/partners', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action, notes }),
+        body: JSON.stringify({ id, action, notes, ...extra }),
       })
-      if (!res.ok) throw new Error('Action failed')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Action failed')
+      }
       await fetchData()
       setEditingNotes(null)
     } catch (error) {
       console.error('Action failed:', error)
+      alert(error instanceof Error ? error.message : 'Action failed')
     }
   }, [fetchData])
 
   const getStatusBadge = (claim: PartnerClaim) => {
-    const isExpired = new Date(claim.expires_at) < new Date() && claim.status === 'claimed'
+    const isExpired =
+      !!claim.expires_at &&
+      new Date(claim.expires_at) < new Date() &&
+      (claim.status === 'claimed' || claim.status === 'held')
     const status = isExpired ? 'expired' : claim.status
 
     const config: Record<string, { label: string; classes: string }> = {
-      claimed: { label: 'Active', classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+      submitted: { label: 'Awaiting verify', classes: 'bg-slate-500/10 text-slate-300 border-slate-500/20' },
+      email_verified: { label: 'Queue', classes: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+      held: { label: 'Held', classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+      claimed: { label: 'Held', classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
       converted: { label: 'Converted', classes: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
       expired: { label: 'Expired', classes: 'bg-red-500/10 text-red-400 border-red-500/20' },
       released: { label: 'Released', classes: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
+      rejected: { label: 'Rejected', classes: 'bg-red-500/10 text-red-300 border-red-500/20' },
     }
 
     const c = config[status] || config.released
@@ -85,7 +136,8 @@ export function PartnerClaimsPage() {
     )
   }
 
-  const getCountdown = (expiresAt: string) => {
+  const getCountdown = (expiresAt: string | null) => {
+    if (!expiresAt) return '—'
     const diff = new Date(expiresAt).getTime() - Date.now()
     if (diff <= 0) return 'Expired'
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -95,8 +147,11 @@ export function PartnerClaimsPage() {
     return `${hours}h left`
   }
 
-  const activeClaims = claims.filter(c => c.status === 'claimed')
-  const otherClaims = claims.filter(c => c.status !== 'claimed')
+  const queueClaims = claims.filter((c) => c.status === 'email_verified' || c.status === 'submitted')
+  const activeClaims = claims.filter((c) => c.status === 'claimed' || c.status === 'held')
+  const otherClaims = claims.filter(
+    (c) => !['claimed', 'held', 'email_verified', 'submitted'].includes(c.status)
+  )
 
   if (loading) {
     return (
@@ -115,10 +170,13 @@ export function PartnerClaimsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Partner Claims</h1>
           <p className="text-sm text-slate-400 mt-1">
-            {activeClaims.length} active {activeClaims.length === 1 ? 'claim' : 'claims'} &middot; {waitlist.length} on waitlist
+            {activeClaims.length} active holds &middot; {waitlist.length} on waitlist
+            {founding
+              ? ` · ${founding.secured}/${founding.total} founding secured`
+              : ''}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('claims')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -139,15 +197,48 @@ export function PartnerClaimsPage() {
           >
             Waitlist ({waitlist.length})
           </button>
+          <button
+            onClick={() => setActiveTab('markets')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'markets'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            Markets ({markets.length})
+          </button>
         </div>
       </div>
 
       {activeTab === 'claims' && (
         <div className="space-y-6">
+          {queueClaims.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-amber-500/80 uppercase tracking-wider mb-3">
+                Review queue ({queueClaims.length})
+              </h2>
+              <div className="space-y-3">
+                {queueClaims.map((claim) => (
+                  <ClaimCard
+                    key={claim.id}
+                    claim={claim}
+                    getStatusBadge={getStatusBadge}
+                    getCountdown={getCountdown}
+                    onAction={handleAction}
+                    editingNotes={editingNotes}
+                    setEditingNotes={setEditingNotes}
+                    notesValue={notesValue}
+                    setNotesValue={setNotesValue}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Active Claims */}
           {activeClaims.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Active Claims</h2>
+              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Active holds</h2>
               <div className="space-y-3">
                 {activeClaims.map(claim => (
                   <ClaimCard
@@ -231,6 +322,79 @@ export function PartnerClaimsPage() {
           )}
         </div>
       )}
+
+      {activeTab === 'markets' && (
+        <div className="rounded-lg border border-slate-800 overflow-hidden">
+          {markets.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-slate-500">No markets yet. Apply the Phase 2 migration to seed hubs.</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">City</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tier</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {markets.map((m) => (
+                  <tr key={m.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-white">{m.city_name}</p>
+                      <p className="text-xs text-slate-500">{m.country}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-400 capitalize">{m.tier}</td>
+                    <td className="px-4 py-3 text-sm capitalize text-slate-300">
+                      {m.status}
+                      {m.blocked ? ' · blocked' : ''}
+                      {m.manual_review_only ? ' · review' : ''}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(['available', 'reserved', 'owned'] as const).map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            disabled={m.status === status}
+                            onClick={async () => {
+                              await fetch('/api/hq/partners/markets', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: m.id, status }),
+                              })
+                              fetchData()
+                            }}
+                            className="px-2 py-1 rounded text-[10px] font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 capitalize"
+                          >
+                            {status}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch('/api/hq/partners/markets', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: m.id, blocked: !m.blocked }),
+                            })
+                            fetchData()
+                          }}
+                          className="px-2 py-1 rounded text-[10px] font-medium bg-slate-800 text-amber-400 hover:bg-slate-700"
+                        >
+                          {m.blocked ? 'Unblock' : 'Block'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -247,15 +411,17 @@ function ClaimCard({
 }: {
   claim: PartnerClaim
   getStatusBadge: (claim: PartnerClaim) => React.ReactNode
-  getCountdown: (expiresAt: string) => string
-  onAction: (id: string, action: string, notes?: string) => void
+  getCountdown: (expiresAt: string | null) => string
+  onAction: (id: string, action: string, notes?: string, extra?: Record<string, unknown>) => void
   editingNotes: string | null
   setEditingNotes: (id: string | null) => void
   notesValue: string
   setNotesValue: (v: string) => void
 }) {
-  const isActive = claim.status === 'claimed'
-  const isExpired = new Date(claim.expires_at) < new Date() && isActive
+  const isHeld = claim.status === 'claimed' || claim.status === 'held'
+  const isQueue = claim.status === 'email_verified' || claim.status === 'submitted'
+  const isExpired =
+    !!claim.expires_at && new Date(claim.expires_at) < new Date() && isHeld
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-5">
@@ -269,42 +435,74 @@ function ClaimCard({
           <p className="text-sm text-slate-300">{claim.full_name}</p>
           <p className="text-sm text-slate-400">{claim.email}</p>
           <div className="flex items-center gap-4 text-xs text-slate-500 pt-1">
-            <span>Claimed {new Date(claim.claimed_at).toLocaleDateString()}</span>
-            {isActive && !isExpired && (
+            <span>Submitted {new Date(claim.claimed_at).toLocaleDateString()}</span>
+            {isHeld && !isExpired && (
               <span className="text-amber-400">{getCountdown(claim.expires_at)}</span>
             )}
             {isExpired && <span className="text-red-400">Expired</span>}
+            {claim.status === 'email_verified' && (
+              <span className="text-amber-400">Needs review (SLA: 2 business days)</span>
+            )}
           </div>
         </div>
 
-        {(isActive || isExpired) && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => onAction(claim.id, 'extend')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
-            >
-              Extend 30d
-            </button>
-            <button
-              onClick={() => onAction(claim.id, 'reserve')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
-            >
-              Reserve
-            </button>
-            <button
-              onClick={() => onAction(claim.id, 'convert')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
-            >
-              Convert
-            </button>
+        <div className="flex flex-wrap gap-2">
+          {isQueue && claim.status === 'email_verified' && (
+            <>
+              <button
+                onClick={() => onAction(claim.id, 'approve_hold')}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+              >
+                Approve hold
+              </button>
+              <button
+                onClick={() => onAction(claim.id, 'reject')}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+              >
+                Reject
+              </button>
+            </>
+          )}
+          {claim.status === 'submitted' && (
+            <p className="text-xs text-slate-500 self-center">Waiting for email verification</p>
+          )}
+          {claim.status === 'rejected' && (
             <button
               onClick={() => onAction(claim.id, 'release')}
-              className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+              className="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
             >
-              Release
+              Release (allow re-enquire)
             </button>
-          </div>
-        )}
+          )}
+          {(isHeld || isExpired) && (
+            <>
+              <button
+                onClick={() => onAction(claim.id, 'extend')}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Extend 30d
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date().toISOString()
+                  onAction(claim.id, 'convert', undefined, {
+                    agreement_signed_at: now,
+                    payment_confirmed_at: now,
+                  })
+                }}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+              >
+                Convert (paid)
+              </button>
+              <button
+                onClick={() => onAction(claim.id, 'release')}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+              >
+                Release
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Notes */}

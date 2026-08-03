@@ -1,0 +1,2 @@
+-- Merged into partners_full_sanity_check.sql (single UNION ALL run).
+-- Use that file instead.
