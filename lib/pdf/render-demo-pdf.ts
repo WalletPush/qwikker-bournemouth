@@ -83,11 +83,35 @@ async function launchBrowser(): Promise<Browser> {
   const viewport = { width: PDF_WIDTH_PX, height: VIEWPORT_HEIGHT_PX, deviceScaleFactor: 1 }
 
   if (SERVERLESS) {
-    const chromium = (await import('@sparticuz/chromium')).default
+    // chromium-min + remote pack: Vercel/pnpm often strip the full package's
+    // /bin folder from the Lambda bundle (exactly the error we hit in prod).
+    // The pack is downloaded at cold start into /tmp and reused for warm invokes.
+    const chromium = (await import('@sparticuz/chromium-min')).default
+    const packUrl =
+      process.env.CHROMIUM_REMOTE_EXEC_PATH ||
+      'https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.x64.tar'
+
+    if (typeof chromium.setGraphicsMode === 'function') {
+      chromium.setGraphicsMode(false)
+    }
+
+    const executablePath = await chromium.executablePath(packUrl)
+    // Help the loader find companion libs next to the extracted binary.
+    try {
+      process.env.LD_LIBRARY_PATH = [
+        path.dirname(executablePath),
+        process.env.LD_LIBRARY_PATH || '',
+      ]
+        .filter(Boolean)
+        .join(':')
+    } catch {
+      // ignore
+    }
+
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: viewport,
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: true,
     })
   }

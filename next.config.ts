@@ -15,9 +15,17 @@ const nextConfig: NextConfig = {
       fullUrl: false, // Don't log full URLs
     },
   },
-  // Keep the headless-Chrome PDF deps out of the bundle — they load their own
-  // native binary / files at runtime and must stay external on the server.
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+  // Keep PDF Chromium deps external — they load binaries at runtime and must
+  // not be relocated by the bundler. Production uses @sparticuz/chromium-min
+  // (remote pack); local uses a system Chrome via PUPPETEER_EXECUTABLE_PATH.
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min'],
+  // Ensure the (tiny) chromium-min package is traced into the PDF routes.
+  outputFileTracingIncludes: {
+    '/api/admin/offer-engine/present-pdf/**/*': [
+      './node_modules/@sparticuz/chromium-min/**/*',
+    ],
+    '/api/demo/**/*': ['./node_modules/@sparticuz/chromium-min/**/*'],
+  },
   // Removed compiler config to avoid styled-jsx issues
   images: {
     remotePatterns: [
@@ -35,15 +43,18 @@ const nextConfig: NextConfig = {
     },
   },
   turbopack: {},
-  webpack: (config: any) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      crypto: false,
-    };
-    
-    return config;
+  // Only stub Node builtins for the CLIENT bundle — stubbing them on the
+  // server breaks packages like @sparticuz/chromium that need fs/path.
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+      }
+    }
+    return config
   },
 };
 
