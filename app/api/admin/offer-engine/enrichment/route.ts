@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('business_enrichments')
-      .select('business_id, status, draft, decisions, edits, generated_at, updated_at, published_at')
+      .select(
+        'business_id, status, draft, decisions, edits, generated_at, updated_at, published_at, sent_at, sent_to_email, claim_link_clicked_at, claim_link_click_count, demo_link_clicked_at, demo_link_click_count'
+      )
       .eq('business_id', businessId)
       .maybeSingle()
 

@@ -36,6 +36,12 @@ export interface PipelineRow {
   confidence: number | null
   flags: string[]
   sentAt: string | null
+  /** Recipient snapshot at invite send time (fallback to `email` for older rows). */
+  sentToEmail: string | null
+  claimLinkClickedAt: string | null
+  claimLinkClickCount: number
+  demoLinkClickedAt: string | null
+  demoLinkClickCount: number
   reviewAction: string | null
   enrichment: RowEnrichment | null
 }

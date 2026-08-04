@@ -73,6 +73,23 @@ const BUCKET_META: Record<JourneyStep, Record<BucketKey, { label: string; desc: 
       tone: 'muted',
     },
   },
+  sent: {
+    ready: {
+      label: 'Engaged',
+      desc: 'Clicked Claim or Present Mode after the invite.',
+      tone: 'ready',
+    },
+    no_email: {
+      label: 'Waiting',
+      desc: 'Invite sent — no tracked clicks yet.',
+      tone: 'warn',
+    },
+    attention: {
+      label: 'Check recipient',
+      desc: 'Sent, but no recipient email is recorded.',
+      tone: 'muted',
+    },
+  },
 }
 
 const BUCKET_TONE: Record<'ready' | 'warn' | 'muted', { border: string; dot: string }> = {
@@ -321,7 +338,12 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     }
   }, [rows])
 
-  const journeyCounts = { enrich: journey.enrich.length, confirm: journey.confirm.length, invite: journey.invite.length }
+  const journeyCounts = {
+    enrich: journey.enrich.length,
+    confirm: journey.confirm.length,
+    invite: journey.invite.length,
+    sent: journey.sent.length,
+  }
 
   // Pick a sensible starting step the first time data lands: wherever there's work.
   useEffect(() => {
@@ -330,17 +352,30 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     if (journey.enrich.length > 0) setJourneyStep('enrich')
     else if (journey.confirm.length > 0) setJourneyStep('confirm')
     else if (journey.invite.length > 0) setJourneyStep('invite')
-  }, [rows.length, journey.enrich.length, journey.confirm.length, journey.invite.length])
+    else if (journey.sent.length > 0) setJourneyStep('sent')
+  }, [
+    rows.length,
+    journey.enrich.length,
+    journey.confirm.length,
+    journey.invite.length,
+    journey.sent.length,
+  ])
 
   // Rows shown for the active step, optionally narrowed to one category.
   const stepRows = useMemo(() => {
     let base = journey[journeyStep]
     if (categoryFilter !== 'all') base = base.filter((r) => (r.category || 'Uncategorised') === categoryFilter)
 
-    // Best-first ordering so the strongest listings (most signals / highest
-    // confidence) rise to the top. Enriched rows use their real confidence score;
-    // not-yet-enriched rows fall back to a signal heuristic (website + email +
-    // rating) so the ones most likely to enrich well surface first.
+    // Sent: newest invites first. Elsewhere: best-first so the strongest listings
+    // (most signals / highest confidence) rise to the top.
+    if (journeyStep === 'sent') {
+      return [...base].sort((a, b) => {
+        const ta = a.sentAt ? new Date(a.sentAt).getTime() : 0
+        const tb = b.sentAt ? new Date(b.sentAt).getTime() : 0
+        return tb - ta || a.name.localeCompare(b.name)
+      })
+    }
+
     const rank = (r: PipelineRow): number => {
       if (r.confidence != null) return r.confidence
       let s = 0
@@ -364,6 +399,12 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
       }
       if (journeyStep === 'invite') {
         return r.email ? 'ready' : 'no_email'
+      }
+      if (journeyStep === 'sent') {
+        const recipient = r.sentToEmail || r.email
+        if (!recipient) return 'attention'
+        if ((r.claimLinkClickCount || 0) > 0 || (r.demoLinkClickCount || 0) > 0) return 'ready'
+        return 'no_email'
       }
       // confirm: "send-ready" needs a strong (high-confidence) draft AND an email.
       const strong = (r.confidence ?? 0) >= HIGH_CONFIDENCE
@@ -403,6 +444,7 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
             ? recomputeStage({
                 ...r,
                 sentAt: now,
+                sentToEmail: r.email,
                 enrichment: r.enrichment ? { ...r.enrichment, published: true } : r.enrichment,
               })
             : r
@@ -781,7 +823,10 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to send')
       setSentTo(data.to || emailValue)
-      patchRow(drawer.id, { sentAt: new Date().toISOString() })
+      patchRow(drawer.id, {
+        sentAt: new Date().toISOString(),
+        sentToEmail: data.to || emailValue,
+      })
     } catch (e) {
       setOutreachError(e instanceof Error ? e.message : 'Failed to send')
     } finally {
@@ -803,7 +848,15 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-5">
         {/* Campaign overview (KPIs) */}
-        <CampaignOverview counts={counts} cityDisplayName={cityDisplayName} />
+        <CampaignOverview
+          counts={counts}
+          cityDisplayName={cityDisplayName}
+          onEmailsSentClick={() => {
+            setJourneyStep('sent')
+            setSelected(new Set())
+            setOpenBucket(null)
+          }}
+        />
 
         {/* Present Mode toggle — flips the whole tab into an in-person demo launcher */}
         <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-2.5">
@@ -953,6 +1006,8 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
               'Nothing to enrich — every unclaimed business already has AI content. Nice!'
             ) : journeyStep === 'confirm' ? (
               'No drafts waiting. Enrich some businesses first, or you\u2019ve confirmed them all.'
+            ) : journeyStep === 'sent' ? (
+              'No claim invites sent yet. Send from Invite, then they show up here with click tracking.'
             ) : (
               'No live listings waiting for an invite yet. Confirm some listings first.'
             )}

@@ -21,14 +21,27 @@ export interface DashboardCounts {
 export function CampaignOverview({
   counts,
   cityDisplayName,
+  onEmailsSentClick,
 }: {
   counts: DashboardCounts
   cityDisplayName: string
+  /** Jump to the Sent journey step when Emails Sent is clicked. */
+  onEmailsSentClick?: () => void
 }) {
-  const kpis: Array<{ label: string; value: string | number; accent: string }> = [
+  const kpis: Array<{
+    label: string
+    value: string | number
+    accent: string
+    onClick?: () => void
+  }> = [
     { label: 'Businesses', value: counts.total, accent: 'text-slate-100' },
     { label: 'Enriched', value: counts.enriched, accent: 'text-emerald-300' },
-    { label: 'Emails Sent', value: counts.emailsSent, accent: 'text-sky-300' },
+    {
+      label: 'Emails Sent',
+      value: counts.emailsSent,
+      accent: 'text-sky-300',
+      onClick: onEmailsSentClick,
+    },
     { label: 'Claimed', value: counts.claimed, accent: 'text-[#00d083]' },
     { label: 'Claim Rate', value: `${counts.claimRate}%`, accent: 'text-[#00d083]' },
   ]
@@ -40,12 +53,28 @@ export function CampaignOverview({
         <span className="text-xs text-slate-500">{cityDisplayName}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label}>
-            <div className={`text-2xl font-bold tabular-nums ${k.accent}`}>{k.value}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{k.label}</div>
-          </div>
-        ))}
+        {kpis.map((k) =>
+          k.onClick ? (
+            <button
+              key={k.label}
+              type="button"
+              onClick={k.onClick}
+              className="text-left rounded-lg -m-1 p-1 hover:bg-slate-800/60 transition-colors"
+              title="View Sent list"
+            >
+              <div className={`text-2xl font-bold tabular-nums ${k.accent}`}>{k.value}</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {k.label}
+                <span className="text-slate-600"> →</span>
+              </div>
+            </button>
+          ) : (
+            <div key={k.label}>
+              <div className={`text-2xl font-bold tabular-nums ${k.accent}`}>{k.value}</div>
+              <div className="text-xs text-slate-400 mt-0.5">{k.label}</div>
+            </div>
+          )
+        )}
       </div>
     </div>
   )

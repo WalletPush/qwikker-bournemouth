@@ -13,6 +13,7 @@ import { sendFranchiseEmail, getFranchiseSupportEmail } from '@/lib/email/send-f
 import { getFranchisePublicUrl, getFranchiseBaseUrl } from '@/lib/utils/franchise-url'
 import { createClaimInvitationEmail } from '@/lib/email/templates/business-notifications'
 import { signDemoToken } from '@/lib/listing-engine/demo-token'
+import { createClaimInviteTrackedLinks } from '@/lib/listing-engine/outreach-tracked-links'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -84,20 +85,24 @@ export async function getInviteContent(supabaseAdmin: AdminClient, businessId: s
 }
 
 /** Build the branded claim-invitation email (pure — no side effects). */
-export function buildClaimTemplate(business: InviteBusiness, city: string, content: InviteContent) {
+export function buildClaimTemplate(
+  business: InviteBusiness,
+  city: string,
+  content: InviteContent,
+  urls?: { claimUrl: string; demoUrl: string }
+) {
   // Recipient-facing links must always resolve to the live franchise subdomain
   // (never localhost / admin host), so a business never receives a dead link.
   const baseUrl = getFranchisePublicUrl(city)
   const supportEmail = getFranchiseSupportEmail(city)
   // Signed, expiring (30-day) Present-Mode preview link, unguessable + noindex.
-  // Env-aware host: in production this is the live franchise subdomain; in dev it
-  // resolves to localhost so the /demo route is testable against the running dev
-  // server (the production subdomain won't have this route until deployed).
-  const demoUrl = `${getFranchiseBaseUrl(city)}/demo/${signDemoToken(business.id, city)}`
+  const demoUrl =
+    urls?.demoUrl || `${getFranchiseBaseUrl(city)}/demo/${signDemoToken(business.id, city)}`
+  const claimUrl = urls?.claimUrl || `${baseUrl}/claim?business_id=${business.id}`
   return createClaimInvitationEmail({
     businessName: business.business_name || 'your business',
     city,
-    claimUrl: `${baseUrl}/claim?business_id=${business.id}`,
+    claimUrl,
     forBusinessUrl: `${baseUrl}/for-business`,
     demoUrl,
     supportEmail,
@@ -132,6 +137,45 @@ async function buildClaimPdfAttachment(
   }
 }
 
+/** Persist sent_at / recipient — upsert so CRM sends without prior enrich still show in Sent. */
+async function recordInviteSent(
+  supabaseAdmin: AdminClient,
+  business: InviteBusiness,
+  adminId: string
+): Promise<void> {
+  const nowIso = new Date().toISOString()
+  const city = (business.city || '').toLowerCase() || null
+  const patch = {
+    sent_at: nowIso,
+    sent_by: adminId,
+    sent_to_email: business.email,
+    updated_at: nowIso,
+  }
+
+  const { data: updated, error: updateErr } = await supabaseAdmin
+    .from('business_enrichments')
+    .update(patch)
+    .eq('business_id', business.id)
+    .select('business_id')
+
+  if (updateErr) {
+    console.warn('send-claim-invite: could not update sent_at', updateErr)
+    return
+  }
+
+  if (updated && updated.length > 0) return
+
+  const { error: insertErr } = await supabaseAdmin.from('business_enrichments').insert({
+    business_id: business.id,
+    city,
+    status: 'pending',
+    ...patch,
+  })
+  if (insertErr) {
+    console.warn('send-claim-invite: could not insert enrichment for sent_at', insertErr)
+  }
+}
+
 /**
  * Send ONE claim invite and record sent_at. Returns a per-business outcome so a
  * bulk caller can report which succeeded. Guards claimed/no-email defensively.
@@ -147,7 +191,30 @@ export async function sendClaimInvite(
 
   const city = business.city || ''
   const content = await getInviteContent(supabaseAdmin, business.id)
-  const template = buildClaimTemplate(business, city, content)
+
+  const publicBase = getFranchisePublicUrl(city)
+  const claimTarget = `${publicBase}/claim?business_id=${business.id}`
+  const demoTarget = `${getFranchiseBaseUrl(city)}/demo/${signDemoToken(business.id, city)}`
+
+  let claimUrl = claimTarget
+  let demoUrl = demoTarget
+  try {
+    const tracked = await createClaimInviteTrackedLinks(supabaseAdmin, {
+      businessId: business.id,
+      city,
+      publicBaseUrl: publicBase,
+      claimTargetUrl: claimTarget,
+      demoTargetUrl: demoTarget,
+      createdBy: adminId,
+    })
+    claimUrl = tracked.claim.trackedUrl
+    demoUrl = tracked.demo.trackedUrl
+  } catch (e) {
+    // Never block the invite if tracking tables aren't migrated yet — fall back to raw URLs.
+    console.warn(`send-claim-invite: tracked links failed for ${business.id}, using raw URLs`, e)
+  }
+
+  const template = buildClaimTemplate(business, city, content, { claimUrl, demoUrl })
 
   // Best-effort: attach the Present Mode PDF so the owner can see their full
   // listing offline. Never blocks the invite — if rendering fails we send plain.
@@ -166,15 +233,7 @@ export async function sendClaimInvite(
     return { ok: false, error: emailResult.error || 'Failed to send email' }
   }
 
-  try {
-    const nowIso = new Date().toISOString()
-    await supabaseAdmin
-      .from('business_enrichments')
-      .update({ sent_at: nowIso, sent_by: adminId, updated_at: nowIso })
-      .eq('business_id', business.id)
-  } catch (e) {
-    console.warn('send-claim-invite: could not record sent_at', e)
-  }
+  await recordInviteSent(supabaseAdmin, business, adminId)
 
   console.log(`📧 [${city}] Claim invite sent to ${business.email} (${business.business_name})`)
   return { ok: true, to: business.email }
