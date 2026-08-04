@@ -18,6 +18,12 @@ interface DraftShape {
 /**
  * Per-city triage list for the Acquisition Engine table.
  * Returns businesses in the admin's covered cities with their enrichment status.
+ *
+ * IMPORTANT: Franchise cities can have 400+ unclaimed imports. A low alphabetical
+ * cap silently hid enriched businesses from Confirm/Invite even though drafts
+ * existed (CRM claim email still worked by businessId). Default/max limits are
+ * sized for that; we also force-include any ready enrichments missing from the
+ * page so Confirm & publish never loses existing AI work.
  */
 export async function GET(request: NextRequest) {
   const guard = await requireCityAdmin(request)
@@ -30,10 +36,20 @@ export async function GET(request: NextRequest) {
     const unclaimedOnly = params.get('unclaimed') === '1'
     const hasWebsiteOnly = params.get('hasWebsite') === '1'
     const enriched = params.get('enriched') || 'all' // all | yes | no
-    const limit = Math.min(Math.max(parseInt(params.get('limit') || '100', 10) || 100, 1), 300)
+    // Default 1000 / max 2000 — Kefalonia alone has ~400 unclaimed imports.
+    const limit = Math.min(Math.max(parseInt(params.get('limit') || '1000', 10) || 1000, 1), 2000)
 
     const covered = coveredCitiesFor(city)
     const supabase = createAdminClient()
+
+    let countQuery = supabase
+      .from('business_profiles')
+      .select('id', { count: 'exact', head: true })
+      .in('city', covered)
+    if (q) countQuery = countQuery.ilike('business_name', `%${q}%`)
+    if (unclaimedOnly) countQuery = countQuery.is('owner_user_id', null)
+    if (hasWebsiteOnly) countQuery = countQuery.not('website_url', 'is', null)
+    const { count: matchedTotal } = await countQuery
 
     let query = supabase
       .from('business_profiles')
@@ -51,7 +67,39 @@ export async function GET(request: NextRequest) {
     const { data: businesses, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const ids = (businesses || []).map((b) => b.id)
+    // Always pull ready enrichments for this city and merge any businesses the
+    // alphabetical page missed (so Confirm & publish shows existing drafts).
+    const { data: cityEnrichments } = await supabase
+      .from('business_enrichments')
+      .select(
+        'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, review_action'
+      )
+      .in('city', covered)
+      .eq('status', 'ready')
+
+    const businessById = new Map((businesses || []).map((b) => [b.id, b]))
+    const missingEnrichmentIds = (cityEnrichments || [])
+      .map((e) => e.business_id)
+      .filter((id) => id && !businessById.has(id))
+
+    if (missingEnrichmentIds.length > 0) {
+      let missingQuery = supabase
+        .from('business_profiles')
+        .select(
+          'id, business_name, business_town, city, owner_user_id, email, phone, contact_methods, rating, review_count, google_place_id, website_url, display_category, system_category, business_type'
+        )
+        .in('id', missingEnrichmentIds)
+      if (unclaimedOnly) missingQuery = missingQuery.is('owner_user_id', null)
+      const { data: missingBiz } = await missingQuery
+      for (const b of missingBiz || []) {
+        businessById.set(b.id, b)
+      }
+    }
+
+    const mergedBusinesses = Array.from(businessById.values()).sort((a, b) =>
+      String(a.business_name || '').localeCompare(String(b.business_name || ''))
+    )
+    const ids = mergedBusinesses.map((b) => b.id)
     interface EnrichmentInfo {
       status: string
       offersCount: number
@@ -67,35 +115,59 @@ export async function GET(request: NextRequest) {
     }
     const enrichmentMap = new Map<string, EnrichmentInfo>()
 
-    if (ids.length > 0) {
-      const { data: enrichments } = await supabase
-        .from('business_enrichments')
-        .select(
-          'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, review_action'
-        )
-        .in('business_id', ids)
+    // Prefer the city-wide ready set, then fill any other statuses for listed IDs.
+    for (const e of cityEnrichments || []) {
+      const draft = (e.draft || {}) as DraftShape
+      const cs = (e.confidence_signals || {}) as { flags?: string[] }
+      enrichmentMap.set(e.business_id, {
+        status: e.status,
+        offersCount: Array.isArray(draft.offers) ? draft.offers.length : 0,
+        hasListing: !!draft.listing?.business_description?.value,
+        generatedAt: e.generated_at,
+        published: !!e.published_at,
+        confidence: e.confidence ?? null,
+        flags: Array.isArray(cs.flags) ? cs.flags : [],
+        sentAt: e.sent_at ?? null,
+        reviewAction: e.review_action ?? null,
+        whatsapp: draft.contact?.whatsapp ?? null,
+        whatsappVerified:
+          draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
+      })
+    }
 
-      for (const e of enrichments || []) {
-        const draft = (e.draft || {}) as DraftShape
-        const cs = (e.confidence_signals || {}) as { flags?: string[] }
-        enrichmentMap.set(e.business_id, {
-          status: e.status,
-          offersCount: Array.isArray(draft.offers) ? draft.offers.length : 0,
-          hasListing: !!draft.listing?.business_description?.value,
-          generatedAt: e.generated_at,
-          published: !!e.published_at,
-          confidence: e.confidence ?? null,
-          flags: Array.isArray(cs.flags) ? cs.flags : [],
-          sentAt: e.sent_at ?? null,
-          reviewAction: e.review_action ?? null,
-          whatsapp: draft.contact?.whatsapp ?? null,
-          whatsappVerified:
-            draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
-        })
+    const missingStatusIds = ids.filter((id) => !enrichmentMap.has(id))
+    if (missingStatusIds.length > 0) {
+      for (let i = 0; i < missingStatusIds.length; i += 200) {
+        const chunk = missingStatusIds.slice(i, i + 200)
+        const { data: enrichments } = await supabase
+          .from('business_enrichments')
+          .select(
+            'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, review_action'
+          )
+          .in('business_id', chunk)
+
+        for (const e of enrichments || []) {
+          const draft = (e.draft || {}) as DraftShape
+          const cs = (e.confidence_signals || {}) as { flags?: string[] }
+          enrichmentMap.set(e.business_id, {
+            status: e.status,
+            offersCount: Array.isArray(draft.offers) ? draft.offers.length : 0,
+            hasListing: !!draft.listing?.business_description?.value,
+            generatedAt: e.generated_at,
+            published: !!e.published_at,
+            confidence: e.confidence ?? null,
+            flags: Array.isArray(cs.flags) ? cs.flags : [],
+            sentAt: e.sent_at ?? null,
+            reviewAction: e.review_action ?? null,
+            whatsapp: draft.contact?.whatsapp ?? null,
+            whatsappVerified:
+              draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
+          })
+        }
       }
     }
 
-    let rows = (businesses || []).map((b) => {
+    let rows = mergedBusinesses.map((b) => {
       const e = enrichmentMap.get(b.id) || null
       const claimed = !!b.owner_user_id
       const stage: Stage = deriveStage({
@@ -168,7 +240,18 @@ export async function GET(request: NextRequest) {
       claimRate: emailsSent > 0 ? Math.round((claimed / emailsSent) * 1000) / 10 : 0,
     }
 
-    return NextResponse.json({ rows, counts })
+    const totalMatched = matchedTotal ?? rows.length
+    return NextResponse.json({
+      rows,
+      counts,
+      meta: {
+        limit,
+        returned: rows.length,
+        matchedTotal: totalMatched,
+        truncated: totalMatched > rows.length,
+        forceIncludedEnrichments: missingEnrichmentIds.length,
+      },
+    })
   } catch (error) {
     console.error('pipeline error:', error)
     const message = error instanceof Error ? error.message : 'Internal server error'

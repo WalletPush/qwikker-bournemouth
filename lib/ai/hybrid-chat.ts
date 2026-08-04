@@ -394,10 +394,108 @@ function appendSentence(base: string, sentence: string): string {
 }
 
 /**
- * Post-process AI response: strip banned phrases, guard hallucinations for zero-data businesses
+ * Derive cuisine/type labels that actually exist in the current inventory.
+ * Used for clarify-first prompts — never invent types the city doesn't have.
+ */
+function deriveAvailableTypes(businesses: any[], limit = 5): string[] {
+  const cuisineHints: Array<{ label: string; patterns: RegExp[] }> = [
+    { label: 'Pizza', patterns: [/pizza/i] },
+    { label: 'Seafood', patterns: [/seafood|fish|sushi/i] },
+    { label: 'Italian', patterns: [/italian|pasta|trattoria/i] },
+    { label: 'Indian', patterns: [/indian|tandoori|curry house/i] },
+    { label: 'Thai', patterns: [/thai/i] },
+    { label: 'Chinese', patterns: [/chinese|dim\s*sum/i] },
+    { label: 'Japanese', patterns: [/japanese|ramen|sushi/i] },
+    { label: 'Mexican', patterns: [/mexican|taco|burrito/i] },
+    { label: 'Korean', patterns: [/korean|bbq/i] },
+    { label: 'Greek', patterns: [/greek|gyro|souvlaki/i] },
+    { label: 'Swahili', patterns: [/swahili|local cuisine|zanzibar cuisine/i] },
+    { label: 'Burgers', patterns: [/burger/i] },
+    { label: 'Steak', patterns: [/steak/i] },
+    { label: 'Cafe', patterns: [/\bcafe\b|\bcoffee\b/i] },
+    { label: 'Fine dining', patterns: [/fine dining|gourmet/i] },
+  ]
+
+  const found: string[] = []
+  const seen = new Set<string>()
+
+  for (const hint of cuisineHints) {
+    const hit = businesses.some((b) => {
+      const hay = `${b.display_category || ''} ${b.business_name || ''} ${b.business_type || ''}`
+      return hint.patterns.some((p) => p.test(hay))
+    })
+    if (hit && !seen.has(hint.label.toLowerCase())) {
+      seen.add(hint.label.toLowerCase())
+      found.push(hint.label)
+    }
+    if (found.length >= limit) break
+  }
+
+  // Fall back to distinct display_category labels when cuisine hints are sparse
+  if (found.length < 2) {
+    const counts = new Map<string, number>()
+    for (const b of businesses) {
+      const label = String(b.display_category || '').trim()
+      if (!label || /^restaurants?$/i.test(label)) continue
+      counts.set(label, (counts.get(label) || 0) + 1)
+    }
+    const extras = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label]) => label)
+      .filter((label) => !seen.has(label.toLowerCase()))
+    for (const label of extras) {
+      found.push(label)
+      if (found.length >= limit) break
+    }
+  }
+
+  return found.slice(0, limit)
+}
+
+/**
+ * Post-process AI response: strip internal tags, enforce inventory-only mentions,
+ * guard hallucinations for zero-data businesses.
  */
 function postProcessResponse(response: string, businesses: any[]): string {
   let result = response
+  const allowedSlugs = new Set(
+    businesses.map((b) => getBusinessSlug(b)).filter((s) => typeof s === 'string' && s.length > 0)
+  )
+
+  // 0a. Drop whole paragraphs that reference slugs not in AVAILABLE BUSINESSES
+  // (stops PDF-invented venues like "Ocean Restaurant [SLUG: ocean-restaurant]")
+  result = result
+    .split(/\n\n+/)
+    .filter((paragraph) => {
+      const slugRefs = [
+        ...paragraph.matchAll(/\[SLUG:\s*([a-z0-9-]+)\]/gi),
+        ...paragraph.matchAll(/\/user\/business\/([a-z0-9-]+)/gi),
+      ]
+      if (slugRefs.length === 0) return true
+      return slugRefs.every((m) => allowedSlugs.has(m[1]))
+    })
+    .join('\n\n')
+
+  // 0b. Convert **Name** [SLUG: foo] → proper markdown link when slug is allowed
+  result = result.replace(
+    /\*\*([^*]+)\*\*\s*\[SLUG:\s*([a-z0-9-]+)\]/gi,
+    (_full, name: string, slug: string) => {
+      if (allowedSlugs.has(slug)) {
+        return `**[${name.trim()}](/user/business/${slug})**`
+      }
+      return '' // illegal — already filtered by paragraph drop; belt-and-braces
+    }
+  )
+
+  // 0c. Strip any leftover internal tags (never show to users)
+  result = result.replace(/\s*\[SLUG:\s*[a-z0-9-]+\]/gi, '')
+  result = result.replace(/\s*\[TIER:\s*[^\]]+\]/gi, '')
+
+  // 0d. Neutralise markdown business links whose slug is not in inventory
+  result = result.replace(
+    /\*\*\[([^\]]+)\]\(\/user\/business\/([a-z0-9-]+)\)\*\*/g,
+    (full, _name: string, slug: string) => (allowedSlugs.has(slug) ? full : '')
+  )
   
   // 1. Strip banned opening phrases
   const bannedOpeners = [
@@ -546,6 +644,7 @@ function buildSystemPromptV2(args: {
   cityDisplayName: string
   userMessage: string
   isBroadQuery: boolean
+  availableTypes?: string[]
   stateContext?: string
   businessContext: string
   cityContext?: string
@@ -558,7 +657,7 @@ function buildSystemPromptV2(args: {
   eventContext?: string
   userProfileSection?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext, userProfileSection } = args
+  const { cityDisplayName, userMessage, isBroadQuery, availableTypes = [], stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext, userProfileSection } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -574,16 +673,21 @@ function buildSystemPromptV2(args: {
     ? `\nVARIETY: Your last ${previousResponses.length} response(s) started with: ${previousResponses.map(r => `"${r.slice(0, 60)}…"`).join(', ')}. Do NOT repeat the same opening sentence or structure.\n`
     : ''
 
-  // Clarify-first rule for very broad queries with no constraints
+  // Clarify-first: ask before dumping — inventory-backed types only
+  const typesLine = availableTypes.length > 0
+    ? `Available types you MAY offer (ONLY these — do not invent others): ${availableTypes.join(', ')}.`
+    : `If you mention types/cuisines, ONLY use labels that appear in AVAILABLE BUSINESSES categories/names — never invent cuisines.`
   const clarifyBlock = isBroadQuery
     ? `
 CLARIFY-FIRST: The user asked something broad: "${userMessage}"
-Show 2–3 top picks immediately, then ask ONE short preference question to narrow it down.
-Examples of good questions (pick the most relevant):
-- For bars: "Cocktail bar vibe, pub with a beer garden, or somewhere with food and drinks?"
-- For restaurants: "Any cuisine in mind, or something specific like date night, family, outdoor seating?"
-- For cafes: "After a coffee spot, brunch place, or somewhere to work from?"
-Do NOT block results — always show picks first, then ask.`
+Do NOT dump a long list of businesses yet. Instead:
+1. Warm opener (use their name if you know it).
+2. Say you'd rather not show everything at once — ask if they have anything in mind.
+3. Offer 2–5 types from the list below if useful: ${typesLine}
+4. Also offer: a specific craving/dish ("tell me what you're after and I'll find the best match").
+5. Also offer: "or I can just show my top picks."
+Do NOT recommend specific businesses in this clarify turn unless they already asked for top picks / a specific type / a dish.
+When they later say "top picks" / "just show me", THEN recommend 2–3 from AVAILABLE BUSINESSES only (highest rated first).`
     : ''
 
   const nameGreeting = userName && userName !== 'there' ? `The user's name is ${userName}. Use their first name naturally in your opening line (e.g. "Hey ${userName.split(' ')[0]}," or "Right then ${userName.split(' ')[0]},"). Don't overuse it — once at the start is enough.` : 'You don\'t know the user\'s name. Use a friendly generic opener.'
@@ -601,12 +705,15 @@ PERSONALITY:
 - Vary your openers — don't start every response the same way
 ${temporalBlock}
 ⚠️  CRITICAL FORMATTING RULES ⚠️
-Every business has a [SLUG: ...] tag in AVAILABLE BUSINESSES. Use it to build the link.
+Every business in AVAILABLE BUSINESSES has internal tags: [SLUG: ...] and [TIER: ...].
+These tags are INTERNAL ONLY — NEVER copy [SLUG: ...] or [TIER: ...] into your reply.
+Use the SLUG only to build a markdown link, then discard the tag.
 Example: If a business has [SLUG: sobo-beach], write: **[Sobo Beach](/user/business/sobo-beach)**
 NEVER write plain bold business names — always include the link!
+NEVER invent a SLUG for a place that is not in AVAILABLE BUSINESSES.
 
 HARD RULES (DO NOT BREAK):
-- LINKS: Every business mention MUST use **[Business Name](/user/business/{slug from SLUG tag})**. If you can't find the slug, don't mention it.
+- LINKS: Every business mention MUST use **[Business Name](/user/business/{slug from SLUG tag})**. If you can't find the slug in AVAILABLE BUSINESSES, don't mention it.
 - ONE BUSINESS PER PARAGRAPH: Separate businesses with a blank line. Never put two in the same paragraph.
 - KEEP IT TIGHT: 1–2 sentences per business max (rating + ONE factual detail from AVAILABLE BUSINESSES only).
 - NO BULLET LISTS for business results. Use full paragraphs.
@@ -622,7 +729,7 @@ HARD RULES (DO NOT BREAK):
   ✅ CHECK for "Featured Menu Items:" OR any food/drink items with prices in the business's KB data
   ✅ If present: list 3-5 items with names and prices. If user asks for more, list MORE from the data.
   ❌ ABSOLUTE BAN: NEVER say "I don't have menu details", "I don't have the full menu", or "I can't provide more menu info" when ANY menu/food/drink data exists in that business's context. This is a CRITICAL UX failure.
-- SHOW ALL UPFRONT: If you have 2+ relevant matches, mention ALL in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses, you MUST recommend from them — never claim you have no recommendations when businesses are listed in your context.
+- SHOW ALL UPFRONT: If you have 2+ relevant matches AND this is NOT a CLARIFY-FIRST turn, mention ALL matches in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses and the user asked for recommendations/top picks/a type, you MUST recommend from them — never claim you have no recommendations when businesses are listed. CLARIFY-FIRST turns are the exception: ask first, don't dump businesses.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
 - 🚨 PER-BUSINESS DATA BOUNDARY: Each business's features are independent. When a user asks for specific amenities (outdoor seating, WiFi, parking, dog friendly, wheelchair accessible, etc.), ONLY claim a business has that feature if it appears in THAT business's Tags, KB content, or description. Never transfer or blend features from one business onto another. If Business A has "outdoor seating" and Business B does not, do NOT say Business B has outdoor seating — even if Business B matches other parts of the query. It is better to recommend fewer businesses accurately than to fabricate features to make more businesses fit.
 - 🚨 ABSOLUTE RULE — QWIKKER BUSINESSES ONLY: You MUST ONLY mention businesses, venues, attractions, or commercial establishments that appear in AVAILABLE BUSINESSES above. If a place charges admission, sells products, or is a registered business, it MUST be in AVAILABLE BUSINESSES or you MUST NOT mention it. This includes but is not limited to: cinemas, bowling alleys, aquariums, theme parks, soft play centres, swimming pools, museums with paid admission, escape rooms, trampoline parks, and any chain brand (e.g. ODEON, Oceanarium, Adventure Wonderland). NEVER bold a name that is not a linked Qwikker business.
@@ -687,7 +794,7 @@ ${userProfileSection ? `\n${userProfileSection}\n` : ''}
 ${userLoyaltySummary || ''}
 AVAILABLE BUSINESSES (sorted by tier; qwikker_picks first):
 ${businessContext || 'No businesses available.'}
-${cityContext ? `CITY & LOCAL KNOWLEDGE (verified — use this as your PRIMARY source and quote its facts freely):\n${cityContext}\n\nIMPORTANT:\n- You MAY state any fact, name, date, venue, festival, event, landmark, or practical detail that appears in the CITY & LOCAL KNOWLEDGE above. It is verified information for this city (covering things like local festivals/events, culture, transport, parking, areas, and tips) — answer the question directly using it. For example, if it names a festival's dates, venue or performers, you can share them.\n- Do NOT recommend or promote specific COMMERCIAL BUSINESSES (restaurants, bars, cafes, shops, etc.) that are not in AVAILABLE BUSINESSES above — only the listed businesses can be recommended.\n- Do NOT invent venues, events, dates, or facts that are not present in the CITY & LOCAL KNOWLEDGE or AVAILABLE BUSINESSES. If the information genuinely isn't there, say so honestly.\n` : ''}
+${cityContext ? `CITY & LOCAL KNOWLEDGE (context for areas, culture, transport, festivals, tips):\n${cityContext}\n\nIMPORTANT — CITY KNOWLEDGE RULES:\n- Use this for neighbourhoods, beaches, culture, transport, parking, festivals, and general local tips.\n- You MAY name free public places (beaches, parks, piers, promenades) from this knowledge.\n- 🚨 COMMERCIAL BUSINESSES (restaurants, bars, cafes, hotels, shops, spas, tours, etc.) named ONLY in city knowledge and NOT in AVAILABLE BUSINESSES MUST NOT be recommended, linked, bolded, or given a SLUG. City PDFs often mention places that are not on Qwikker — ignore those names for recommendations.\n- ONLY recommend businesses that appear in AVAILABLE BUSINESSES above.\n- Do NOT invent venues, events, dates, or facts. If the information genuinely isn't there, say so honestly.\n` : ''}
 ${eventContext || ''}
 `.trim()
 }
@@ -805,8 +912,27 @@ export async function generateHybridAIResponse(
     
     // 🎯 EARLY DETAIL SHORT-CIRCUIT: Detect follow-up/detail queries about a specific business
     // If user is asking about a business we already know about (from slug), skip global KB search
+    // CRITICAL: "tell me about Happiness Spa" must NOT lock to the previous business.
     const lowerMessage = userMessage.toLowerCase()
-    const isFollowUpDetailQuery = /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me (more|about)|their menu|their food|their kids menu|their dessert menu|their drink menu|their wine list)\b/i.test(lowerMessage)
+    const tellMeAboutMatch = lowerMessage.match(/\btell me (?:more )?about\s+(.+?)[\?\!\.]*$/i)
+    const aboutTarget = tellMeAboutMatch?.[1]?.trim() || ''
+    const isAnaphoricAbout = aboutTarget.length > 0 && /^(them|it|that|this|those|more|the (place|spot|business|one))\b/i.test(aboutTarget)
+    const aboutSlug = aboutTarget ? slugifyBusinessName(aboutTarget) : ''
+    const aboutMatchesLast = !!(
+      lastSlug &&
+      aboutSlug &&
+      (aboutSlug === lastSlug ||
+        aboutSlug.includes(lastSlug) ||
+        lastSlug.includes(aboutSlug) ||
+        aboutTarget.includes(lastSlug.split('-').join(' ')))
+    )
+    // "tell me about X" only counts as follow-up when X is anaphoric or clearly the last business
+    const isTellMeAboutFollowUp = /\btell me about\b/i.test(lowerMessage)
+      ? (isAnaphoricAbout || aboutMatchesLast || !aboutTarget)
+      : false
+    const isFollowUpDetailQuery =
+      /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me more\b|their menu|their food|their kids menu|their dessert menu|their drink menu|their wine list)\b/i.test(lowerMessage) ||
+      isTellMeAboutFollowUp
     const isAnaphoricQuery = /^(any more|anything else|what else|more|another|more places)[\?\!\.]*$/i.test(userMessage.trim())
     
     // KB-priority queries MUST always search KB (kids menu, vegan, dietary info lives ONLY in KB)
@@ -817,7 +943,9 @@ export async function generateHybridAIResponse(
     // BUT never skip KB search for priority queries where KB is the only source of truth
     const shouldShortCircuitToDetail = (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug && !isKbPriorityQuery
     
-    if (isKbPriorityQuery && (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug) {
+    if (tellMeAboutMatch && aboutTarget && !isTellMeAboutFollowUp) {
+      console.log(`🔍 [NEW BUSINESS ASK] "tell me about ${aboutTarget}" — not locking to previous slug ${lastSlug || 'none'}`)
+    } else if (isKbPriorityQuery && (isFollowUpDetailQuery || isAnaphoricQuery) && lastSlug) {
       console.log(`📚 [KB PRIORITY] "${lowerMessage}" needs KB search even though it looks like a follow-up — KB is the source of truth for this info`)
     } else if (shouldShortCircuitToDetail) {
       console.log(`🎯 [DETAIL SHORT-CIRCUIT] Follow-up query about ${lastSlug} - skipping global KB search`)
@@ -1119,6 +1247,22 @@ export async function generateHybridAIResponse(
       detectedIntent.keywords = [...detectedIntent.keywords, 'alcohol']
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔒 FACET INJECTION: alcohol facet detected, treating as intentful query`)
+      }
+    }
+
+    // "top picks" / "just show me" after a restaurant clarify — keep restaurant intent
+    const wantsTopPicks = /\b(top picks|just show( me)?|your picks|surprise me|show me (some |your )?picks)\b/i.test(userMessage)
+    if (wantsTopPicks) {
+      const recentText = [
+        userMessage,
+        ...conversationHistory.slice(-4).map((m) => m.content),
+      ].join(' ')
+      if (/\brestaurants?\b|\bdining\b|\beat\b|\bfood\b/i.test(recentText) && !detectedIntent.categories.includes('restaurant')) {
+        detectedIntent.categories.push('restaurant')
+        detectedIntent.hasIntent = true
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔒 TOP PICKS: injecting restaurant intent from conversation context')
+        }
       }
     }
     
@@ -1471,6 +1615,7 @@ export async function generateHybridAIResponse(
     
     // Sanity filter: only apply for food/drink intent queries (not general browse or service queries)
     const foodDrinkCategories = new Set([
+      'restaurant',
       'greek', 'italian', 'chinese', 'japanese', 'thai', 'indian', 'mexican',
       'french', 'american', 'mediterranean', 'vietnamese', 'korean', 'spanish',
       'turkish', 'seafood', 'bakery', 'cafe', 'bar', 'dessert'
@@ -1762,22 +1907,30 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
     // 🎯 STEP 4: Build context-aware system prompt (SIMPLE AND CLEAR)
     const stateContext = generateStateContext(state)
     
-    // Broad query detection: trigger clarify-first when the user gives a category
-    // but zero constraints (no vibe, no area, no dish). Covers both "any restaurants?"
-    // and "any bars?" — the AI shows top picks + asks one preference question.
+    // Broad query detection: clarify-first when category is broad and unconstrained.
+    // Skip clarify when user already asked for top picks / a specific dish follow-up.
     const relevantCount = allBusinessesForContext.filter(b => (b.relevanceScore || 0) >= INJECT_MIN).length
     const hasCategoryButNoConstraints = detectedIntent.hasIntent 
       && detectedIntent.categories.length > 0 
       && detectedIntent.keywords.length === 0
+      && !wantsTopPicks
     const isGenericDiscovery = !detectedIntent.hasIntent 
       && /\b(restaurant|restaurants|eat|food|place|places|where should i|recommend|suggest|dinner|lunch|breakfast|bar|bars|pub|pubs|drinks?|cocktails?|cafe|cafes|coffee)\b/i.test(userMessage)
     
     const isBroadQuery = conversationHistory.length <= 2 
       && (hasCategoryButNoConstraints || isGenericDiscovery)
       && relevantCount >= 3
+      && !wantsTopPicks
+
+    const availableTypes = isBroadQuery
+      ? deriveAvailableTypes(
+          allBusinessesForContext.filter((b) => (b.relevanceScore || 0) >= INJECT_MIN),
+          5
+        )
+      : []
     
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`🎯 [BROAD QUERY CHECK] hasIntent=${detectedIntent.hasIntent}, relevantCount=${relevantCount}, isBroadQuery=${isBroadQuery}`)
+      console.log(`🎯 [BROAD QUERY CHECK] hasIntent=${detectedIntent.hasIntent}, relevantCount=${relevantCount}, isBroadQuery=${isBroadQuery}, types=${availableTypes.join('|') || 'none'}`)
     }
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
@@ -1949,7 +2102,8 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
     const systemPrompt = buildSystemPromptV2({ 
       cityDisplayName, 
       userMessage, 
-      isBroadQuery, 
+      isBroadQuery,
+      availableTypes,
       stateContext, 
       businessContext: tagMatchCallout + businessContext, 
       cityContext, 
@@ -2144,7 +2298,9 @@ Present this information clearly and offer further help.`
       console.log(`💼 Tier separation: T1=${tier1.length}, T2=${tier2.length}, T3=${tier3.length}`)
       
       const businesses = tier1 // ✅ For backward compat, "businesses" = Tier 1
-      hasBusinessResults = businesses.length > 0
+      // T1-only was wrong for T3-heavy cities (e.g. Zanzibar): Atlas/CTA looked empty
+      // even when relevant unclaimed restaurants existed.
+      hasBusinessResults = businessById.size > 0
       
       console.log(`💼 Total businesses after merge: ${Array.from(businessById.values()).length} (${kbScoreById.size} had KB content)`)
       

@@ -177,3 +177,25 @@ export function getImageCountForCategory(systemCategory: string): number {
 export function getFallbackPlaceholderUrl(): string {
   return '/placeholders/default/00.webp'
 }
+
+/**
+ * Single source of truth for a business cover image URL.
+ * Priority: real photo → admin custom placeholder → variant/hash pool.
+ */
+export function resolveBusinessCoverUrl(options: {
+  heroImage?: string | null
+  businessImages?: string[] | null
+  customPlaceholderUrl?: string | null
+  systemCategory?: string | null
+  businessId: string
+  placeholderVariant?: number | null
+}): string {
+  const hero = options.heroImage || options.businessImages?.[0] || null
+  if (hero) return hero
+  if (options.customPlaceholderUrl) return options.customPlaceholderUrl
+  return getPlaceholderVariationWithOverride(
+    options.systemCategory || 'other',
+    options.businessId,
+    options.placeholderVariant,
+  ).url
+}

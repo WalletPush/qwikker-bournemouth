@@ -64,6 +64,12 @@ export function detectIntent(query: string): IntentResult {
   
   // Cuisine / venue categories
   const cuisineMap: Record<string, string[]> = {
+    // Generic venue intents (must beat "no intent" browse-all on T3-heavy cities)
+    restaurant: [
+      'restaurant', 'restaurants', 'dining', 'eatery', 'eateries',
+      'places to eat', 'place to eat', 'somewhere to eat', 'somewhere for food',
+      'eat out', 'eating out', 'nice restaurants', 'good restaurants',
+    ],
     greek: ['greek', 'gyro', 'gyros', 'souvlaki', 'moussaka', 'tzatziki'],
     italian: ['italian', 'pizza', 'pasta', 'risotto', 'carbonara', 'lasagna', 'focaccia'],
     chinese: ['chinese', 'dim sum', 'noodles', 'wonton', 'chow mein'],

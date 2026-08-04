@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Business" card renders identically (correct placeholder, rating, etc.).
     const { data: business, error } = await supabase
       .from('business_profiles')
-      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, business_tagline, business_images, rating, review_count, years_on_google, business_hours, city')
+      .select('id, business_name, business_address, business_town, business_postcode, business_type, business_category, system_category, display_category, placeholder_variant, placeholder_custom_url, business_tagline, business_images, rating, review_count, years_on_google, business_hours, city')
       .eq('id', businessId)
       .eq('city', requestCity)
       .eq('status', 'unclaimed')
@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
         system_category: business.system_category,
         display_category: business.display_category,
         placeholder_variant: business.placeholder_variant ?? 0,
+        placeholder_custom_url: business.placeholder_custom_url ?? null,
         tagline: business.business_tagline,
         image: business.business_images?.[0] || null,
         rating: business.rating,

@@ -229,6 +229,25 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     }
   }, [business.id, ratingLookup.result])
 
+  const [ratingSyncing, setRatingSyncing] = useState(false)
+  const handleSyncGoogleRating = useCallback(async () => {
+    setRatingSyncing(true)
+    try {
+      const res = await fetch('/api/admin/refresh-google-rating', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: business.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      window.location.reload()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not refresh Google rating')
+    } finally {
+      setRatingSyncing(false)
+    }
+  }, [business.id])
+
   // DEBUG: Check subscription data
   console.log(`🔍 CRM Card for ${business.business_name}:`, {
     has_subscription: !!business.subscription,
@@ -974,6 +993,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-500/15 text-slate-400 border border-slate-500/30">
                         Not Verified
                       </span>
+                    )}
+                    {!!business.google_place_id && (
+                      <button
+                        type="button"
+                        onClick={handleSyncGoogleRating}
+                        disabled={ratingSyncing}
+                        title="Pull latest rating & review count from Google"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:bg-slate-600/50 hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {ratingSyncing ? 'Syncing…' : '↻ Sync Google'}
+                      </button>
                     )}
                   </div>
                 ) : (
