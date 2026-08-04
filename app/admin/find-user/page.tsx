@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { AdminToolsLayout } from '@/components/admin/admin-tools-layout'
 
+export const dynamic = 'force-dynamic'
+
 export default async function FindUserPage() {
   const supabaseAdmin = createAdminClient()
 
