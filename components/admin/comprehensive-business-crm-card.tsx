@@ -129,6 +129,12 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [showAddEmailModal, setShowAddEmailModal] = useState(false)
   const [showClaimEmailModal, setShowClaimEmailModal] = useState(false)
   const [pendingClaimAfterEmail, setPendingClaimAfterEmail] = useState(false)
+  const [claimOutreach, setClaimOutreach] = useState<{
+    sentAt: string | null
+    sentToEmail: string | null
+    claimClicks: number
+    demoClicks: number
+  } | null>(null)
   
   // ✅ CRITICAL: Extract subscription from array format ONCE at the top!
   const sub = getSubscription(business)
@@ -330,6 +336,38 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const isUnclaimed = !business.owner_user_id && business.status === 'unclaimed'
   const isImported = business.auto_imported === true
   const isImportedUnclaimed = isUnclaimed && isImported
+
+  // Load claim-invite send + click rollups for unclaimed outreach.
+  useEffect(() => {
+    if (!isUnclaimed) {
+      setClaimOutreach(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/admin/offer-engine/enrichment?businessId=${business.id}`)
+        const data = await res.json().catch(() => ({}))
+        if (cancelled || !res.ok) return
+        const e = data.enrichment
+        if (!e?.sent_at) {
+          setClaimOutreach(null)
+          return
+        }
+        setClaimOutreach({
+          sentAt: e.sent_at,
+          sentToEmail: e.sent_to_email ?? null,
+          claimClicks: e.claim_link_click_count ?? 0,
+          demoClicks: e.demo_link_click_count ?? 0,
+        })
+      } catch {
+        if (!cancelled) setClaimOutreach(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [business.id, isUnclaimed, showClaimEmailModal])
   
   // 🔒 CRITICAL DISTINCTION:
   // - SAFETY GATES (tier lock, feature access): Use `isClaimed` / `!isClaimed` (owner_user_id check)
@@ -1487,26 +1525,42 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           )}
           {/* Outreach: invite unclaimed businesses to claim their pre-built listing */}
           {isUnclaimed && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/20 flex items-center gap-2"
-              onClick={() => {
-                if (contactEmail) {
-                  setShowClaimEmailModal(true)
-                } else {
-                  // Need an email first — collect one, then continue to the claim invite
-                  setPendingClaimAfterEmail(true)
-                  setShowAddEmailModal(true)
-                }
-              }}
-              title={contactEmail ? 'Send a branded claim invitation' : 'Add an email, then send a claim invitation'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              Send Claim Email
-            </Button>
+            <div className="flex flex-col items-start gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/20 flex items-center gap-2"
+                onClick={() => {
+                  if (contactEmail) {
+                    setShowClaimEmailModal(true)
+                  } else {
+                    // Need an email first — collect one, then continue to the claim invite
+                    setPendingClaimAfterEmail(true)
+                    setShowAddEmailModal(true)
+                  }
+                }}
+                title={contactEmail ? 'Send a branded claim invitation' : 'Add an email, then send a claim invitation'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Send Claim Email
+              </Button>
+              {claimOutreach?.sentAt && (
+                <div className="text-[11px] text-slate-400 max-w-[220px] leading-snug">
+                  <div>
+                    Sent to {claimOutreach.sentToEmail || contactEmail || '—'} ·{' '}
+                    {new Date(claimOutreach.sentAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </div>
+                  <div>
+                    Claim clicks: {claimOutreach.claimClicks} · Demo clicks: {claimOutreach.demoClicks}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
         
@@ -3428,7 +3482,15 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
           business_name: business.business_name || 'this business',
           email: contactEmail,
         }}
-        onSent={(name) => alert(`✅ Claim invitation sent to ${name}`)}
+        onSent={(name) => {
+          setClaimOutreach((prev) => ({
+            sentAt: new Date().toISOString(),
+            sentToEmail: contactEmail,
+            claimClicks: prev?.claimClicks ?? 0,
+            demoClicks: prev?.demoClicks ?? 0,
+          }))
+          alert(`✅ Claim invitation sent to ${name}`)
+        }}
         onError={(message) => alert(`❌ ${message}`)}
       />
     </>

@@ -67,15 +67,15 @@ export async function GET(request: NextRequest) {
     const { data: businesses, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Always pull ready enrichments for this city and merge any businesses the
-    // alphabetical page missed (so Confirm & publish shows existing drafts).
+    // Ready drafts (Confirm) + anything already invited (Sent). Force-include so
+    // alphabetical page caps never hide published/sent outreach work.
+    const ENRICHMENT_SELECT =
+      'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, sent_to_email, review_action, claim_link_clicked_at, claim_link_click_count, demo_link_clicked_at, demo_link_click_count'
     const { data: cityEnrichments } = await supabase
       .from('business_enrichments')
-      .select(
-        'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, review_action'
-      )
+      .select(ENRICHMENT_SELECT)
       .in('city', covered)
-      .eq('status', 'ready')
+      .or('status.eq.ready,sent_at.not.is.null')
 
     const businessById = new Map((businesses || []).map((b) => [b.id, b]))
     const missingEnrichmentIds = (cityEnrichments || [])
@@ -109,17 +109,36 @@ export async function GET(request: NextRequest) {
       confidence: number | null
       flags: string[]
       sentAt: string | null
+      sentToEmail: string | null
+      claimLinkClickedAt: string | null
+      claimLinkClickCount: number
+      demoLinkClickedAt: string | null
+      demoLinkClickCount: number
       reviewAction: string | null
       whatsapp: string | null
       whatsappVerified: boolean
     }
     const enrichmentMap = new Map<string, EnrichmentInfo>()
 
-    // Prefer the city-wide ready set, then fill any other statuses for listed IDs.
-    for (const e of cityEnrichments || []) {
+    const toEnrichmentInfo = (e: {
+      business_id: string
+      status: string
+      draft: unknown
+      generated_at: string | null
+      published_at: string | null
+      confidence: number | null
+      confidence_signals: unknown
+      sent_at: string | null
+      sent_to_email?: string | null
+      claim_link_clicked_at?: string | null
+      claim_link_click_count?: number | null
+      demo_link_clicked_at?: string | null
+      demo_link_click_count?: number | null
+      review_action: string | null
+    }): EnrichmentInfo => {
       const draft = (e.draft || {}) as DraftShape
       const cs = (e.confidence_signals || {}) as { flags?: string[] }
-      enrichmentMap.set(e.business_id, {
+      return {
         status: e.status,
         offersCount: Array.isArray(draft.offers) ? draft.offers.length : 0,
         hasListing: !!draft.listing?.business_description?.value,
@@ -128,11 +147,21 @@ export async function GET(request: NextRequest) {
         confidence: e.confidence ?? null,
         flags: Array.isArray(cs.flags) ? cs.flags : [],
         sentAt: e.sent_at ?? null,
+        sentToEmail: e.sent_to_email ?? null,
+        claimLinkClickedAt: e.claim_link_clicked_at ?? null,
+        claimLinkClickCount: e.claim_link_click_count ?? 0,
+        demoLinkClickedAt: e.demo_link_clicked_at ?? null,
+        demoLinkClickCount: e.demo_link_click_count ?? 0,
         reviewAction: e.review_action ?? null,
         whatsapp: draft.contact?.whatsapp ?? null,
         whatsappVerified:
           draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
-      })
+      }
+    }
+
+    // Prefer the city-wide ready/sent set, then fill any other statuses for listed IDs.
+    for (const e of cityEnrichments || []) {
+      enrichmentMap.set(e.business_id, toEnrichmentInfo(e))
     }
 
     const missingStatusIds = ids.filter((id) => !enrichmentMap.has(id))
@@ -141,28 +170,11 @@ export async function GET(request: NextRequest) {
         const chunk = missingStatusIds.slice(i, i + 200)
         const { data: enrichments } = await supabase
           .from('business_enrichments')
-          .select(
-            'business_id, status, draft, generated_at, published_at, confidence, confidence_signals, sent_at, review_action'
-          )
+          .select(ENRICHMENT_SELECT)
           .in('business_id', chunk)
 
         for (const e of enrichments || []) {
-          const draft = (e.draft || {}) as DraftShape
-          const cs = (e.confidence_signals || {}) as { flags?: string[] }
-          enrichmentMap.set(e.business_id, {
-            status: e.status,
-            offersCount: Array.isArray(draft.offers) ? draft.offers.length : 0,
-            hasListing: !!draft.listing?.business_description?.value,
-            generatedAt: e.generated_at,
-            published: !!e.published_at,
-            confidence: e.confidence ?? null,
-            flags: Array.isArray(cs.flags) ? cs.flags : [],
-            sentAt: e.sent_at ?? null,
-            reviewAction: e.review_action ?? null,
-            whatsapp: draft.contact?.whatsapp ?? null,
-            whatsappVerified:
-              draft.contact?.methods?.find((m) => m?.type === 'whatsapp')?.verified ?? false,
-          })
+          enrichmentMap.set(e.business_id, toEnrichmentInfo(e))
         }
       }
     }
@@ -205,6 +217,11 @@ export async function GET(request: NextRequest) {
         confidence: e?.confidence ?? null,
         flags: e?.flags ?? [],
         sentAt: e?.sentAt ?? null,
+        sentToEmail: e?.sentToEmail ?? null,
+        claimLinkClickedAt: e?.claimLinkClickedAt ?? null,
+        claimLinkClickCount: e?.claimLinkClickCount ?? 0,
+        demoLinkClickedAt: e?.demoLinkClickedAt ?? null,
+        demoLinkClickCount: e?.demoLinkClickCount ?? 0,
         reviewAction: e?.reviewAction ?? null,
         enrichment: e
           ? {

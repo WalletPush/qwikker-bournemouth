@@ -1,18 +1,20 @@
 'use client'
 
 /**
- * The Acquisition Engine as a plain-language 3-step journey. Each step maps to one
+ * The Acquisition Engine as a plain-language journey. Each step maps to one
  * real job so the admin always knows what to do next:
  *   1. Enrich  – generate AI content for imported businesses
  *   2. Confirm – review the drafts and publish them live
  *   3. Invite  – send a claim email to businesses whose listing is live
+ *   4. Sent    – who we emailed, and whether they clicked Claim / Present Mode
  */
-export type JourneyStep = 'enrich' | 'confirm' | 'invite'
+export type JourneyStep = 'enrich' | 'confirm' | 'invite' | 'sent'
 
 const STEPS: Array<{ key: JourneyStep; n: number; label: string; sub: string }> = [
   { key: 'enrich', n: 1, label: 'Enrich', sub: 'Generate AI content' },
   { key: 'confirm', n: 2, label: 'Confirm & publish', sub: 'Review drafts, go live' },
   { key: 'invite', n: 3, label: 'Invite', sub: 'Send claim emails' },
+  { key: 'sent', n: 4, label: 'Sent', sub: 'Who we emailed' },
 ]
 
 export function JourneySteps({
@@ -21,11 +23,11 @@ export function JourneySteps({
   onSelect,
 }: {
   step: JourneyStep
-  counts: { enrich: number; confirm: number; invite: number }
+  counts: { enrich: number; confirm: number; invite: number; sent: number }
   onSelect: (s: JourneyStep) => void
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {STEPS.map((s) => {
         const active = step === s.key
         const count = counts[s.key]

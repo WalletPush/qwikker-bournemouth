@@ -133,14 +133,47 @@ export function BusinessCard({
         <ReachPill score={reach.score} label={reach.label} />
       </div>
 
-      {(enrichedReady && mode !== 'enrich') || row.sentAt ? (
+      {(enrichedReady && mode !== 'enrich' && mode !== 'sent') || row.sentAt ? (
         <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px]">
-          {enrichedReady && mode !== 'enrich' && (
+          {enrichedReady && mode !== 'enrich' && mode !== 'sent' && (
             <span className="text-slate-400">📋 {row.enrichment?.offersCount ?? 0} offers</span>
           )}
-          {row.sentAt && <span className="text-sky-400">Invited ✓</span>}
+          {row.sentAt && mode !== 'sent' && <span className="text-sky-400">Invited ✓</span>}
         </div>
       ) : null}
+
+      {mode === 'sent' && row.sentAt && (
+        <div className="mt-2 space-y-1 text-[11px]">
+          <div className="text-slate-300 truncate" title={row.sentToEmail || row.email || undefined}>
+            To: {row.sentToEmail || row.email || '—'}
+          </div>
+          <div className="text-slate-500">
+            Sent{' '}
+            {new Date(row.sentAt).toLocaleString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={
+                (row.claimLinkClickCount || 0) > 0 ? 'text-emerald-400' : 'text-slate-500'
+              }
+            >
+              Claim {(row.claimLinkClickCount || 0) > 0 ? `(${row.claimLinkClickCount})` : '—'}
+            </span>
+            <span className="text-slate-700">·</span>
+            <span
+              className={(row.demoLinkClickCount || 0) > 0 ? 'text-sky-400' : 'text-slate-500'}
+            >
+              Demo {(row.demoLinkClickCount || 0) > 0 ? `(${row.demoLinkClickCount})` : '—'}
+            </span>
+            {row.claimed && <span className="text-[#00d083]">Claimed</span>}
+          </div>
+        </div>
+      )}
 
       {isEnriching ? (
         <div className="mt-2 text-xs text-amber-400 animate-pulse">Generating content…</div>
@@ -220,6 +253,13 @@ export function BusinessCard({
                   </button>
                 )}
               </>
+            )}
+
+            {/* Sent step — open for follow-up / resend from drawer */}
+            {mode === 'sent' && (
+              <Button variant="secondary" onClick={() => onOpen(row)} className="h-7 px-2 text-xs flex-1">
+                Open
+              </Button>
             )}
           </div>
         </>
