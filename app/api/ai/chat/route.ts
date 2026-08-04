@@ -595,111 +595,129 @@ export async function POST(request: NextRequest) {
       }
 
       // 🔍 FALLBACK: If no match from candidates or history, try direct DB lookup by name
-      // This handles fresh conversations where user asks about a specific business
+      // This handles fresh conversations where user asks about a specific business.
+      // MUST search all three chat tiers — chat_eligible alone excludes unclaimed T3.
       if (!resolvedSlug && matchedBy !== 'ambiguous') {
         console.log(`🔍 [DB LOOKUP] Attempting direct name search for: "${message}" (city: ${city})`)
         try {
           const { createServiceRoleClient: createSR } = await import('@/lib/supabase/server')
           const supabase = createSR()
-          // Extract likely business name from query by removing stop words
-          const stopWords = ['what', 'is', 'are', 'the', 'a', 'an', 'open', 'hours', 'time', 'does', 'do',
+          const stopWords = new Set([
+            'what', 'is', 'are', 'the', 'a', 'an', 'open', 'hours', 'time', 'does', 'do',
             'when', 'where', 'how', 'can', 'i', 'get', 'to', 'about', 'tell', 'me', 'more',
-            'info', 'information', 'close', 'closing', 'opening', 'for', 'of', 'at', 'in', 'on']
-          const nameTokens = message.toLowerCase()
+            'info', 'information', 'close', 'closing', 'opening', 'for', 'of', 'at', 'in', 'on',
+          ])
+          const genericTokens = new Set([
+            'restaurant', 'restaurants', 'bar', 'bars', 'cafe', 'cafes', 'grill', 'bistro',
+            'pub', 'lounge', 'house', 'club', 'and',
+          ])
+          const nameTokens = message
+            .toLowerCase()
+            .replace(/&/g, ' and ')
             .replace(/[^\w\s]/g, ' ')
             .split(/\s+/)
-            .filter(t => t.length >= 3 && !stopWords.includes(t))
-          
+            .filter((t) => t.length >= 2 && !stopWords.has(t))
+          const distinctiveTokens = nameTokens.filter((t) => !genericTokens.has(t) && t.length >= 3)
+
           console.log(`🔍 [DB LOOKUP] Name tokens: [${nameTokens.join(', ')}]`)
-          if (nameTokens.length > 0) {
-            const searchTerm = nameTokens.join(' ')
+          console.log(`🔍 [DB LOOKUP] Distinctive tokens: [${distinctiveTokens.join(', ')}]`)
+
+          const lookupViews = [
+            'business_profiles_chat_eligible',
+            'business_profiles_lite_eligible',
+            'business_profiles_ai_fallback_pool',
+          ] as const
+
+          const scoreCandidate = (businessName: string): number => {
+            const norm = businessName
+              .toLowerCase()
+              .replace(/&/g, ' and ')
+              .replace(/[^\w\s]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+            const bizTokens = norm.split(' ').filter((t) => t.length >= 2)
+            const tokensForScore = distinctiveTokens.length > 0 ? distinctiveTokens : nameTokens
+            const matched = tokensForScore.filter((t) =>
+              bizTokens.some((bt) => bt === t || (t.length >= 4 && (bt.includes(t) || t.includes(bt))))
+            )
+            if (matched.length >= 2) return 50 + matched.length * 10
+            if (matched.length === 1 && matched[0].length >= 6) return 45
+            return 0
+          }
+
+          let dbMatches: { id: string; business_name: string }[] = []
+
+          if (distinctiveTokens.length >= 2 || nameTokens.length >= 2) {
+            // AND-match distinctive tokens across all tiers (handles "Bar & Restaurant" vs "bar restaurant")
+            const andTokens =
+              distinctiveTokens.length >= 2 ? distinctiveTokens.slice(0, 4) : nameTokens.slice(0, 4)
+            for (const view of lookupViews) {
+              let q = supabase.from(view).select('id, business_name').eq('city', city)
+              for (const token of andTokens) {
+                q = q.ilike('business_name', `%${token}%`)
+              }
+              const { data, error } = await q.limit(8)
+              if (error) {
+                console.log(`🔍 [DB LOOKUP] ${view} error: ${error.message}`)
+                continue
+              }
+              if (data?.length) {
+                dbMatches = data
+                console.log(
+                  `🔍 [DB LOOKUP] ${view} AND-match (${andTokens.join('+')}): ${data.map((b) => b.business_name).join(', ')}`
+                )
+                break
+              }
+            }
+          }
+
+          // Phrase / single-token fallbacks if AND-match missed
+          if (dbMatches.length === 0 && distinctiveTokens.length > 0) {
+            const searchTerm = distinctiveTokens.join(' ')
             console.log(`🔍 [DB LOOKUP] Searching for: "${searchTerm}"`)
-
-            let dbMatches: { id: string; business_name: string }[] | null = null
-            let dbErr: any = null
-
-            // Try 1: exact substring match (e.g. "bellaggio" in "Bellaggio")
-            // SECURITY: Use chat_eligible view to prevent expired/ineligible businesses from appearing
-            const result1 = await supabase
-              .from('business_profiles_chat_eligible')
-              .select('id, business_name')
-              .eq('city', city)
-              .ilike('business_name', `%${searchTerm}%`)
-              .limit(3)
-            dbMatches = result1.data
-            dbErr = result1.error
-
-            // Try 2: if no match, try each token individually (handles multi-word mismatches)
-            if ((!dbMatches || dbMatches.length === 0) && nameTokens.length > 1) {
-              for (const token of nameTokens) {
-                if (token.length < 4) continue
-                const { data: tokenMatches } = await supabase
-                  .from('business_profiles_chat_eligible')
-                  .select('id, business_name')
-                  .eq('city', city)
-                  .ilike('business_name', `%${token}%`)
-                  .limit(3)
-                if (tokenMatches && tokenMatches.length > 0) {
-                  dbMatches = tokenMatches
-                  console.log(`🔍 [DB LOOKUP] Token "${token}" matched: ${tokenMatches.map(b => b.business_name).join(', ')}`)
-                  break
-                }
+            for (const view of lookupViews) {
+              const { data, error } = await supabase
+                .from(view)
+                .select('id, business_name')
+                .eq('city', city)
+                .ilike('business_name', `%${searchTerm}%`)
+                .limit(5)
+              if (!error && data?.length) {
+                dbMatches = data
+                break
               }
             }
+          }
 
-            // Try 3: fuzzy prefix match — use first 4 chars of longest token
-            // Handles common misspellings like "Bellagio" -> "Bell%" matching "Bellaggio"
-            if (!dbMatches || dbMatches.length === 0) {
-              const longestToken = nameTokens.sort((a, b) => b.length - a.length)[0]
-              if (longestToken && longestToken.length >= 5) {
-                const prefix = longestToken.substring(0, Math.ceil(longestToken.length * 0.6))
-                console.log(`🔍 [DB LOOKUP] Trying fuzzy prefix: "${prefix}%"`)
-                const { data: fuzzyMatches } = await supabase
-                  .from('business_profiles_chat_eligible')
-                  .select('id, business_name')
-                  .eq('city', city)
-                  .ilike('business_name', `%${prefix}%`)
-                  .limit(5)
-                if (fuzzyMatches && fuzzyMatches.length > 0) {
-                  dbMatches = fuzzyMatches
-                  console.log(`🔍 [DB LOOKUP] Fuzzy prefix matched: ${fuzzyMatches.map(b => b.business_name).join(', ')}`)
-                }
-              }
-            }
-
-            console.log(`🔍 [DB LOOKUP] Results: ${dbMatches?.length ?? 0} matches${dbErr ? `, ERROR: ${dbErr.message}` : ''}${dbMatches?.length ? ` — ${dbMatches.map((b: any) => b.business_name).join(', ')}` : ''}`)
-
-            if (dbMatches && dbMatches.length === 1) {
-              resolvedSlug = generateSlugFromName(dbMatches[0].business_name)
-              matchedBy = 'db_name_lookup'
-              console.log(`🔍 [DB LOOKUP] Found "${dbMatches[0].business_name}" via name search: "${searchTerm}"`)
-            } else if (dbMatches && dbMatches.length > 1) {
-              // Try exact-ish match: check if any name starts with or closely matches the search
-              const exact = dbMatches.find(b => 
-                b.business_name.toLowerCase().includes(searchTerm) || 
-                searchTerm.includes(b.business_name.toLowerCase().replace(/[^\w\s]/g, '').trim())
+          // Score multi-candidates — prefer CHE Rock over The Rock Restaurant for "che rock …"
+          if (dbMatches.length > 1) {
+            const ranked = dbMatches
+              .map((b) => ({ b, score: scoreCandidate(b.business_name) }))
+              .filter((x) => x.score >= 50)
+              .sort((a, b) => b.score - a.score)
+            if (ranked.length > 0) {
+              dbMatches = [ranked[0].b]
+              console.log(
+                `🔍 [DB LOOKUP] Scored best match: "${ranked[0].b.business_name}" (score ${ranked[0].score})`
               )
-              if (exact) {
-                resolvedSlug = generateSlugFromName(exact.business_name)
-                matchedBy = 'db_name_lookup'
-                console.log(`🔍 [DB LOOKUP] Resolved "${exact.business_name}" from ${dbMatches.length} candidates`)
-              } else {
-                // Pick the closest match by checking if the search term shares most characters
-                const bestFuzzy = dbMatches.reduce((best, b) => {
-                  const name = b.business_name.toLowerCase()
-                  const shared = [...searchTerm].filter((c, i) => name[i] === c).length
-                  const bestShared = best ? [...searchTerm].filter((c, i) => best.business_name.toLowerCase()[i] === c).length : 0
-                  return shared > bestShared ? b : best
-                }, null as { id: string; business_name: string } | null)
-                if (bestFuzzy) {
-                  resolvedSlug = generateSlugFromName(bestFuzzy.business_name)
-                  matchedBy = 'db_fuzzy_lookup'
-                  console.log(`🔍 [DB LOOKUP] Fuzzy best match: "${bestFuzzy.business_name}" for "${searchTerm}"`)
-                } else {
-                  console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map(b => b.business_name).join(', ')}`)
-                }
-              }
+            } else {
+              console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map((b) => b.business_name).join(', ')}`)
+              dbMatches = []
             }
+          }
+
+          console.log(
+            `🔍 [DB LOOKUP] Results: ${dbMatches.length} matches${
+              dbMatches.length ? ` — ${dbMatches.map((b) => b.business_name).join(', ')}` : ''
+            }`
+          )
+
+          if (dbMatches.length === 1) {
+            resolvedSlug = generateSlugFromName(dbMatches[0].business_name)
+            matchedBy = 'db_name_lookup'
+            console.log(
+              `🔍 [DB LOOKUP] Found "${dbMatches[0].business_name}" via name search across chat tiers`
+            )
           }
         } catch (err) {
           console.error('[DB LOOKUP] Error:', err)
@@ -761,17 +779,26 @@ export async function POST(request: NextRequest) {
         let biz = null
         let matchedBy = 'none'
 
-        // 1️⃣ Try ID (best) — use eligibility view to prevent expired businesses
-        if (currentBusinessId) {
-          const { data } = await supabase
-            .from('business_profiles_chat_eligible')
-            .select(selectFields)
-            .eq('id', currentBusinessId)
-            .maybeSingle()
+        // 1️⃣ Try ID across all chat tiers (T1 paid + T2 lite + T3 unclaimed)
+        const detailViews = [
+          'business_profiles_chat_eligible',
+          'business_profiles_lite_eligible',
+          'business_profiles_ai_fallback_pool',
+        ] as const
 
-          if (data) {
-            biz = data
-            matchedBy = 'id'
+        if (currentBusinessId) {
+          for (const view of detailViews) {
+            const { data } = await supabase
+              .from(view)
+              .select(selectFields)
+              .eq('id', currentBusinessId)
+              .maybeSingle()
+
+            if (data) {
+              biz = data
+              matchedBy = `id:${view}`
+              break
+            }
           }
         }
 
@@ -779,19 +806,22 @@ export async function POST(request: NextRequest) {
         if (!biz && currentBusinessSlug) {
           const words = currentBusinessSlug.split('-').filter(Boolean)
           const pattern = `%${words.join('%')}%` // e.g. "%triangle%gyross%"
-          
-          const { data } = await supabase
-            .from('business_profiles_chat_eligible')
-            .select(selectFields)
-            .eq('city', city)
-            .ilike('business_name', pattern)
-            .order('review_count', { ascending: false }) // deterministic tie-break
-            .limit(1)
-            .maybeSingle()
 
-          if (data) {
-            biz = data
-            matchedBy = 'name_from_slug'
+          for (const view of detailViews) {
+            const { data } = await supabase
+              .from(view)
+              .select(selectFields)
+              .eq('city', city)
+              .ilike('business_name', pattern)
+              .order('review_count', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            if (data) {
+              biz = data
+              matchedBy = `name_from_slug:${view}`
+              break
+            }
           }
         }
 

@@ -859,7 +859,20 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             businesses={atlasBusinesses}
             onTellMeMore={(text, businessId) => {
               setView('chat')
-              handleSendMessage(text)
+              // Atlas already resolved the business (incl. unclaimed T3). Use the ID
+              // path — do NOT drop to name-only chat, which misses Tier 3 lookups.
+              if (businessId) {
+                const userMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  type: 'user',
+                  content: text,
+                  timestamp: new Date().toISOString(),
+                }
+                setMessages((prev) => [...prev, userMessage])
+                void fetchBusinessDetail(businessId)
+              } else {
+                handleSendMessage(text)
+              }
             }}
           />
         </div>

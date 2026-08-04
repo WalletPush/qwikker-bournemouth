@@ -349,6 +349,63 @@ function slugifyBusinessName(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
+/** Normalize for name matching — strips & / punctuation so "Bar & Restaurant" ≈ "Bar Restaurant". */
+function normalizeSpokenBusinessName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Resolve a spoken business name against inventory (all tiers).
+ * Used for "tell me about X" so unclaimed T3 listings are not missed.
+ */
+function findBusinessBySpokenName(queryName: string, businesses: any[]): any | null {
+  const generic = new Set([
+    'restaurant', 'restaurants', 'bar', 'bars', 'cafe', 'cafes', 'grill', 'bistro',
+    'pub', 'lounge', 'house', 'the', 'and', 'club', 'night', 'hotel', 'resort',
+  ])
+  const targetNorm = normalizeSpokenBusinessName(queryName)
+  if (!targetNorm) return null
+  const targetSlug = slugifyBusinessName(queryName)
+  const targetTokens = targetNorm.split(' ').filter((t) => t.length >= 2 && !generic.has(t))
+
+  let best: any | null = null
+  let bestScore = 0
+
+  for (const biz of businesses) {
+    const name = typeof biz?.business_name === 'string' ? biz.business_name : ''
+    if (!name) continue
+    const nameNorm = normalizeSpokenBusinessName(name)
+    const nameSlug = slugifyBusinessName(name)
+    const bizTokens = nameNorm.split(' ').filter((t) => t.length >= 2)
+
+    let score = 0
+    if (nameNorm === targetNorm || nameSlug === targetSlug) {
+      score = 100
+    } else if (nameNorm.includes(targetNorm) || targetNorm.includes(nameNorm)) {
+      score = 80
+    } else if (targetTokens.length > 0) {
+      const matched = targetTokens.filter((t) =>
+        bizTokens.some((bt) => bt === t || (t.length >= 4 && (bt.includes(t) || t.includes(bt))))
+      )
+      if (matched.length >= 2) score = 50 + matched.length * 10
+      else if (matched.length === 1 && matched[0].length >= 6) score = 45
+    }
+
+    if (score > bestScore) {
+      bestScore = score
+      best = biz
+    }
+  }
+
+  // Require a confident match — avoids "rock" alone resolving to The Rock Restaurant
+  return bestScore >= 50 ? best : null
+}
+
 /**
  * Helper: Get business slug (DB slug > generated from name > ID fallback)
  * CRITICAL: Use this everywhere you format business links or build slug lookups
@@ -1054,13 +1111,29 @@ export async function generateHybridAIResponse(
     
     console.log(`💼 Queried from views: T1=${tier1Businesses.length}, T2=${tier2Businesses.length}, T3=${tier3Businesses.length}`)
     
-    // 🎯 DETAIL SHORT-CIRCUIT: If this is a follow-up about a specific business,
-    // filter candidates to only that business (skip global search)
+    // 🎯 DETAIL / NAMED ASK: lock candidates to the specific business when we can resolve it.
+    // CRITICAL: search ALL tiers — chat_eligible (T1) alone excludes unclaimed T3.
     let tier1FilteredForDetail = tier1Businesses
     let tier2FilteredForDetail = tier2Businesses
     let tier3FilteredForDetail = tier3Businesses
-    
-    if (shouldShortCircuitToDetail && lastSlug) {
+
+    const namedAskTarget =
+      tellMeAboutMatch && aboutTarget && !isTellMeAboutFollowUp ? aboutTarget : null
+
+    if (namedAskTarget) {
+      const allForNameMatch = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses]
+      const namedHit = findBusinessBySpokenName(namedAskTarget, allForNameMatch)
+      if (namedHit) {
+        tier1FilteredForDetail = tier1Businesses.filter((b) => b.id === namedHit.id)
+        tier2FilteredForDetail = tier2Businesses.filter((b) => b.id === namedHit.id)
+        tier3FilteredForDetail = tier3Businesses.filter((b) => b.id === namedHit.id)
+        console.log(
+          `🎯 [NAMED ASK] Locked to inventory match: ${namedHit.business_name} (id: ${namedHit.id})`
+        )
+      } else {
+        console.log(`⚠️ [NAMED ASK] No inventory match for "${namedAskTarget}" across T1/T2/T3`)
+      }
+    } else if (shouldShortCircuitToDetail && lastSlug) {
       // Convert slug to business name pattern (e.g., "triangle-gyross" -> "triangle gyross")
       const namePattern = lastSlug.split('-').join(' ')
       const allBusinesses = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses]
@@ -3148,20 +3221,37 @@ async function generateBusinessDetailResponse(
     }
   }
   
-  // Fetch business — use eligibility view to prevent expired/ineligible businesses
-  const { data: business, error} = await supabase
-    .from('business_profiles_chat_eligible')
-    .select('*')
-    .eq('id', businessId)
-    .single()
-  
-  if (error || !business) {
-    console.error(`❌ Business not found: ${businessId}`, error)
+  // Fetch by ID across ALL chat tiers. Atlas "Tell me more" can point at unclaimed
+  // T3 listings that are intentionally absent from chat_eligible (paid/trial only).
+  const detailViews = [
+    'business_profiles_chat_eligible',
+    'business_profiles_lite_eligible',
+    'business_profiles_ai_fallback_pool',
+  ] as const
+
+  let business: any = null
+  let detailViewUsed: string | null = null
+  for (const view of detailViews) {
+    const { data, error } = await supabase
+      .from(view)
+      .select('*')
+      .eq('id', businessId)
+      .maybeSingle()
+    if (!error && data) {
+      business = data
+      detailViewUsed = view
+      break
+    }
+  }
+
+  if (!business) {
+    console.error(`❌ Business not found across chat tiers: ${businessId}`)
     return {
       success: false,
       error: 'Business not found'
     }
   }
+  console.log(`✅ Detail lookup via ${detailViewUsed}: ${business.business_name}`)
   
   console.log(`✅ Found business: ${business.business_name}`)
   
