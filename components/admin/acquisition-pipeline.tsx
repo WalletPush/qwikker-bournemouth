@@ -146,13 +146,19 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     setLoading(true)
     setError(null)
     try {
-      // Search + step filtering happen client-side now; we always pull the full
-      // unclaimed set so the journey counts stay accurate.
-      const res = await fetch(`/api/admin/offer-engine/pipeline?unclaimed=1`)
+      // Pull the full unclaimed set (API default 1000) so journey counts stay
+      // accurate on large import cities. Ready enrichments outside the page are
+      // force-included server-side — existing AI drafts never need re-running.
+      const res = await fetch(`/api/admin/offer-engine/pipeline?unclaimed=1&limit=1000`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load')
       setRows(data.rows || [])
       setSelected(new Set())
+      if (data.meta?.truncated && process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[acquisition] pipeline truncated: returned ${data.meta.returned} of ${data.meta.matchedTotal}`
+        )
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     } finally {

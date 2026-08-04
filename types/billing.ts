@@ -114,6 +114,7 @@ export interface BusinessCRMData {
   system_category: string | null
   display_category: string | null
   placeholder_variant: number | null
+  placeholder_custom_url: string | null
   business_address: string
   business_town: string
   business_postcode: string

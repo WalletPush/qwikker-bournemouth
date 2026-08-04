@@ -13,6 +13,7 @@ export interface ClaimBusiness {
   system_category?: string  // ✅ CRITICAL: For placeholder images (e.g., 'restaurant', 'cafe')
   display_category?: string // ✅ Display label (e.g., 'Italian Restaurant')
   placeholder_variant?: number // Which placeholder image variant to use (0-based)
+  placeholder_custom_url?: string | null // Admin-uploaded custom cover for unclaimed listings
   tagline?: string
   yearsOnGoogle?: number
   type?: string

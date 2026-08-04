@@ -1,6 +1,6 @@
 'use client'
 
-import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
+import { resolveBusinessCoverUrl } from '@/lib/placeholders/getPlaceholderImage'
 import type { FactChip } from '@/lib/atlas/buildBusinessFacts'
 import type { Business } from './AtlasMode'
 
@@ -33,13 +33,13 @@ export function AtlasMobileDetailCard({
   onToggleSave,
   onOpenDirections,
 }: AtlasMobileDetailCardProps) {
-  const imageUrl =
-    business.business_images?.[0] ||
-    getPlaceholderVariationWithOverride(
-      business.system_category || 'default',
-      business.id,
-      business.placeholder_variant
-    ).url
+  const imageUrl = resolveBusinessCoverUrl({
+    businessImages: business.business_images,
+    customPlaceholderUrl: business.placeholder_custom_url,
+    systemCategory: business.system_category || 'default',
+    businessId: business.id,
+    placeholderVariant: business.placeholder_variant,
+  })
 
   return (
     <div className="space-y-4">

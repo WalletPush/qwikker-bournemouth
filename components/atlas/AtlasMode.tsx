@@ -56,6 +56,7 @@ export interface Business {
   phone?: string
   business_images?: string[]
   placeholder_variant?: number | null
+  placeholder_custom_url?: string | null
   slug?: string
   business_tier?: string
   isPaid?: boolean

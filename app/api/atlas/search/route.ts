@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
           phone,
           business_images,
           placeholder_variant,
+          placeholder_custom_url,
           business_tier,
           business_hours_structured
         `)

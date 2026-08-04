@@ -156,6 +156,13 @@ export function scoreBusinessRelevance(
   
   // Intent-to-type expansion: map intent categories to their related google_primary_type values
   const intentTypeExpansion: Record<string, string[]> = {
+    restaurant: [
+      'restaurant', 'meal_takeaway', 'meal_delivery', 'fine_dining_restaurant',
+      'fast_food_restaurant', 'seafood_restaurant', 'steak_house', 'pizza_restaurant',
+      'sushi_restaurant', 'indian_restaurant', 'chinese_restaurant', 'italian_restaurant',
+      'mexican_restaurant', 'thai_restaurant', 'japanese_restaurant', 'vegan_restaurant',
+      'vegetarian_restaurant', 'hamburger_restaurant', 'barbecue_restaurant',
+    ],
     bar: ['bar', 'pub', 'night_club', 'wine_bar', 'cocktail_bar', 'sports_bar', 'dive_bar', 'lounge', 'gastropub'],
     cafe: ['cafe', 'coffee_shop'],
     bakery: ['bakery'],
@@ -170,7 +177,8 @@ export function scoreBusinessRelevance(
     if (
       displayCategory.includes(cat) ||
       systemCategory.includes(cat) ||
-      systemCategory === 'pub' && cat === 'bar' ||
+      (systemCategory === 'pub' && cat === 'bar') ||
+      (cat === 'restaurant' && ['restaurant', 'fast_food', 'takeaway'].includes(systemCategory)) ||
       googlePrimaryType.includes(cat) ||
       expandedTypes.some(t => googlePrimaryType === t || systemCategory === t)
     ) {

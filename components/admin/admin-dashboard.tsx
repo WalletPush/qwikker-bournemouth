@@ -94,6 +94,55 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
 
   // Live Listings view mode: CRM (default admin table) vs User (discover-style cards)
   const [liveViewMode, setLiveViewMode] = useState<'crm' | 'user'>('crm')
+  const [ratingRefreshRunning, setRatingRefreshRunning] = useState(false)
+  const [ratingRefreshProgress, setRatingRefreshProgress] = useState<string | null>(null)
+
+  const handleRefreshAllGoogleRatings = async () => {
+    if (ratingRefreshRunning) return
+    const ok = window.confirm(
+      `Refresh Google ratings & review counts for all ${cityDisplayName} listings with a Google Place ID?\n\nThis runs in small batches and may take a few minutes on large cities.`
+    )
+    if (!ok) return
+
+    setRatingRefreshRunning(true)
+    setRatingRefreshProgress('Starting…')
+    let offset = 0
+    let totalProcessed = 0
+    let totalUpdated = 0
+    let totalErrors = 0
+
+    try {
+      // Client-driven paging keeps each request under Vercel timeouts (~25 listings).
+      for (let round = 0; round < 40; round++) {
+        setRatingRefreshProgress(
+          `Refreshing… ${totalProcessed} done (${totalUpdated} updated${totalErrors ? `, ${totalErrors} errors` : ''})`
+        )
+        const res = await fetch('/api/admin/refresh-google-rating', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ all: true, limit: 25, offset }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Refresh failed')
+
+        totalProcessed += data.processed || 0
+        totalUpdated += data.updated || 0
+        totalErrors += data.errors || 0
+        offset = data.nextOffset ?? offset + (data.processed || 0)
+
+        if (!data.hasMore || (data.processed || 0) === 0) break
+      }
+
+      setRatingRefreshProgress(
+        `Done — checked ${totalProcessed}, updated ${totalUpdated}${totalErrors ? `, ${totalErrors} failed` : ''}. Reloading…`
+      )
+      window.location.reload()
+    } catch (err) {
+      setRatingRefreshProgress(null)
+      alert(err instanceof Error ? err.message : 'Could not refresh Google ratings')
+      setRatingRefreshRunning(false)
+    }
+  }
 
   // Admin preview modal (user view click-through)
   const [previewBusiness, setPreviewBusiness] = useState<any>(null)
@@ -1649,7 +1698,7 @@ Qwikker Admin Team`
                   <p className="text-slate-400 text-lg mb-4">
                     View and manage your live listings
                   </p>
-                  <div className="inline-flex items-center gap-1 p-1 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+                  <div className="inline-flex items-center gap-1 p-1 bg-slate-800/60 border border-slate-700/50 rounded-lg mb-3">
                     <button
                       onClick={() => setLiveViewMode('crm')}
                       className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
@@ -1677,6 +1726,29 @@ Qwikker Admin Team`
                       </span>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshAllGoogleRatings}
+                    disabled={ratingRefreshRunning}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-slate-600 bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-60"
+                  >
+                    {ratingRefreshRunning ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                        Refreshing ratings…
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh all Google ratings
+                      </>
+                    )}
+                  </button>
+                  {ratingRefreshProgress && (
+                    <p className="text-xs text-slate-400 mt-2 max-w-md">{ratingRefreshProgress}</p>
+                  )}
                 </div>
 
                 {/* Stats Overview Cards */}

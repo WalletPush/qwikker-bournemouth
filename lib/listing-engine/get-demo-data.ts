@@ -14,7 +14,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { resolveBusinessCoverUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { getCurrencySymbolForCity } from '@/lib/utils/currency'
 import { buildLaunchLinks, getLaunchPackQrCodes, type LaunchQrUrls } from '@/lib/listing-engine/ensure-launch-qr'
 
@@ -146,7 +146,8 @@ export async function getDemoData(businessId: string): Promise<DemoData | null> 
        display_category, system_category, business_type,
        logo, business_images, rating, review_count, website_url,
        business_tagline, business_description, menu_preview,
-       google_reviews_highlights, google_place_id`
+       google_reviews_highlights, google_place_id,
+       placeholder_variant, placeholder_custom_url`
     )
     .eq('id', businessId)
     .maybeSingle()
@@ -253,7 +254,15 @@ export async function getDemoData(businessId: string): Promise<DemoData | null> 
       images: Array.isArray(biz.business_images)
         ? (biz.business_images as unknown[]).map((x) => String(x)).filter(Boolean).slice(0, 6)
         : [],
-      placeholderImage: getPlaceholderUrl(biz.system_category || 'restaurant', biz.id),
+      placeholderImage: resolveBusinessCoverUrl({
+        businessImages: Array.isArray(biz.business_images)
+          ? (biz.business_images as unknown[]).map((x) => String(x)).filter(Boolean)
+          : null,
+        customPlaceholderUrl: biz.placeholder_custom_url || null,
+        systemCategory: biz.system_category || 'restaurant',
+        businessId: biz.id,
+        placeholderVariant: biz.placeholder_variant ?? null,
+      }),
       rating: typeof biz.rating === 'number' ? biz.rating : null,
       reviewCount: typeof biz.review_count === 'number' ? biz.review_count : null,
       websiteUrl: biz.website_url || null,

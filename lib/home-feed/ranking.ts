@@ -6,7 +6,7 @@
  */
 
 import type { TimeOfDay, BusinessTier } from './types'
-import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
+import { resolveBusinessCoverUrl } from '@/lib/placeholders/getPlaceholderImage'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -322,16 +322,17 @@ export function getBusinessImage(
     return { image: businessImages[0], logo }
   }
 
-  // Admin-picked custom placeholder wins over the generated pool.
   if (customPlaceholderUrl) {
     return { image: customPlaceholderUrl, logo }
   }
 
   if (systemCategory && businessId) {
-    // Respect the admin-selected placeholder variant when present, otherwise
-    // fall back to the deterministic hash-based choice (identical to before).
     return {
-      image: getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant).url,
+      image: resolveBusinessCoverUrl({
+        systemCategory,
+        businessId,
+        placeholderVariant,
+      }),
       logo,
     }
   }

@@ -12,7 +12,7 @@ import { ConfirmBusinessDetails } from '@/components/claim/confirm-business-deta
 import { ReviewAiOffers, type DraftOffer } from '@/components/claim/review-ai-offers'
 import type { ClaimBusiness } from '@/types/claim'
 import { getDisplayName, getDisplayAddress, getDisplayCategory, getDisplayType, getDisplayDescription, getDisplayReviewCount } from '@/types/claim'
-import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { getFallbackPlaceholderUrl, resolveBusinessCoverUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { getCityFromHostnameClient } from '@/lib/utils/client-city-detection'
 import { getMaxOffers } from '@/lib/utils/tier-limits'
@@ -151,6 +151,7 @@ export default function ClaimPage() {
                   system_category: business.system_category,
                   display_category: business.display_category,
                   placeholder_variant: business.placeholder_variant ?? 0,
+                  placeholder_custom_url: business.placeholder_custom_url ?? null,
                   tagline: business.tagline,
                   image: business.image,
                   rating: business.rating,
@@ -520,8 +521,13 @@ export default function ClaimPage() {
                         const displayReviewCount = getDisplayReviewCount(business)
                         
                         const resolvedCategory = resolveSystemCategory(business) || (business as any).system_category || (business as any).systemCategory || 'other'
-                        const placeholderVariant = (business as any).placeholder_variant ?? undefined
-                        const imgSrc = business.image || getPlaceholderUrl(resolvedCategory, business.id)
+                        const imgSrc = resolveBusinessCoverUrl({
+                          heroImage: business.image,
+                          customPlaceholderUrl: business.placeholder_custom_url,
+                          systemCategory: resolvedCategory,
+                          businessId: business.id,
+                          placeholderVariant: business.placeholder_variant,
+                        })
                         
                         return (
                           <div 
@@ -538,8 +544,9 @@ export default function ClaimPage() {
                                   className="w-20 h-20 rounded-xl object-cover ring-1 ring-white/[0.08]"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    if (target.src !== '/placeholders/default/00.webp') {
-                                      target.src = '/placeholders/default/00.webp'
+                                    const fallback = getFallbackPlaceholderUrl()
+                                    if (target.src !== fallback) {
+                                      target.src = fallback
                                     }
                                   }}
                                 />
@@ -680,18 +687,18 @@ export default function ClaimPage() {
                 <CardContent className="space-y-6 px-8 pb-8">
                   <div className="flex gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <img 
-                      src={
-                        selectedBusiness.image || 
-                        getPlaceholderUrl(
-                          resolveSystemCategory(selectedBusiness),
-                          selectedBusiness.id
-                        )
-                      }
+                      src={resolveBusinessCoverUrl({
+                        heroImage: selectedBusiness.image,
+                        customPlaceholderUrl: selectedBusiness.placeholder_custom_url,
+                        systemCategory: resolveSystemCategory(selectedBusiness),
+                        businessId: selectedBusiness.id,
+                        placeholderVariant: selectedBusiness.placeholder_variant,
+                      })}
                       alt={selectedBusiness.name || selectedBusiness.business_name || ''}
                       className="w-24 h-24 rounded-xl object-cover ring-1 ring-white/[0.08]"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
-                        target.src = getPlaceholderUrl('other', selectedBusiness.id)
+                        target.src = getFallbackPlaceholderUrl()
                       }}
                     />
                     <div className="flex-1">

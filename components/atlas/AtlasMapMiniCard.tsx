@@ -6,7 +6,7 @@ import type { Business } from './AtlasMode'
 import type { Coordinates } from '@/lib/location/useUserLocation'
 import type { FactChip } from '@/lib/atlas/buildBusinessFacts'
 import { formatDistance, calculateDistanceKm } from '@/lib/utils/distance-formatter'
-import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
+import { resolveBusinessCoverUrl } from '@/lib/placeholders/getPlaceholderImage'
 
 interface AtlasMapMiniCardProps {
   selectedBusiness: Business
@@ -41,13 +41,13 @@ export function AtlasMapMiniCard({
   onTellMeMore,
   onDirectionsClicked,
 }: AtlasMapMiniCardProps) {
-  const cardImageUrl =
-    selectedBusiness.business_images?.[0] ||
-    getPlaceholderVariationWithOverride(
-      selectedBusiness.system_category || 'default',
-      selectedBusiness.id,
-      selectedBusiness.placeholder_variant
-    ).url
+  const cardImageUrl = resolveBusinessCoverUrl({
+    businessImages: selectedBusiness.business_images,
+    customPlaceholderUrl: selectedBusiness.placeholder_custom_url,
+    systemCategory: selectedBusiness.system_category || 'default',
+    businessId: selectedBusiness.id,
+    placeholderVariant: selectedBusiness.placeholder_variant,
+  })
 
   const distanceInfo = userLocation
     ? formatDistance(

@@ -7,6 +7,7 @@ import { scoreConfidence } from '@/lib/listing-engine/score-confidence'
 import { ensureLaunchPackQrCodes, buildLaunchLinks, type LaunchQrUrls } from '@/lib/listing-engine/ensure-launch-qr'
 import { signDemoToken } from '@/lib/listing-engine/demo-token'
 import { getFranchisePublicUrl } from '@/lib/utils/franchise-url'
+import { refreshBusinessRating } from '@/lib/google/refresh-business-rating'
 
 /**
  * Generate an Acquisition draft for ONE business and persist it to
@@ -91,6 +92,20 @@ export async function POST(request: NextRequest) {
     if (upsertError) {
       console.error('enrich upsert error:', upsertError)
       return NextResponse.json({ error: `Saved draft failed: ${upsertError.message}` }, { status: 500 })
+    }
+
+    // Keep rating/review_count fresh from Google — best-effort, never fail enrich.
+    try {
+      const ratingRefresh = await refreshBusinessRating(businessId)
+      if (ratingRefresh.ok && ratingRefresh.changed) {
+        console.log(
+          `[enrich] refreshed Google rating for ${ratingRefresh.businessName}: ` +
+            `${ratingRefresh.previousRating}★/${ratingRefresh.previousReviewCount} → ` +
+            `${ratingRefresh.rating}★/${ratingRefresh.reviewCount}`
+        )
+      }
+    } catch (e) {
+      console.warn('[enrich] rating refresh skipped', e)
     }
 
     // Register (idempotently) this business's launch-pack QR codes in the REAL QR
