@@ -135,7 +135,6 @@ export interface BusinessCRMData {
   rating?: number | null
   review_count?: number | null
   rating_source?: 'google_verified' | 'self_reported' | 'admin_verified' | 'unknown' | null
-  google_primary_type?: string | null
   latitude?: number | null
   longitude?: number | null
   
