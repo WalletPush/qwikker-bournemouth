@@ -3208,10 +3208,7 @@ async function generateBusinessDetailResponse(
   conversationHistory: ChatMessage[] = []
 ): Promise<ChatResponse> {
   console.log(`🔍 Generating detail response for business ID: ${businessId}`)
-  
-  // ✅ TENANT SAFETY: Pass city to ensure correct tenant context
-  const supabase = await createTenantAwareServerClient(context.city)
-  
+
   // SECURITY: UUID validation first
   if (!isValidUUID(businessId)) {
     console.error(`❌ Invalid business ID: ${businessId}`)
@@ -3220,9 +3217,12 @@ async function generateBusinessDetailResponse(
       error: 'Invalid business ID'
     }
   }
-  
-  // Fetch by ID across ALL chat tiers. Atlas "Tell me more" can point at unclaimed
-  // T3 listings that are intentionally absent from chat_eligible (paid/trial only).
+
+  // Service role + explicit city check. Anon/RLS on chat_eligible alone misses
+  // unclaimed T3 (Atlas "Tell me more" for imports like CHE Rock).
+  const supabase = createServiceRoleClient()
+  const city = (context.city || '').toLowerCase()
+
   const detailViews = [
     'business_profiles_chat_eligible',
     'business_profiles_lite_eligible',
@@ -3244,6 +3244,19 @@ async function generateBusinessDetailResponse(
     }
   }
 
+  // Last resort: base table (still city-gated below)
+  if (!business) {
+    const { data } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .eq('id', businessId)
+      .maybeSingle()
+    if (data) {
+      business = data
+      detailViewUsed = 'business_profiles'
+    }
+  }
+
   if (!business) {
     console.error(`❌ Business not found across chat tiers: ${businessId}`)
     return {
@@ -3251,9 +3264,19 @@ async function generateBusinessDetailResponse(
       error: 'Business not found'
     }
   }
+
+  // Tenant isolation — never return another city's listing
+  if (city && business.city && String(business.city).toLowerCase() !== city) {
+    console.error(
+      `🚨 Detail city mismatch: business ${businessId} city=${business.city} request=${city}`
+    )
+    return {
+      success: false,
+      error: 'Business not found'
+    }
+  }
+
   console.log(`✅ Detail lookup via ${detailViewUsed}: ${business.business_name}`)
-  
-  console.log(`✅ Found business: ${business.business_name}`)
   
   const vibeStats = await getBusinessVibeStats(businessId)
 

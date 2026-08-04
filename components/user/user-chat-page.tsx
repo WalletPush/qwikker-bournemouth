@@ -464,22 +464,20 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   }
 
   // ATLAS: Fetch business detail using hidden ID-based command
+  // (used by onRequestDetails — not Tell me more, which uses named chat)
   const fetchBusinessDetail = async (businessId: string) => {
     console.log(`🔍 Fetching business detail for ID: ${businessId}`)
     setIsTyping(true)
     
     try {
-      // ✅ FIXED: Pass last 6 messages for context (keeps AI tone/constraints)
-      // But do NOT include the hidden command as a visible user message
       const recentHistory = messagesRef.current
-        .filter(m => !m.content?.startsWith('__qwikker_')) // Strip hidden commands defensively
+        .filter(m => !m.content?.startsWith('__qwikker_'))
         .slice(-6)
         .map(msg => ({
           role: msg.type === 'user' ? 'user' : 'assistant',
           content: msg.content
         }))
       
-      // Call AI API with HIDDEN command (no user message)
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
@@ -498,7 +496,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       const data = await response.json()
       
       if (data.success) {
-        // Add ONLY the AI response (no user message)
         const aiMessage: ChatMessage = {
           id: Date.now().toString(),
           type: 'ai',
@@ -857,22 +854,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             initialQuery={atlasInitialQuery}
             onInitialQueryConsumed={() => setAtlasInitialQuery(null)}
             businesses={atlasBusinesses}
-            onTellMeMore={(text, businessId) => {
+            onTellMeMore={(text) => {
               setView('chat')
-              // Atlas already resolved the business (incl. unclaimed T3). Use the ID
-              // path — do NOT drop to name-only chat, which misses Tier 3 lookups.
-              if (businessId) {
-                const userMessage: ChatMessage = {
-                  id: Date.now().toString(),
-                  type: 'user',
-                  content: text,
-                  timestamp: new Date().toISOString(),
-                }
-                setMessages((prev) => [...prev, userMessage])
-                void fetchBusinessDetail(businessId)
-              } else {
-                handleSendMessage(text)
-              }
+              // Named chat path — same as typing "Tell me about X". The ID detail
+              // path (__qwikker_business_detail__) only hits paid Tier-1 views and
+              // falsely says unclaimed imports aren't on Qwikker.
+              handleSendMessage(text)
             }}
           />
         </div>
