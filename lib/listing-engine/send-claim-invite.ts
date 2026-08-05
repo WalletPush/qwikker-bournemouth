@@ -192,9 +192,11 @@ export async function sendClaimInvite(
   const city = business.city || ''
   const content = await getInviteContent(supabaseAdmin, business.id)
 
+  // Recipient-facing targets must always be the live franchise host — even when
+  // the invite is sent from local/dev. (getFranchiseBaseUrl → localhost in NODE_ENV=development.)
   const publicBase = getFranchisePublicUrl(city)
   const claimTarget = `${publicBase}/claim?business_id=${business.id}`
-  const demoTarget = `${getFranchiseBaseUrl(city)}/demo/${signDemoToken(business.id, city)}`
+  const demoTarget = `${publicBase}/demo/${signDemoToken(business.id, city)}`
 
   let claimUrl = claimTarget
   let demoUrl = demoTarget

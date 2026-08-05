@@ -5,6 +5,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
 import { z } from 'zod'
 
+/** Empty form fields often arrive as "" — treat as null so .url() doesn't reject them. */
+const emptyToNull = (v: unknown) => (v === '' ? null : v)
+
+/** Absolute https URL, or a site-relative path (hero presets use /hero-vibrant.png etc.). */
+const absoluteOrSitePath = z
+  .string()
+  .refine(
+    (v) => v.startsWith('/') || z.string().url().safeParse(v).success,
+    { message: 'Must be an absolute URL or a site-relative path' }
+  )
+
+const nullableAbsoluteOrSitePath = z.preprocess(emptyToNull, absoluteOrSitePath.nullable().optional())
+const nullableUrl = z.preprocess(emptyToNull, z.string().url().nullable().optional())
+
 const landingPageConfigSchema = z.object({
   // Template + theme (admins pick a template and a curated accent; layout/copy stay locked)
   template: z.enum(['signature', 'vibrant', 'editorial']).optional(),
@@ -25,20 +39,21 @@ const landingPageConfigSchema = z.object({
 
   hero_headline: z.string().max(120).nullable().optional(),
   hero_subtitle: z.string().max(300).nullable().optional(),
-  hero_image_url: z.string().url().nullable().optional(),
+  // Built-in presets are relative (/hero-vibrant.png); uploads are Cloudinary https URLs.
+  hero_image_url: nullableAbsoluteOrSitePath,
   hero_blur: z.number().min(0).max(100).nullable().optional(),
 
   sponsor_enabled: z.boolean().optional(),
   sponsor_name: z.string().max(100).nullable().optional(),
   sponsor_tagline: z.string().max(200).nullable().optional(),
-  sponsor_logo_url: z.string().url().nullable().optional(),
-  sponsor_url: z.string().url().nullable().optional(),
+  sponsor_logo_url: nullableUrl,
+  sponsor_url: nullableUrl,
 
   // Up to 2 secondary ("tier 2") sponsors shown below the headline sponsor
   tier2_sponsors: z.array(z.object({
     name: z.string().max(100),
     logo_url: z.string().url(),
-    url: z.string().url().nullable().optional(),
+    url: z.preprocess(emptyToNull, z.string().url().nullable().optional()),
   })).max(2).nullable().optional(),
 
   supporters_enabled: z.boolean().optional(),
@@ -46,7 +61,7 @@ const landingPageConfigSchema = z.object({
   supporter_logos: z.array(z.object({
     name: z.string().max(100),
     logo_url: z.string().url(),
-    url: z.string().url().nullable().optional(),
+    url: z.preprocess(emptyToNull, z.string().url().nullable().optional()),
   })).nullable().optional(),
 
   show_founding_counter: z.boolean().optional(),

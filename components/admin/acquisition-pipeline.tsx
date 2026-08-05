@@ -472,7 +472,9 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
     setPreview(null)
     setPreviewing(false)
     setSending(false)
-    setSentTo(null)
+    // Restore prior send so reopening a Sent business shows "Invite sent ✓"
+    // instead of the full compose UI again.
+    setSentTo(row?.sentAt ? row.sentToEmail || row.email || 'recipient' : null)
     setOutreachError(null)
   }
 
@@ -503,6 +505,18 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
         setDrawerDecisions(data.enrichment?.decisions || {})
         setDrawerEdits(data.enrichment?.edits || {})
         setPublishedAt(data.enrichment?.published_at || null)
+        if (data.enrichment?.sent_at) {
+          const to = data.enrichment.sent_to_email || row.email || 'recipient'
+          setSentTo(to)
+          patchRow(row.id, {
+            sentAt: data.enrichment.sent_at,
+            sentToEmail: data.enrichment.sent_to_email ?? row.email,
+            claimLinkClickCount: data.enrichment.claim_link_click_count ?? 0,
+            demoLinkClickCount: data.enrichment.demo_link_click_count ?? 0,
+            claimLinkClickedAt: data.enrichment.claim_link_clicked_at ?? null,
+            demoLinkClickedAt: data.enrichment.demo_link_clicked_at ?? null,
+          })
+        }
       } catch (e) {
         setDrawerError(e instanceof Error ? e.message : 'Failed to load draft')
       } finally {
@@ -1248,11 +1262,20 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
                       and <span className="font-semibold">discoverable by the Qwikker AI</span>.
                     </p>
                     <div className="flex items-center gap-2">
-                      {step !== 3 && (
-                        <Button onClick={() => setStep(3)} className="bg-emerald-600 hover:bg-emerald-700">
-                          Send claim invite →
-                        </Button>
-                      )}
+                      {step !== 3 &&
+                        (drawer.sentAt || sentTo ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setStep(3)}
+                            className="border-sky-700 text-sky-300"
+                          >
+                            Invite sent ✓
+                          </Button>
+                        ) : (
+                          <Button onClick={() => setStep(3)} className="bg-emerald-600 hover:bg-emerald-700">
+                            Send claim invite →
+                          </Button>
+                        ))}
                       <Button variant="secondary" onClick={publishListing} disabled={publishing}>
                         {publishing ? 'Updating…' : 'Re-publish'}
                       </Button>

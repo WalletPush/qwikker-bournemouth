@@ -203,7 +203,17 @@ export function LandingPageEditor({ city }: LandingPageEditorProps) {
       if (data.success) {
         setSaveMessage({ type: 'success', text: 'Landing page configuration saved' })
       } else {
-        setSaveMessage({ type: 'error', text: data.error || 'Failed to save' })
+        const fieldHints =
+          data.details?.fieldErrors && typeof data.details.fieldErrors === 'object'
+            ? Object.entries(data.details.fieldErrors as Record<string, string[]>)
+                .map(([k, errs]) => `${k}: ${(errs || []).join(', ')}`)
+                .slice(0, 3)
+                .join(' · ')
+            : ''
+        setSaveMessage({
+          type: 'error',
+          text: fieldHints ? `${data.error || 'Failed to save'} (${fieldHints})` : data.error || 'Failed to save',
+        })
       }
     } catch {
       setSaveMessage({ type: 'error', text: 'Network error' })
