@@ -212,6 +212,13 @@ function buildInventoryVocabulary(businesses: any[]): InventoryVocabulary {
     addPhrase(b.display_category)
     addPhrase(b.system_category)
     addType(b.google_primary_type)
+    // Enriched featured items — so dish tokens exist in inventory vocabulary
+    if (Array.isArray(b.menu_preview)) {
+      for (const item of b.menu_preview) {
+        addPhrase(item?.name)
+        addPhrase(item?.description)
+      }
+    }
   }
 
   return { categories, types, terms }
@@ -1464,19 +1471,19 @@ export async function generateHybridAIResponse(
       
       // Score Tier 1
     tier1.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
         businessRelevanceScores.set(b.id, score)
       })
       
       // Score Tier 2
     tier2.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
         businessRelevanceScores.set(b.id, score)
       })
       
       // Score Tier 3
     tier3.forEach(b => {
-        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+        const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
         businessRelevanceScores.set(b.id, score)
       })
       
@@ -2009,11 +2016,15 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
     
     const cityDisplayName = city.charAt(0).toUpperCase() + city.slice(1)
     
-    // Compute Atlas availability from the SAME candidates we'll show (not all businesses)
-    // This prevents AI from mentioning map when businesses have no valid coordinates
-    const candidatesForAtlas = detectedIntent.hasIntent
-      ? sortedForContext // intent mode: relevant businesses only
-      : allBusinessesForContext // browse mode: all businesses
+    // Compute Atlas availability from businesses we'll actually surface.
+    // If dish/menu matches produced a relevance filter, use that set — never the
+    // full city catalog (that caused "no sambosa" + "tour these spots" contradictions).
+    const hasMenuOrIntentHits = sortedForContext.length > 0
+      && sortedForContext.length < allBusinessesForContext.length
+      && sortedForContext.some((b) => (b.relevanceScore || 0) >= INJECT_MIN)
+    const candidatesForAtlas = (detectedIntent.hasIntent || hasMenuOrIntentHits)
+      ? sortedForContext
+      : allBusinessesForContext
     
     const atlasAvailable = (candidatesForAtlas || []).filter(hasValidCoords).length >= 2
     
@@ -2451,7 +2462,7 @@ Present this information clearly and offer further help.`
         
         // Score Tier 1
         const tier1WithScores = businesses.map(b => {
-          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
           businessRelevanceScores.set(b.id, score) // Store for carousel filtering
           return {
             ...b,
@@ -2462,7 +2473,7 @@ Present this information clearly and offer further help.`
         
         // ALWAYS score Tier 2 (for text filtering) even if we don't fetch Tier 3
         liteBusinesses.forEach(b => {
-          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet)
+          const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
           businessRelevanceScores.set(b.id, score)
         })
         
@@ -2486,7 +2497,7 @@ Present this information clearly and offer further help.`
             .map(b => ({
               ...b,
               tierPriority: 2,
-              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage),
               tierSource: 'tier2'
             }))
             .filter(b => b.relevanceScore > 0)
@@ -2498,7 +2509,7 @@ Present this information clearly and offer further help.`
             .map(b => ({
               ...b,
               tierPriority: 3,
-              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet),
+              relevanceScore: scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage),
               tierSource: 'tier3'
             }))
           

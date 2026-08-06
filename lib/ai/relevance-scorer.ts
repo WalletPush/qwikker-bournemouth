@@ -13,6 +13,75 @@ export interface ScoredBusiness {
   matchReasons: string[] // For debugging
 }
 
+const MENU_QUERY_STOPWORDS = new Set([
+  'anywhere', 'with', 'have', 'find', 'show', 'near', 'me', 'the', 'and', 'for',
+  'any', 'some', 'please', 'looking', 'want', 'get', 'where', 'can', 'you',
+  'is', 'are', 'do', 'does', 'that', 'this', 'place', 'places', 'spot', 'spots',
+  'serving', 'serve', 'food', 'something', 'good', 'best', 'like', 'about',
+  'from', 'here', 'there', 'they', 'them', 'know', 'tell', 'recommend',
+  'suggestion', 'suggestions', 'around', 'nearby', 'local', 'today', 'tonight',
+])
+
+/**
+ * Score enriched featured items (menu_preview) against the user query.
+ * Critical for Acquisition: dish names must be findable from day 1.
+ */
+export function scoreMenuPreviewMatch(
+  menuPreview: unknown,
+  intent: IntentResult,
+  queryText?: string
+): number {
+  if (!Array.isArray(menuPreview) || menuPreview.length === 0) return 0
+
+  const query = (queryText || '').toLowerCase().trim()
+  const terms = new Set<string>()
+
+  for (const term of [...intent.keywords, ...intent.cuisineTerms, ...intent.categories]) {
+    const t = String(term || '').toLowerCase().trim()
+    if (t.length >= 3) terms.add(t)
+  }
+
+  const words = query
+    .split(/[^a-z0-9]+/g)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !MENU_QUERY_STOPWORDS.has(w))
+
+  for (const word of words) terms.add(word)
+  for (let i = 0; i < words.length - 1; i++) {
+    terms.add(`${words[i]} ${words[i + 1]}`)
+  }
+
+  // Strip common lead-ins so "anywhere with beef sambosa" → "beef sambosa"
+  const dishPhrase = query
+    .replace(/^(anywhere|anyone|any place|any places|looking for|find me|find|show me|got any|do you have|is there|are there)\s+/i, '')
+    .replace(/\b(with|serving|that (has|have|serve|serves)|near me|nearby|around here)\b/gi, ' ')
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (dishPhrase.length >= 4) terms.add(dishPhrase)
+
+  if (terms.size === 0) return 0
+
+  let best = 0
+  for (const item of menuPreview) {
+    if (!item || typeof item !== 'object') continue
+    const name = String((item as any).name || '').toLowerCase().trim()
+    const desc = String((item as any).description || '').toLowerCase().trim()
+    if (!name && !desc) continue
+
+    for (const term of terms) {
+      if (term.length < 3) continue
+      if (name === term || name.includes(term)) {
+        best = Math.max(best, term.includes(' ') || term.length >= 6 ? 5 : 4)
+      } else if (desc.includes(term)) {
+        best = Math.max(best, 3)
+      }
+    }
+  }
+
+  return best
+}
+
 /**
  * Score a business's relevance to the user's intent
  * 
@@ -20,6 +89,7 @@ export interface ScoredBusiness {
  * - +3 if category/type matches intent cuisine
  * - +2 if business name contains intent keyword
  * - +1 if KB content mentions intent keyword
+ * - +3–5 if menu_preview / featured item matches the query (enrichment path)
  * 
  * Max score: 6 (category + name match)
  * Min score: 0 (no match)
@@ -29,7 +99,8 @@ export function scoreBusinessRelevance(
   intent: IntentResult,
   kbContent?: string,
   kbSimilarityScore?: number,  // ✅ SEMANTIC SEARCH = EVIDENCE (not fallback!)
-  facet?: QueryFacet  // 🔒 FACET GATE: Apply category filters for specialized queries
+  facet?: QueryFacet,  // 🔒 FACET GATE: Apply category filters for specialized queries
+  queryText?: string // Raw user message — used to match featured menu items
 ): number {
   // 🔒 FACET GATE: Apply category-aware filtering for specialized queries
   // Prevents semantic search false positives (e.g., cafes matching "cocktails")
@@ -129,20 +200,28 @@ export function scoreBusinessRelevance(
     }
   }
   
+  // Enriched featured items (menu_preview) — score before early returns so dish
+  // queries like "beef sambosa" work even when intent detection finds nothing.
+  const menuScore = scoreMenuPreviewMatch(business.menu_preview, intent, queryText)
+
   // For non-priority, non-cuisine queries with a semantic score AND no tag match, return semantic directly.
   // IMPORTANT: When categories are present (cuisine queries like "Italian", "Greek"), always run
   // keyword scoring — the +3 category match properly identifies restaurants of that cuisine.
   const hasCuisineCategories = intent.categories.length > 0
   if (semanticScore > 0 && !hasPriorityIntent && !hasCuisineCategories && vibeTagScore === 0) {
+    const early = Math.max(semanticScore, menuScore, vibeTagScore)
     if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 Relevance: ${business.business_name} = ${semanticScore} (semantic:${kbSimilarityScore?.toFixed(2)})`)
+      console.log(`📊 Relevance: ${business.business_name} = ${early} (semantic:${kbSimilarityScore?.toFixed(2)}${menuScore ? `, menu:${menuScore}` : ''})`)
     }
-    return semanticScore
+    return early
   }
   
-  // No semantic match and no intent -- nothing to score
+  // No semantic match and no intent -- still allow menu_preview dish matches
   if (!intent.hasIntent) {
-    return semanticScore // 0 if no semantic match
+    if (process.env.NODE_ENV === 'development' && menuScore > 0) {
+      console.log(`📊 Relevance: ${business.business_name} = ${menuScore} (menu_preview match)`)
+    }
+    return Math.max(semanticScore, menuScore)
   }
   
   let score = 0
@@ -280,9 +359,11 @@ export function scoreBusinessRelevance(
   // For priority queries, take the MAX of keyword and semantic scores.
   // This ensures businesses with "kids" in their KB score 4+ even if their
   // semantic similarity was moderate (0.65-0.75).
-  const finalScore = Math.max(score, semanticScore)
+  // menu_preview dish matches are also first-class evidence.
+  if (menuScore > 0) reasons.push(`menu:${menuScore}`)
+  const finalScore = Math.max(score, semanticScore, menuScore)
   
-  if (process.env.NODE_ENV === 'development' && intent.hasIntent) {
+  if (process.env.NODE_ENV === 'development' && (intent.hasIntent || menuScore > 0)) {
     if (finalScore > 0) {
       const parts = reasons.length > 0 ? reasons.join(', ') : `semantic:${kbSimilarityScore?.toFixed(2)}`
       console.log(`📊 Relevance: ${business.business_name} = ${finalScore} (${parts}${semanticScore > 0 && score > 0 ? `, max of keyword:${score} / semantic:${semanticScore}` : ''})`)

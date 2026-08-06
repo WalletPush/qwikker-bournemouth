@@ -440,11 +440,20 @@ export async function POST(request: NextRequest) {
     // AND this isn't a specific name query with no matching results
     // AND this isn't a pure event query (no relevant business results to explore)
     const isEventOnlyQuery = intent === 'events' && (result.eventCards?.length || 0) > 0
-    const showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins) && !nameMatchSuppressed && !isEventOnlyQuery
+    let showAtlasCta = atlasAvailable && hasActualBusinessResults && (hasAtlasCarousel || hasAtlasPins) && !nameMatchSuppressed && !isEventOnlyQuery
     
     // 🔧 POST-PROCESS: Remove Atlas mentions from AI response if model mentioned it but UI won't show CTA
     // CRITICAL: Use showAtlasCta (final UI truth), not atlasAvailable (prompt hint)
     let finalResponse = result.response || ''
+
+    // Never pitch "tour these spots" when the reply itself says nothing was found
+    const responseSaysNoResults = /\b(couldn'?t find|could not find|can'?t find|cannot find|no places|none of (our|the)|don'?t have any|do not have any|haven'?t found|no (matching )?listings|nothing (matching|serving|listed)|wasn'?t able to find|unable to find)\b/i.test(finalResponse)
+    if (showAtlasCta && responseSaysNoResults) {
+      showAtlasCta = false
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🗺️ ATLAS CTA SUPPRESSED: response says no results were found')
+      }
+    }
     
     // 🎯 DETAIL MODE: Check if this is a detail request about a specific business
     // GUARD: If user is asking for menu items/cocktails/dishes, do NOT enter detail mode
