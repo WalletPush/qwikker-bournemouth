@@ -116,6 +116,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  // Instant feedback when opening a business from a chat link (stops double-taps)
+  const [openingBusiness, setOpeningBusiness] = useState<string | null>(null)
+  const openingLockRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatWrapperRef = useRef<HTMLDivElement>(null)
@@ -797,16 +800,43 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     return `${href}${join}wallet_pass_id=${currentUser.wallet_pass_id}`
   }
 
-  // Soft-navigate to business pages (full reload was the main perceived delay)
-  const navigateToBusinessHref = (href: string) => {
-    const url = withWalletPass(href)
-    router.prefetch(url)
-    router.push(url)
+  const flashLinkTap = (el: HTMLElement | null) => {
+    if (!el) return
+    el.classList.add('business-link-tapped')
+    window.setTimeout(() => el.classList.remove('business-link-tapped'), 400)
   }
 
-  const handleBusinessClick = (businessName: string) => {
+  // Soft-navigate — show opening state immediately so taps feel acknowledged
+  const navigateToBusinessHref = (href: string, label?: string, tapEl?: HTMLElement | null) => {
+    if (openingLockRef.current) return
+    openingLockRef.current = true
+
+    const url = withWalletPass(href)
+    const nameFromPath = decodeURIComponent(href.split('/user/business/')[1]?.split('?')[0] || '')
+      .replace(/-/g, ' ')
+    const display = label || nameFromPath || 'listing'
+
+    flashLinkTap(tapEl || null)
+    setOpeningBusiness(display)
+    try {
+      navigator.vibrate?.(12)
+    } catch {
+      // ignore — not supported everywhere
+    }
+
+    router.prefetch(url)
+    router.push(url)
+
+    // Safety unlock if navigation is cancelled / very slow
+    window.setTimeout(() => {
+      openingLockRef.current = false
+      setOpeningBusiness(null)
+    }, 8000)
+  }
+
+  const handleBusinessClick = (businessName: string, tapEl?: HTMLElement | null) => {
     const slug = slugifyBusinessName(businessName)
-    navigateToBusinessHref(`/user/business/${slug}`)
+    navigateToBusinessHref(`/user/business/${slug}`, businessName, tapEl)
   }
 
   const handleMessageInteraction = (e: React.MouseEvent | React.PointerEvent) => {
@@ -818,7 +848,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       if (!businessName) return
       if (e.type === 'click') {
         e.preventDefault()
-        handleBusinessClick(businessName)
+        handleBusinessClick(businessName, businessLink)
       } else if (e.type === 'pointerdown' || e.type === 'mouseover') {
         router.prefetch(withWalletPass(`/user/business/${slugifyBusinessName(businessName)}`))
       }
@@ -832,7 +862,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
     if (e.type === 'click') {
       e.preventDefault()
-      navigateToBusinessHref(href)
+      const label = (anchor.textContent || '').trim() || undefined
+      navigateToBusinessHref(href, label, anchor)
     } else if (e.type === 'pointerdown' || e.type === 'mouseover') {
       router.prefetch(withWalletPass(href))
     }
@@ -916,7 +947,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       
       {/* CHAT MODE: Regular chat interface */}
       {view === 'chat' && (
-    <div ref={chatWrapperRef} className="flex flex-col max-w-4xl mx-auto" style={{ height: chatHeight }}>
+    <div ref={chatWrapperRef} className="relative flex flex-col max-w-4xl mx-auto" style={{ height: chatHeight }}>
       <style jsx>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }
@@ -932,7 +963,32 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         .animate-slide-up {
           animation: slide-up 0.6s ease-out both;
         }
+        :global(.business-link-tapped) {
+          color: #ffffff !important;
+          background: rgba(0, 208, 131, 0.4);
+          border-radius: 4px;
+          box-shadow: 0 0 0 3px rgba(0, 208, 131, 0.3);
+          transition: background 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+        }
       `}</style>
+
+      {/* Instant ack when a business link is tapped — prevents double-taps while RSC loads */}
+      {openingBusiness && (
+        <div
+          className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/55 backdrop-blur-[2px]"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="mx-6 flex items-center gap-3 rounded-2xl border border-[#00d083]/35 bg-slate-900/95 px-5 py-4 shadow-xl shadow-black/40">
+            <div className="h-5 w-5 shrink-0 rounded-full border-2 border-[#00d083]/30 border-t-[#00d083] animate-spin" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">Opening {openingBusiness}</p>
+              <p className="text-xs text-slate-400 mt-0.5">One moment…</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Toolbar -- Atlas + clear chat */}
       <div className="flex items-center justify-end gap-1 px-1 mb-2">

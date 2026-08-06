@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Business {
   id: string
@@ -45,7 +46,9 @@ interface BusinessCarouselProps {
 }
 
 export function BusinessCarousel({ businesses, currentUser, className = '', onShowOffers }: BusinessCarouselProps) {
+  const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [openingId, setOpeningId] = useState<string | null>(null)
 
   // Sort businesses by tier priority (CRITICAL: qwikker_picks ALWAYS first)
   const sortedBusinesses = [...businesses].sort((a, b) => {
@@ -204,9 +207,28 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
                       href={`/user/business/${business.slug || slugifyBusinessName(business.business_name) || business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`}
                       className="w-full"
                       prefetch
+                      onClick={(e) => {
+                        if (openingId) {
+                          e.preventDefault()
+                          return
+                        }
+                        setOpeningId(business.id)
+                        try { navigator.vibrate?.(12) } catch {}
+                        const href = `/user/business/${business.slug || slugifyBusinessName(business.business_name) || business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`
+                        router.prefetch(href)
+                      }}
                     >
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2">
-                        View Details
+                      <Button
+                        className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 ${openingId === business.id ? 'opacity-90' : ''}`}
+                      >
+                        {openingId === business.id ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                            Opening…
+                          </span>
+                        ) : (
+                          'View Details'
+                        )}
                       </Button>
                     </Link>
                     
