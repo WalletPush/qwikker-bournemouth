@@ -8,6 +8,7 @@ import Link from 'next/link'
 
 interface Business {
   id: string
+  slug?: string
   business_name: string
   business_category: string
   business_tagline?: string
@@ -26,6 +27,14 @@ interface Business {
     distanceMeters: number | null
     ratingBadge: string | null
   }
+}
+
+function slugifyBusinessName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 interface BusinessCarouselProps {
@@ -192,8 +201,9 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
                   {/* Action Buttons */}
                   <div className="mt-auto space-y-2">
                     <Link 
-                      href={`/user/business/${business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`}
+                      href={`/user/business/${business.slug || slugifyBusinessName(business.business_name) || business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`}
                       className="w-full"
+                      prefetch
                     >
                       <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2">
                         View Details

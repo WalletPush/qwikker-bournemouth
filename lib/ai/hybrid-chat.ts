@@ -59,6 +59,7 @@ interface ChatResponse {
   hasBusinessResults?: boolean // For Atlas "earned moment" without carousel spam
   businessCarousel?: Array<{
     id: string
+    slug?: string
     business_name: string
     business_tagline?: string
     system_category?: string // Stable enum for filtering
@@ -2702,6 +2703,7 @@ Present this information clearly and offer further help.`
           .filter(({ business }) => Boolean(business)) // Remove nulls
           .map(({ business: b, vibes }) => ({
             id: b!.id,
+            slug: getBusinessSlug(b!),
             business_name: b!.business_name,
             business_tagline: b!.business_tagline || undefined,
             system_category: b!.system_category || undefined,
@@ -3343,6 +3345,7 @@ async function generateBusinessDetailResponse(
       response: aiResponse,
       businessCarousel: [{
         id: business.id,
+        slug: getBusinessSlug(business),
         business_name: business.business_name,
         business_tagline: business.business_tagline,
         system_category: business.system_category,
@@ -3373,6 +3376,7 @@ async function generateBusinessDetailResponse(
       response: `${business.business_name} is located at ${business.business_address || 'this location'}. ${business.rating ? `Rated ${business.rating}★ on Google.` : ''} Want directions?`,
       businessCarousel: [{
         id: business.id,
+        slug: getBusinessSlug(business),
         business_name: business.business_name,
         business_tagline: business.business_tagline,
         system_category: business.system_category,

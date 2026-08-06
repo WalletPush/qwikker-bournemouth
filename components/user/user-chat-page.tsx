@@ -11,8 +11,16 @@ import { useUserLocation, primeLocationCache } from '@/lib/location/useUserLocat
 import { useState, useEffect, useRef, useMemo } from 'react'
 import React from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Map } from 'lucide-react'
+
+function slugifyBusinessName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
 
 interface ChatMessage {
   id: string
@@ -35,6 +43,7 @@ interface ChatMessage {
   queryKeywords?: string[] // ✅ ATLAS: Keywords detected in query (for filtering businesses)
   businessCarousel?: Array<{
     id: string
+    slug?: string
     business_name: string
     business_tagline?: string
     business_category?: string
@@ -103,6 +112,7 @@ interface ChatMessage {
 
 export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bournemouth' }: { currentUser?: any, currentCity?: string, cityDisplayName?: string }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -781,12 +791,51 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     return () => ro.disconnect()
   }, [processedMessages.length])
 
-  // Handle business name clicks
+  const withWalletPass = (href: string) => {
+    if (!currentUser?.wallet_pass_id || href.includes('wallet_pass_id=')) return href
+    const join = href.includes('?') ? '&' : '?'
+    return `${href}${join}wallet_pass_id=${currentUser.wallet_pass_id}`
+  }
+
+  // Soft-navigate to business pages (full reload was the main perceived delay)
+  const navigateToBusinessHref = (href: string) => {
+    const url = withWalletPass(href)
+    router.prefetch(url)
+    router.push(url)
+  }
+
   const handleBusinessClick = (businessName: string) => {
-    // Convert business name to slug format (match business page generation)
-    const slug = businessName.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    const url = `/user/business/${slug}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`
-    window.location.href = url
+    const slug = slugifyBusinessName(businessName)
+    navigateToBusinessHref(`/user/business/${slug}`)
+  }
+
+  const handleMessageInteraction = (e: React.MouseEvent | React.PointerEvent) => {
+    const target = e.target as HTMLElement
+
+    const businessLink = target.closest('.business-link') as HTMLElement | null
+    if (businessLink) {
+      const businessName = businessLink.getAttribute('data-business')
+      if (!businessName) return
+      if (e.type === 'click') {
+        e.preventDefault()
+        handleBusinessClick(businessName)
+      } else if (e.type === 'pointerdown' || e.type === 'mouseover') {
+        router.prefetch(withWalletPass(`/user/business/${slugifyBusinessName(businessName)}`))
+      }
+      return
+    }
+
+    const anchor = target.closest('a') as HTMLAnchorElement | null
+    if (!anchor) return
+    const href = anchor.getAttribute('href') || ''
+    if (!href.startsWith('/user/business/')) return
+
+    if (e.type === 'click') {
+      e.preventDefault()
+      navigateToBusinessHref(href)
+    } else if (e.type === 'pointerdown' || e.type === 'mouseover') {
+      router.prefetch(withWalletPass(href))
+    }
   }
 
   // Start a new chat — fresh sessionId, fresh welcome message
@@ -940,17 +989,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 }`}>
                   {message.type === 'ai' ? (
                     <div
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement
-                        console.log('🖱️ Click detected on:', target.tagName, target.className)
-                        if (target.classList.contains('business-link')) {
-                          const businessName = target.getAttribute('data-business')
-                          console.log('🏢 Business link clicked:', businessName)
-                          if (businessName) {
-                            handleBusinessClick(businessName)
-                          }
-                        }
-                      }}
+                      onClick={handleMessageInteraction}
+                      onPointerDown={handleMessageInteraction}
+                      onMouseOver={handleMessageInteraction}
                     >
                       <StreamingText 
                         htmlContent={message.processedContent}
@@ -1127,14 +1168,14 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask about restaurants, deals, menus..."
-                className="w-full bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm resize-none min-h-[44px] max-h-32 transition-colors"
+                className="w-full box-border bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm leading-5 resize-none min-h-[48px] max-h-32 overflow-y-auto transition-colors"
                 disabled={isTyping}
                 rows={1}
-                style={{ height: 'auto', minHeight: '44px' }}
+                style={{ minHeight: '48px', height: '48px' }}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement
-                  target.style.height = 'auto'
-                  target.style.height = Math.min(target.scrollHeight, 128) + 'px'
+                  target.style.height = '48px'
+                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`
                 }}
               />
             </div>
