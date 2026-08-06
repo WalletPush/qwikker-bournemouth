@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PendingLink } from '@/components/ui/nav-pending'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalizedCard, RewardCard, TonightLabel } from '@/lib/home-feed/types'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
@@ -512,7 +513,7 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
   const bgImage = card.eventImage || card.businessImage
 
   return (
-    <Link href={href} className="snap-start shrink-0 w-[78vw] sm:w-72 block">
+    <PendingLink href={href} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-72 block">
       <div
         className="relative h-64 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
@@ -530,14 +531,14 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
           <p className="text-white/90 text-xs">{card.businessName}</p>
         </div>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
 function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (href: string) => string }) {
   const bgImage = card.dishImage || card.businessImage
   return (
-    <Link href={getNavUrl(`/user/business/${card.businessSlug}`)} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
@@ -552,13 +553,13 @@ function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (hr
           </div>
         </div>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
 function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (href: string) => string }) {
   return (
-    <Link href={getNavUrl('/user/offers')} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl('/user/offers')} pendingLabel="Offers" className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
         className="relative h-44 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
@@ -571,13 +572,13 @@ function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (hr
           <p className="text-white/90 text-xs">{card.businessName}</p>
         </div>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
 function PersonalizedCardComponent({ card, getNavUrl }: { card: PersonalizedCard; getNavUrl: (href: string) => string }) {
   return (
-    <Link href={getNavUrl(`/user/business/${card.businessSlug}`)} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
@@ -591,7 +592,7 @@ function PersonalizedCardComponent({ card, getNavUrl }: { card: PersonalizedCard
           {card.dishName && !card.offerName && <p className="text-white/90 text-xs">{card.dishName}</p>}
         </div>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
@@ -600,7 +601,7 @@ function RewardCardComponent({ card, getNavUrl }: { card: RewardCard; getNavUrl:
   const isReady = card.currentBalance >= card.threshold
 
   return (
-    <Link href={getNavUrl('/user/rewards')} className="snap-start shrink-0 w-[78vw] sm:w-64">
+    <PendingLink href={getNavUrl('/user/rewards')} pendingLabel="Rewards" className="snap-start shrink-0 w-[78vw] sm:w-64">
       <div className="rounded-xl bg-slate-800 border border-slate-700/50 p-4 space-y-3">
         <div className="flex items-center gap-3">
           {card.businessLogo ? (
@@ -629,7 +630,7 @@ function RewardCardComponent({ card, getNavUrl }: { card: RewardCard; getNavUrl:
           </p>
         )}
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
@@ -654,7 +655,7 @@ function AvailableLoyaltyCard({ program }: { program: DiscoverProgram }) {
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
 
   return (
-    <Link href={`/loyalty/join/${program.public_id}`} className="snap-start shrink-0 w-[78vw] sm:w-64">
+    <PendingLink href={`/loyalty/join/${program.public_id}`} pendingLabel={program.business.business_name || 'loyalty'} className="snap-start shrink-0 w-[78vw] sm:w-64">
       <div className="rounded-xl bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-colors p-4 space-y-3">
         <div className="flex items-center gap-3">
           {program.business.logo ? (
@@ -684,13 +685,13 @@ function AvailableLoyaltyCard({ program }: { program: DiscoverProgram }) {
         />
         <p className="text-xs text-emerald-400 font-medium">Start collecting</p>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
 function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (href: string) => string }) {
   return (
-    <Link href={getNavUrl('/user/secret-menu')} className="snap-start shrink-0 w-[78vw] sm:w-64">
+    <PendingLink href={getNavUrl('/user/secret-menu')} pendingLabel="Secret Menu" className="snap-start shrink-0 w-[78vw] sm:w-64">
       <div className="relative h-48 rounded-xl overflow-hidden border border-purple-500/30 flex flex-col items-center justify-center gap-3 group hover:border-purple-500/50 transition-colors">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-slate-900/80 to-slate-900" />
         <div className="relative flex flex-col items-center gap-3">
@@ -703,7 +704,7 @@ function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (hre
           </div>
         </div>
       </div>
-    </Link>
+    </PendingLink>
   )
 }
 
@@ -774,7 +775,7 @@ function NavigationCards({
           >
             <div className="flex gap-3 px-4">
               {cards.map(c => (
-                <Link key={c.label} href={getNavUrl(c.href)} className="snap-start shrink-0 w-32">
+                <PendingLink key={c.label} href={getNavUrl(c.href)} pendingLabel={c.label} className="snap-start shrink-0 w-32">
                   <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
                     <CardContent className="p-5 text-center">
                       <div className={`w-14 h-14 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-3 flex items-center justify-center border ${c.border}`}>
@@ -787,7 +788,7 @@ function NavigationCards({
                       <p className="text-xs text-slate-400">{c.sub}</p>
                     </CardContent>
                   </Card>
-                </Link>
+                </PendingLink>
               ))}
             </div>
           </div>
@@ -813,7 +814,7 @@ function NavigationCards({
       {/* Desktop: grid */}
       <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {cards.map(c => (
-          <Link key={c.label} href={getNavUrl(c.href)} className="group">
+          <PendingLink key={c.label} href={getNavUrl(c.href)} className="group">
             <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
               <CardContent className="p-6 text-center">
                 <div className={`w-16 h-16 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-4 flex items-center justify-center border ${c.border}`}>
@@ -826,7 +827,7 @@ function NavigationCards({
                 <p className="text-sm text-slate-400">{c.sub}</p>
               </CardContent>
             </Card>
-          </Link>
+          </PendingLink>
         ))}
       </div>
     </>
@@ -888,7 +889,7 @@ function ActivityFeed({ activity, getNavUrl, getChatUrl }: { activity: ActivityI
             const iconPath = ACTIVITY_ICONS[item.icon] || ACTIVITY_ICONS.sparkles
 
             return (
-              <Link key={item.id} href={getNavUrl(item.href)} className="group">
+              <PendingLink key={item.id} href={getNavUrl(item.href)} className="group">
                 <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 transition-all duration-200 cursor-pointer">
                   <div className={`w-8 h-8 ${colors.bg} rounded-full flex items-center justify-center shrink-0`}>
                     <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -903,7 +904,7 @@ function ActivityFeed({ activity, getNavUrl, getChatUrl }: { activity: ActivityI
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
-              </Link>
+              </PendingLink>
             )
           })}
         </div>

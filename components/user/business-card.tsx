@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { PendingLink } from '@/components/ui/nav-pending'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
@@ -706,12 +706,16 @@ export function BusinessCard({
     )
   }
 
-  // If href is provided, wrap in Link
+  // If href is provided, wrap in Link with instant opening feedback
   if (href) {
     return (
-      <Link href={href} className="block">
+      <PendingLink
+        href={href}
+        className="block"
+        pendingLabel={business.name || business.business_name || 'listing'}
+      >
         {cardContent}
-      </Link>
+      </PendingLink>
     )
   }
 

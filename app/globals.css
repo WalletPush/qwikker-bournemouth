@@ -91,6 +91,12 @@ button {
   z-index: 10 !important;
 }
 
+/* Instant tap acknowledgment — press flash only, no loading overlays */
+.tap-target.tap-pressed {
+  transform: scale(0.97);
+  filter: brightness(1.12);
+}
+
 /* Fix mobile navigation and touch targets */
 @media (max-width: 768px) {
   /* Ensure minimum touch target size (exclude Atlas map overlay) */

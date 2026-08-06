@@ -116,7 +116,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  // Instant feedback when opening a business from a chat link (stops double-taps)
+  // Chat business links only — show "Opening…" while the listing loads
   const [openingBusiness, setOpeningBusiness] = useState<string | null>(null)
   const openingLockRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -806,7 +806,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     window.setTimeout(() => el.classList.remove('business-link-tapped'), 400)
   }
 
-  // Soft-navigate — show opening state immediately so taps feel acknowledged
+  // Soft-navigate — chat links get "Opening…" copy; other nav uses press flash only
   const navigateToBusinessHref = (href: string, label?: string, tapEl?: HTMLElement | null) => {
     if (openingLockRef.current) return
     openingLockRef.current = true
@@ -818,16 +818,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
     flashLinkTap(tapEl || null)
     setOpeningBusiness(display)
-    try {
-      navigator.vibrate?.(12)
-    } catch {
-      // ignore — not supported everywhere
-    }
-
+    try { navigator.vibrate?.(8) } catch {}
     router.prefetch(url)
     router.push(url)
 
-    // Safety unlock if navigation is cancelled / very slow
     window.setTimeout(() => {
       openingLockRef.current = false
       setOpeningBusiness(null)
@@ -965,14 +959,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         }
         :global(.business-link-tapped) {
           color: #ffffff !important;
-          background: rgba(0, 208, 131, 0.4);
-          border-radius: 4px;
-          box-shadow: 0 0 0 3px rgba(0, 208, 131, 0.3);
-          transition: background 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+          background: rgba(0, 208, 131, 0.35);
+          border-radius: 3px;
+          transition: background 0.12s ease, color 0.12s ease;
         }
       `}</style>
 
-      {/* Instant ack when a business link is tapped — prevents double-taps while RSC loads */}
       {openingBusiness && (
         <div
           className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/55 backdrop-blur-[2px]"
@@ -989,7 +981,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           </div>
         </div>
       )}
-      
+
       {/* Toolbar -- Atlas + clear chat */}
       <div className="flex items-center justify-end gap-1 px-1 mb-2">
         {atlasEnabled && (

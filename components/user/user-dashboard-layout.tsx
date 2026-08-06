@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
-import Link from 'next/link'
+import { NavPendingProvider, PendingLink } from '@/components/ui/nav-pending'
 
 interface UserDashboardLayoutProps {
   children: React.ReactNode
@@ -143,6 +143,7 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
   }
 
   return (
+    <NavPendingProvider>
     <SidebarContext.Provider value={{ sidebarOpen }}>
     <div className="min-h-screen bg-slate-950 text-slate-100">
         {/* Mobile sidebar overlay */}
@@ -184,9 +185,10 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
           overscrollBehavior: 'contain'
         }}>
           {navItems.map((item) => (
-            <Link
+            <PendingLink
               key={item.id}
               href={getNavUrl(item.href)}
+              pendingLabel={item.title}
               onClick={() => setSidebarOpen(false)} // Close mobile sidebar on navigation
               className={`flex items-center gap-3 px-4 py-4 rounded-lg transition-colors touch-manipulation min-h-[48px] ${
                 currentSection === item.id
@@ -201,7 +203,7 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
                   {notifBadge > 99 ? '99+' : notifBadge}
                 </span>
               )}
-            </Link>
+            </PendingLink>
           ))}
         </nav>
 
@@ -282,5 +284,6 @@ export function UserDashboardLayout({ children, currentSection, currentUser, wal
       </div>
     </div>
     </SidebarContext.Provider>
+    </NavPendingProvider>
   )
 }

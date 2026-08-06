@@ -4,8 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ImageCarousel } from '@/components/ui/image-carousel'
 import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { PendingLink } from '@/components/ui/nav-pending'
 
 interface Business {
   id: string
@@ -46,9 +45,7 @@ interface BusinessCarouselProps {
 }
 
 export function BusinessCarousel({ businesses, currentUser, className = '', onShowOffers }: BusinessCarouselProps) {
-  const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [openingId, setOpeningId] = useState<string | null>(null)
 
   // Sort businesses by tier priority (CRITICAL: qwikker_picks ALWAYS first)
   const sortedBusinesses = [...businesses].sort((a, b) => {
@@ -203,34 +200,16 @@ export function BusinessCarousel({ businesses, currentUser, className = '', onSh
 
                   {/* Action Buttons */}
                   <div className="mt-auto space-y-2">
-                    <Link 
+                    <PendingLink 
                       href={`/user/business/${business.slug || slugifyBusinessName(business.business_name) || business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`}
                       className="w-full"
                       prefetch
-                      onClick={(e) => {
-                        if (openingId) {
-                          e.preventDefault()
-                          return
-                        }
-                        setOpeningId(business.id)
-                        try { navigator.vibrate?.(12) } catch {}
-                        const href = `/user/business/${business.slug || slugifyBusinessName(business.business_name) || business.id}${currentUser?.wallet_pass_id ? `?wallet_pass_id=${currentUser.wallet_pass_id}` : ''}`
-                        router.prefetch(href)
-                      }}
+                      pendingLabel={business.business_name}
                     >
-                      <Button
-                        className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 ${openingId === business.id ? 'opacity-90' : ''}`}
-                      >
-                        {openingId === business.id ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                            Opening…
-                          </span>
-                        ) : (
-                          'View Details'
-                        )}
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2">
+                        View Details
                       </Button>
-                    </Link>
+                    </PendingLink>
                     
                     {business.offers_count && business.offers_count > 0 && (
                       <Button 

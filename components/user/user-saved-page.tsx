@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { useState } from 'react'
 import Link from 'next/link'
+import { PendingLink } from '@/components/ui/nav-pending'
 import { unsaveItem } from '@/lib/actions/user-saved-actions'
 import { useRouter } from 'next/navigation'
 
@@ -180,12 +181,13 @@ export function UserSavedPage({ savedItems, walletPassId }: UserSavedPageProps) 
             </svg>
             <h3 className="text-xl font-semibold text-slate-300 mb-2">No saved items yet</h3>
             <p className="text-slate-400 mb-6">Start exploring and save your favorite places!</p>
-            <Link
+            <PendingLink
               href={getNavUrl('/user/discover')}
+              pendingLabel="Discover"
               className="inline-block bg-pink-500 hover:bg-pink-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
             >
               Discover Places
-            </Link>
+            </PendingLink>
           </CardContent>
         </Card>
       ) : (
@@ -215,11 +217,11 @@ export function UserSavedPage({ savedItems, walletPassId }: UserSavedPageProps) 
                   </button>
                 </div>
 
-                <Link href={getItemLink(item)}>
+                <PendingLink href={getItemLink(item)} pendingLabel={item.item_name || 'listing'}>
                   <h3 className="text-lg font-semibold text-slate-100 mb-2 hover:text-pink-400 transition-colors">
                     {item.item_name || 'Saved Item'}
                   </h3>
-                </Link>
+                </PendingLink>
 
                 <p className="text-xs text-slate-400">
                   Saved {new Date(item.saved_at).toLocaleDateString('en-US', {

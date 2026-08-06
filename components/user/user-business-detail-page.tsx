@@ -9,6 +9,7 @@ import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { PendingLink } from '@/components/ui/nav-pending'
 import { useSearchParams } from 'next/navigation'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
@@ -195,11 +196,11 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
         <h1 className="text-2xl font-bold text-white mb-4">Business Not Found</h1>
         <p className="text-gray-400 mb-6">The business you're looking for doesn't exist.</p>
-        <Link href={getNavUrl("/user/discover")}>
+        <PendingLink href={getNavUrl("/user/discover")} pendingLabel="Discover">
           <Button className="bg-[#00d083] hover:bg-[#00b86f] text-black">
             Back to Discover
           </Button>
-        </Link>
+        </PendingLink>
       </div>
     )
   }
@@ -361,7 +362,9 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         <h1 className="text-2xl font-bold text-slate-100 mb-4">Business Not Found</h1>
         <p className="text-slate-400 mb-6">The business you're looking for doesn't exist.</p>
         <Button asChild>
-          <Link href={getNavUrl("/user/discover")}>Back to Discover</Link>
+          <PendingLink href={getNavUrl("/user/discover")} pendingLabel="Discover">
+            Back to Discover
+          </PendingLink>
         </Button>
       </div>
     )
@@ -390,12 +393,12 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
       {/* Back Button */}
       <div>
         <Button variant="outline" asChild className="border-slate-600 text-slate-300 hover:bg-slate-700">
-          <Link href={getNavUrl("/user/discover")}>
+          <PendingLink href={getNavUrl("/user/discover")} pendingLabel="Discover">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Discover
-          </Link>
+          </PendingLink>
         </Button>
       </div>
 
