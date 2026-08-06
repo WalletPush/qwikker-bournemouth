@@ -77,15 +77,9 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
     }
   }
   
-  // Fetch eligible businesses (subscription-aware, filters out expired trials)
-  // Uses business_profiles_chat_eligible view which enforces:
-  // ✅ status = 'approved'
-  // ✅ Active subscription (paid or trial)
-  // ✅ Excludes expired trials
-  // ✅ Excludes unclaimed/incomplete businesses
-  const { data: approvedBusinesses, error } = await supabase
-    .from('business_profiles_chat_eligible')
-    .select(`
+  // Same scope as Offers: paid/trial (chat_eligible) + free listings (claimed_free).
+  // chat_eligible alone hid claimed_free secret menus even when Discover showed the business.
+  const selectCols = `
       id,
       business_name,
       system_category,
@@ -95,14 +89,33 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
       additional_notes,
       status,
       plan
-    `)
-    .eq('city', currentCity) // SECURITY: Filter by franchise city
-    .not('business_name', 'is', null)
+    `
+  const [{ data: paidOrTrial, error: paidErr }, { data: freeListings, error: freeErr }] =
+    await Promise.all([
+      supabase
+        .from('business_profiles_chat_eligible')
+        .select(selectCols)
+        .eq('city', currentCity)
+        .not('business_name', 'is', null),
+      supabase
+        .from('business_profiles')
+        .select(selectCols)
+        .eq('city', currentCity)
+        .eq('status', 'claimed_free')
+        .not('business_name', 'is', null),
+    ])
 
+  const error = paidErr || freeErr
   if (error) {
     console.error('Error fetching businesses with secret menus:', error)
     console.error('Error details:', JSON.stringify(error, null, 2))
   }
+
+  const byId = new Map<string, NonNullable<typeof paidOrTrial>[number]>()
+  for (const b of [...(paidOrTrial || []), ...(freeListings || [])]) {
+    byId.set(b.id, b)
+  }
+  const approvedBusinesses = Array.from(byId.values())
 
   // Parse real secret menu items from approved businesses
   const realSecretMenus = (approvedBusinesses || []).map(business => {

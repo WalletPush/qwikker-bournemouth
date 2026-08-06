@@ -96,17 +96,25 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   const userCity = currentUser?.city || currentCity
   const franchiseCity = currentCity // Use validated city directly
   
-  // First get eligible businesses for this franchise (subscription-aware)
-  // Uses business_profiles_chat_eligible view which enforces:
-  // ✅ status = 'approved'
-  // ✅ Active subscription (paid or trial)
-  // ✅ Excludes expired trials
-  const { data: franchiseBusinesses, error: businessError } = await supabase
-    .from('business_profiles_chat_eligible')
-    .select('id, business_name, city, status')
-    .eq('city', franchiseCity)
-  
-  const businessIds = franchiseBusinesses?.map(b => b.id) || []
+  // Offers tab = city marketplace, not AI Tier-1 only.
+  // Tier 1 (chat_eligible): paid + active free trial (excludes expired trials).
+  // Free listings (claimed_free): Tier 2 — on Discover/profile but NOT in chat_eligible.
+  // Union both so free-listing offers appear here too.
+  const [{ data: paidOrTrial }, { data: freeListings }] = await Promise.all([
+    supabase
+      .from('business_profiles_chat_eligible')
+      .select('id')
+      .eq('city', franchiseCity),
+    supabase
+      .from('business_profiles')
+      .select('id')
+      .eq('city', franchiseCity)
+      .eq('status', 'claimed_free'),
+  ])
+
+  const businessIds = Array.from(
+    new Set([...(paidOrTrial || []), ...(freeListings || [])].map((b) => b.id))
+  )
   
   // Then get offers for those businesses
   
