@@ -1163,20 +1163,16 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         <div className="p-3 border-t border-slate-800/60">
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <textarea
+              <input
+                type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask about restaurants, deals, menus..."
-                className="w-full box-border bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm leading-5 resize-none min-h-[48px] max-h-32 overflow-y-auto transition-colors"
+                placeholder="Ask Qwikker..."
+                className="w-full h-12 box-border bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm leading-none"
                 disabled={isTyping}
-                rows={1}
-                style={{ minHeight: '48px', height: '48px' }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement
-                  target.style.height = '48px'
-                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`
-                }}
+                enterKeyHint="send"
+                autoComplete="off"
               />
             </div>
             <Button 
