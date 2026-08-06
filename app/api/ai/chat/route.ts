@@ -384,21 +384,15 @@ export async function POST(request: NextRequest) {
     const atlasAvailable = result.metadata?.atlasAvailable ?? false
     const coordsCandidateCount = result.metadata?.coordsCandidateCount ?? 0
     
-    // Count how many businesses in carousel have valid coords
-    const hasAtlasCarousel = (result.businessCarousel || []).filter((b: any) => 
-      b.latitude && 
-      b.longitude && 
-      Math.abs(Number(b.latitude)) <= 90 && 
+    // Valid-coord helpers — CTA is allowed for a single suggested place
+    const hasValidAtlasCoord = (b: any) =>
+      b?.latitude &&
+      b?.longitude &&
+      Math.abs(Number(b.latitude)) <= 90 &&
       Math.abs(Number(b.longitude)) <= 180
-    ).length >= 2
-    
-    // Count how many map pins have valid coords (2+ for a meaningful Atlas tour)
-    const hasAtlasPins = (result.mapPins || []).filter((p: any) => 
-      p.latitude && 
-      p.longitude && 
-      Math.abs(Number(p.latitude)) <= 90 && 
-      Math.abs(Number(p.longitude)) <= 180
-    ).length >= 2
+
+    const hasAtlasCarousel = (result.businessCarousel || []).filter(hasValidAtlasCoord).length >= 1
+    const hasAtlasPins = (result.mapPins || []).filter(hasValidAtlasCoord).length >= 1
     
     const hasActualBusinessResults = !!(
       (result.businessCarousel && result.businessCarousel.length > 0) ||
@@ -1096,19 +1090,57 @@ export async function POST(request: NextRequest) {
       finalResponse = finalResponse.replace(/\n{3,}/g, '\n\n').trim()
     }
     
-    // 🗺️ ATLAS TEXT: Ensure Atlas is mentioned when CTA will show
-    if (showAtlasCta && finalResponse && !/atlas/i.test(finalResponse)) {
-      finalResponse = finalResponse.trimEnd() + '\n\nTap **Explore on Atlas** below to take a guided tour of these spots on the map!'
-    }
-
     // 🔗 AUTO-LINK: Inject links for bold business names the AI forgot to link
     // contextBusinesses = every business sent to the AI prompt (guaranteed superset of carousel/mapPins)
     const allKnownBusinesses = [
       ...(result.businessCarousel || []),
-      ...(result.mapPins || []).map((p: any) => ({ business_name: p.name, slug: p.slug, id: p.id })),
+      ...(result.mapPins || []).map((p: any) => ({ business_name: p.business_name || p.name, slug: p.slug, id: p.id })),
       ...(result.contextBusinesses || []),
     ]
     finalResponse = autoInjectBusinessLinks(finalResponse, allKnownBusinesses)
+
+    // 🗺️ Scope Atlas pins to businesses the reply actually linked.
+    // Stops "1 place suggested → Take a tour (12 places)".
+    let atlasPins = nameMatchSuppressed ? [] : [...(result.mapPins || [])]
+    const linkedSlugs = new Set(
+      [...finalResponse.matchAll(/\/user\/business\/([a-z0-9-]+)/gi)].map((m) => m[1].toLowerCase())
+    )
+    if (linkedSlugs.size > 0 && atlasPins.length > 0) {
+      const slugify = (name: string) =>
+        name.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const scoped = atlasPins.filter((p: any) => {
+        const slug = String(p.slug || slugify(p.business_name || p.name || '')).toLowerCase()
+        return linkedSlugs.has(slug)
+      })
+      if (scoped.length > 0) {
+        console.log(`🗺️ ATLAS pins scoped to ${scoped.length} linked business(es) (was ${atlasPins.length})`)
+        atlasPins = scoped
+      }
+    }
+
+    const scopedAtlasCount = atlasPins.filter(hasValidAtlasCoord).length
+    // Recompute CTA from scoped pins (1 place is enough — user still wants Atlas)
+    if (!responseSaysNoResults && !nameMatchSuppressed && !isEventOnlyQuery && scopedAtlasCount >= 1) {
+      showAtlasCta = true
+    } else if (scopedAtlasCount === 0 || responseSaysNoResults) {
+      showAtlasCta = false
+    }
+
+    // Atlas footer copy — singular/plural must match scoped pin count
+    if (finalResponse) {
+      finalResponse = finalResponse
+        .replace(/[^.!?\n]*\b[Aa]tlas\b[^.!?\n]*[.!?]?\s*/g, '')
+        .replace(/[^.!?\n]*\bmap below\b[^.!?\n]*[.!?]?\s*/g, '')
+        .replace(/  +/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+    }
+    if (showAtlasCta && finalResponse) {
+      const atlasLine = scopedAtlasCount === 1
+        ? 'Tap **Explore on Atlas** below to see this spot on the map!'
+        : 'Tap **Explore on Atlas** below to take a guided tour of these spots on the map!'
+      finalResponse = finalResponse.trimEnd() + `\n\n${atlasLine}`
+    }
 
     // 🚨 HALLUCINATION GUARD: Strip bold from non-linked names (likely hallucinated businesses)
     // Runs AFTER autoInjectBusinessLinks so all known Qwikker businesses are already **[Name](link)** format
@@ -1210,7 +1242,7 @@ export async function POST(request: NextRequest) {
       quickReplies,
       hasBusinessResults: result.hasBusinessResults,
       businessCarousel: result.businessCarousel,
-      mapPins: nameMatchSuppressed ? [] : result.mapPins, // ✅ ATLAS: Clear pins if name query didn't match
+      mapPins: atlasPins, // Scoped to businesses actually linked in the reply
       queryCategories: result.queryCategories || [], // ✅ ATLAS: For filtering businesses by query
       queryKeywords: result.queryKeywords || [], // ✅ ATLAS: For filtering businesses by query
       walletActions: result.walletActions,

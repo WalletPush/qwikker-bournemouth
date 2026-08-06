@@ -60,7 +60,11 @@ export function scoreMenuPreviewMatch(
     .trim()
   if (dishPhrase.length >= 4) terms.add(dishPhrase)
 
-  if (terms.size === 0) return 0
+  if (terms.size === 0 || words.length === 0) return 0
+
+  // Multi-word dish queries ("shrimp soup", "beef sambosa") must not match
+  // every item that only shares a weak single token like "soup".
+  const isMultiWordDishQuery = words.length >= 2
 
   let best = 0
   for (const item of menuPreview) {
@@ -68,6 +72,23 @@ export function scoreMenuPreviewMatch(
     const name = String((item as any).name || '').toLowerCase().trim()
     const desc = String((item as any).description || '').toLowerCase().trim()
     if (!name && !desc) continue
+    const hay = `${name} ${desc}`
+
+    const matchedWords = words.filter((w) => hay.includes(w))
+    const phraseHit = words.length >= 2 && (
+      name.includes(words.join(' ')) ||
+      hay.includes(words.join(' ')) ||
+      // tolerate plural/spacing drift: "shrimp soup" ≈ "shrimps soup"
+      matchedWords.length >= 2
+    )
+
+    if (isMultiWordDishQuery) {
+      if (phraseHit || matchedWords.length >= 2) {
+        best = Math.max(best, 5)
+      }
+      // Ignore single-token hits for multi-word dish asks
+      continue
+    }
 
     for (const term of terms) {
       if (term.length < 3) continue

@@ -123,6 +123,7 @@ interface ChatResponse {
   mapPins?: Array<{
     // ✅ ATLAS: ALL businesses for map (paid + unclaimed + claimed_free)
     id: string
+    slug?: string
     business_name: string
     latitude: number
     longitude: number
@@ -3080,10 +3081,16 @@ Present this information clearly and offer further help.`
     ]
     
     if (shouldBuildMapPins) {
-      // 🚨 FIX: Use sortedForContext (relevance-filtered) instead of ALL businesses
-      // This ensures Atlas shows ONLY relevant results (e.g. Greek query => only Greek pins)
-      const relevantBusinessesForAtlas = sortedForContext.slice(0, 25) // Cap at 25 for performance
+      // Prefer strong matches for Atlas — weak score>=1 noise made dish queries
+      // open a 12-place tour when chat only named one spot.
+      const topAtlasScore = Math.max(0, ...sortedForContext.map((b: any) => b.relevanceScore || 0))
+      const atlasScoreFloor = topAtlasScore >= CAROUSEL_MIN ? CAROUSEL_MIN : CONTEXT_MIN
+      const relevantBusinessesForAtlas = sortedForContext
+        .filter((b: any) => (b.relevanceScore || 0) >= atlasScoreFloor)
+        .slice(0, 12)
       
+      console.log(`🗺️ Atlas pin floor: score>=${atlasScoreFloor} (top=${topAtlasScore}) → ${relevantBusinessesForAtlas.length} candidates`)
+
       // Optimization: Build tier ID sets once for O(1) lookup (important for large cities)
       const tier1Ids = new Set((tier1 || []).map((b: any) => b.id))
       const tier2Ids = new Set((tier2 || []).map((b: any) => b.id))
@@ -3103,6 +3110,7 @@ Present this information clearly and offer further help.`
 
           mapPins.push({
             id: b.id,
+            slug: getBusinessSlug(b),
             business_name: b.business_name,
             latitude: b.latitude,
             longitude: b.longitude,
