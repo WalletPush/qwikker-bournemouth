@@ -91,10 +91,10 @@ button {
   z-index: 10 !important;
 }
 
-/* Instant tap acknowledgment — press flash only, no loading overlays */
-.tap-target.tap-pressed {
-  transform: scale(0.97);
-  filter: brightness(1.12);
+/* Subtle press feedback — CSS :active only (no JS class toggle; that double-fired) */
+.tap-feedback {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Fix mobile navigation and touch targets */

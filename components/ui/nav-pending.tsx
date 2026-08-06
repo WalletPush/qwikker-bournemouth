@@ -2,14 +2,13 @@
 
 import {
   type ComponentProps,
-  type MouseEvent,
   type ReactNode,
 } from 'react'
 import Link from 'next/link'
 
 /**
- * Lightweight tap acknowledgment for nav links.
- * No overlays / "Opening…" copy — just a quick press flash so the tap feels registered.
+ * Lightweight tap acknowledgment — CSS press only.
+ * Avoid JS class toggles here; stacking with :active caused a double-flash glitch.
  */
 
 interface NavPendingProviderProps {
@@ -21,7 +20,7 @@ export function NavPendingProvider({ children }: NavPendingProviderProps) {
   return <>{children}</>
 }
 
-/** @deprecated No-op kept so older call sites compile; prefer TapLink press styles. */
+/** @deprecated No-op kept so older call sites compile. */
 export function useNavPending() {
   return {
     isPending: false,
@@ -36,40 +35,21 @@ interface PendingLinkProps extends ComponentProps<typeof Link> {
   children: ReactNode
 }
 
-function flashTap(el: HTMLElement) {
-  el.classList.add('tap-pressed')
-  window.setTimeout(() => el.classList.remove('tap-pressed'), 220)
-  try {
-    navigator.vibrate?.(8)
-  } catch {
-    // ignore
-  }
-}
+/** Shared subtle press classes for links and buttons. */
+export const TAP_FEEDBACK_CLASS =
+  'tap-feedback transition-[transform,filter] duration-100 ease-out active:scale-[0.98] active:brightness-110'
 
-/** Drop-in Link with instant press feedback (scale/flash), no loading overlay. */
+/** Drop-in Link with subtle press feedback only (no overlay / no JS flash). */
 export function PendingLink({
   pendingLabel: _pendingLabel,
-  onClick,
   className,
   children,
   ...props
 }: PendingLinkProps) {
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-      flashTap(e.currentTarget)
-    }
-    onClick?.(e)
-  }
-
   return (
     <Link
       {...props}
-      onClick={handleClick}
-      className={[
-        'tap-target transition-transform duration-150 ease-out',
-        'active:scale-[0.97] active:brightness-110',
-        className || '',
-      ].join(' ')}
+      className={[TAP_FEEDBACK_CLASS, className || ''].join(' ')}
     >
       {children}
     </Link>

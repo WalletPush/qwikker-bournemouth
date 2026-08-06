@@ -9,7 +9,7 @@ import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { PendingLink } from '@/components/ui/nav-pending'
+import { PendingLink, TAP_FEEDBACK_CLASS } from '@/components/ui/nav-pending'
 import { useSearchParams } from 'next/navigation'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
@@ -549,7 +549,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         {/* Book Now — only shown when business has configured a booking method */}
         {business.booking_preference && business.booking_preference !== 'none' && (
           <Button
-            className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold"
+            className={`${TAP_FEEDBACK_CLASS} bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold`}
             onClick={() => {
               // Fire-and-forget booking click event
               if (trackingData?.businessId) {
@@ -591,7 +591,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
         <Button 
           variant="outline" 
-          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          className={`${TAP_FEEDBACK_CLASS} border-slate-600 text-slate-300 hover:bg-slate-700`}
           onClick={() => {
             // Detect if user is on iOS/macOS
             const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)
@@ -626,7 +626,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         
         <Button 
           variant="outline" 
-          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          className={`${TAP_FEEDBACK_CLASS} border-slate-600 text-slate-300 hover:bg-slate-700`}
           onClick={() => {
             if (business.phone) {
               window.location.href = `tel:${business.phone}`
@@ -644,7 +644,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         {business.website && (
           <Button
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            className={`${TAP_FEEDBACK_CLASS} border-slate-600 text-slate-300 hover:bg-slate-700`}
             onClick={() => {
               const url = business.website.startsWith('http') ? business.website : `https://${business.website}`
               window.open(url, '_blank', 'noopener,noreferrer')
@@ -659,7 +659,7 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         
         <Button 
           variant="outline" 
-          className={`transition-all ${
+          className={`${TAP_FEEDBACK_CLASS} ${
             isSaved 
               ? 'border-[#00d083] bg-[#00d083]/10 text-[#00d083] hover:bg-[#00d083]/20' 
               : 'border-slate-600 text-slate-300 hover:bg-slate-700'

@@ -800,14 +800,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     return `${href}${join}wallet_pass_id=${currentUser.wallet_pass_id}`
   }
 
-  const flashLinkTap = (el: HTMLElement | null) => {
-    if (!el) return
-    el.classList.add('business-link-tapped')
-    window.setTimeout(() => el.classList.remove('business-link-tapped'), 400)
-  }
-
-  // Soft-navigate — chat links get "Opening…" copy; other nav uses press flash only
-  const navigateToBusinessHref = (href: string, label?: string, tapEl?: HTMLElement | null) => {
+  // Soft-navigate — chat links get "Opening…" (tap flash left to CSS :active on the link)
+  const navigateToBusinessHref = (href: string, label?: string, _tapEl?: HTMLElement | null) => {
     if (openingLockRef.current) return
     openingLockRef.current = true
 
@@ -816,9 +810,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       .replace(/-/g, ' ')
     const display = label || nameFromPath || 'listing'
 
-    flashLinkTap(tapEl || null)
     setOpeningBusiness(display)
-    try { navigator.vibrate?.(8) } catch {}
     router.prefetch(url)
     router.push(url)
 
@@ -957,11 +949,15 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         .animate-slide-up {
           animation: slide-up 0.6s ease-out both;
         }
-        :global(.business-link-tapped) {
-          color: #ffffff !important;
-          background: rgba(0, 208, 131, 0.35);
-          border-radius: 3px;
-          transition: background 0.12s ease, color 0.12s ease;
+        :global(.business-link),
+        :global(a[href^="/user/business/"]) {
+          -webkit-tap-highlight-color: transparent;
+          transition: filter 0.1s ease, opacity 0.1s ease;
+        }
+        :global(.business-link:active),
+        :global(a[href^="/user/business/"]:active) {
+          filter: brightness(1.15);
+          opacity: 0.9;
         }
       `}</style>
 
