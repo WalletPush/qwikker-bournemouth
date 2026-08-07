@@ -727,13 +727,22 @@ export async function updateBusinessTier(params: {
     let trialEndDate = null
     
     if (isTrial) {
-      if (existingSubscription?.free_trial_start_date && existingSubscription?.free_trial_end_date) {
-        // Preserve original trial dates
+      const existingEnd = existingSubscription?.free_trial_end_date
+        ? new Date(existingSubscription.free_trial_end_date)
+        : null
+      const existingStillActive = existingEnd && existingEnd >= now
+
+      if (
+        existingStillActive &&
+        existingSubscription?.free_trial_start_date &&
+        existingSubscription?.free_trial_end_date
+      ) {
+        // Preserve still-active trial dates
         trialStartDate = existingSubscription.free_trial_start_date
         trialEndDate = existingSubscription.free_trial_end_date
         console.log('✅ Preserving original trial dates')
       } else {
-        // Create new trial (for new businesses or manual trial extension)
+        // New trial OR reactivate expired trial with fresh window
         trialStartDate = now.toISOString()
         trialEndDate = new Date(now.getTime() + (trialDays || 90) * 24 * 60 * 60 * 1000).toISOString()
         console.log(`✅ Creating new ${trialDays || 90}-day trial`)
@@ -775,6 +784,9 @@ export async function updateBusinessTier(params: {
     console.log('✅ Profile updated with features:', features)
 
     // 5. Update or Insert business_subscriptions (manual check since no unique constraint)
+    // Admin-granted paid tiers: clear current_period_end (null = no expiry).
+    // Leaving a past current_period_end makes entitlement fall through to SUB_OTHER
+    // ("Unknown") even when status is active — save looks successful but UI never updates.
     const subscriptionData: any = {
       business_id: businessId, // Use businessId (profile.id) to match foreign key constraint
       tier_id: tierData.id,
@@ -783,6 +795,9 @@ export async function updateBusinessTier(params: {
       // CRITICAL: When upgrading from trial to paid, clear trial dates
       free_trial_start_date: isTrial ? trialStartDate : null,
       free_trial_end_date: isTrial ? trialEndDate : null,
+      current_period_start: isTrial ? null : now.toISOString(),
+      // Paid admin grant: null = no expiry (must clear stale past dates or CRM stays "Unknown")
+      current_period_end: null,
       updated_at: now.toISOString()
     }
     

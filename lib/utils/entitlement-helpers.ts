@@ -149,6 +149,7 @@ export function computeEntitlementState(
   // ========================================
   if (sub.status === 'active') {
     // Check if subscription period is still valid
+    // null/missing current_period_end = no expiry (admin-granted)
     const isPeriodValid = !sub.current_period_end || new Date(sub.current_period_end) >= now
     
     if (isPeriodValid) {
@@ -165,6 +166,21 @@ export function computeEntitlementState(
         displayLabel: sub.tier_display_name || sub.tier_name || 'Paid',
         displayColor: 'text-green-400'
       }
+    }
+
+    // status=active but period already ended → treat as lapsed (not Unknown)
+    return {
+      state: 'PAID_LAPSED',
+      isClaimed: true,
+      isUnclaimed: false,
+      isTrialActive: false,
+      isTrialExpired: false,
+      isPaidActive: false,
+      tierNameOrNull: null,
+      shouldLockControls: false,
+      shouldShowToUsers: false,
+      displayLabel: 'Expired',
+      displayColor: 'text-orange-400'
     }
   }
   
