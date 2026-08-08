@@ -40,6 +40,8 @@ interface FranchiseEmailOptions {
     sentBy?: string
     campaignId?: string
     batchId?: string
+    threadId?: string
+    inReplyToSendId?: string
     skipLog?: boolean
   }
 }
@@ -173,6 +175,8 @@ async function persistSendLog(params: {
       businessId: params.logMeta?.businessId || null,
       campaignId: params.logMeta?.campaignId || null,
       batchId: params.logMeta?.batchId || null,
+      threadId: params.logMeta?.threadId || null,
+      inReplyToSendId: params.logMeta?.inReplyToSendId || null,
       metadata: params.error ? { error: params.error } : {},
     })
     if (id) lastId = id

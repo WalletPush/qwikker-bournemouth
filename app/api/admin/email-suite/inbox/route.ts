@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from('email_sends')
     .select(
-      'id, direction, to_email, from_email, subject, status, thread_id, business_id, sent_at, created_at'
+      'id, direction, to_email, from_email, subject, html_body, text_body, status, thread_id, business_id, sent_at, created_at'
     )
     .eq('city', auth.city)
     .eq('direction', 'inbound')
@@ -48,8 +48,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     inbound: data || [],
-    receivingReady: false,
-    note: 'Inbox populates when Resend Receiving is enabled and webhooks hit /api/webhooks/resend (email.received).',
   })
 }
 
@@ -85,6 +83,8 @@ export async function POST(request: NextRequest) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')}</div>`
 
+  const threadId = body.threadId || body.inReplyToSendId || undefined
+
   const result = await sendFranchiseEmail({
     city: auth.city,
     to: body.toEmail,
@@ -95,19 +95,10 @@ export async function POST(request: NextRequest) {
       templateKey: 'inbox_reply',
       category: 'system',
       sentBy: auth.adminId,
+      threadId,
+      inReplyToSendId: body.inReplyToSendId,
     },
   })
-
-  if (result.success && result.emailSendId && (body.threadId || body.inReplyToSendId)) {
-    const supabase = createAdminClient()
-    await supabase
-      .from('email_sends')
-      .update({
-        thread_id: body.threadId || body.inReplyToSendId || null,
-        in_reply_to_send_id: body.inReplyToSendId || null,
-      })
-      .eq('id', result.emailSendId)
-  }
 
   if (!result.success) {
     return NextResponse.json({ error: result.error || 'Send failed' }, { status: 500 })

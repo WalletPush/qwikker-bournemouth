@@ -136,6 +136,10 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
   const [automations, setAutomations] = useState<AutomationRow[]>([])
   const [suppressions, setSuppressions] = useState<Array<Record<string, unknown>>>([])
   const [inbound, setInbound] = useState<Array<Record<string, unknown>>>([])
+  const [selectedInboundId, setSelectedInboundId] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const [replyBusy, setReplyBusy] = useState(false)
+  const [replyNotice, setReplyNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sendBusy, setSendBusy] = useState(false)
@@ -514,9 +518,63 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
     const res = await fetch('/api/admin/email-suite/inbox')
     if (res.ok) {
       const json = await res.json()
-      setInbound(json.inbound || [])
+      const rows = (json.inbound || []) as Array<Record<string, unknown>>
+      setInbound(rows)
+      setSelectedInboundId((prev) => {
+        if (prev && rows.some((r) => String(r.id) === prev)) return prev
+        return rows[0] ? String(rows[0].id) : null
+      })
     }
   }, [])
+
+  const selectedInbound = useMemo(
+    () => inbound.find((m) => String(m.id) === selectedInboundId) || null,
+    [inbound, selectedInboundId]
+  )
+
+  const replySubjectFor = (subject: string) =>
+    /^re:\s/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim() || '(no subject)'}`
+
+  const sendInboxReply = async () => {
+    if (!selectedInbound || !replyText.trim()) return
+    const toEmail = String(selectedInbound.from_email || '')
+    if (!toEmail.includes('@')) {
+      setReplyNotice('Missing sender email on this message')
+      return
+    }
+    setReplyBusy(true)
+    setReplyNotice(null)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/email-suite/inbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail,
+          subject: replySubjectFor(String(selectedInbound.subject || '')),
+          text: replyText.trim(),
+          businessId: selectedInbound.business_id ? String(selectedInbound.business_id) : undefined,
+          threadId: selectedInbound.thread_id
+            ? String(selectedInbound.thread_id)
+            : String(selectedInbound.id),
+          inReplyToSendId: String(selectedInbound.id),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error || 'Reply failed')
+        setReplyBusy(false)
+        return
+      }
+      setReplyText('')
+      setReplyNotice('Reply sent — it will also appear in History')
+      void loadStatus()
+    } catch {
+      setError('Reply failed')
+    } finally {
+      setReplyBusy(false)
+    }
+  }
 
   useEffect(() => {
     loadStatus()
@@ -709,19 +767,107 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
               No inbound messages yet
             </div>
           ) : (
-            <ul className="space-y-2">
-              {inbound.map((m) => (
-                <li
-                  key={String(m.id)}
-                  className="rounded-lg border border-slate-700 bg-slate-800/40 px-3 py-2 text-sm"
-                >
-                  <div className="text-slate-100 font-medium">{String(m.subject)}</div>
-                  <div className="text-xs text-slate-400">
-                    From {String(m.from_email)} · {String(m.created_at)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ul className="space-y-2 max-h-[70vh] overflow-auto">
+                {inbound.map((m) => {
+                  const id = String(m.id)
+                  const active = id === selectedInboundId
+                  return (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedInboundId(id)
+                          setReplyNotice(null)
+                        }}
+                        className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          active
+                            ? 'border-[#00d083]/50 bg-[#00d083]/10'
+                            : 'border-slate-700 bg-slate-800/40 hover:border-slate-600'
+                        }`}
+                      >
+                        <div className="text-slate-100 font-medium truncate">
+                          {String(m.subject || '(no subject)')}
+                        </div>
+                        <div className="text-xs text-slate-400 truncate">
+                          From {String(m.from_email)} · {String(m.created_at)}
+                        </div>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <div className="rounded-xl border border-slate-700 bg-slate-900/40 flex flex-col min-h-[420px] overflow-hidden">
+                {selectedInbound ? (
+                  <>
+                    <div className="px-3 py-2 border-b border-slate-700 bg-slate-900/80 space-y-0.5">
+                      <div className="text-sm text-slate-100 font-medium">
+                        {String(selectedInbound.subject || '(no subject)')}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        From {String(selectedInbound.from_email)} · To{' '}
+                        {String(selectedInbound.to_email)} · {String(selectedInbound.created_at)}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-h-[200px] max-h-[45vh] overflow-auto bg-[#0a0a0a]">
+                      {selectedInbound.html_body ? (
+                        <EmailHtmlPreview
+                          html={String(selectedInbound.html_body)}
+                          title="Inbound email"
+                        />
+                      ) : selectedInbound.text_body ? (
+                        <pre className="p-4 text-sm text-slate-200 whitespace-pre-wrap font-sans">
+                          {String(selectedInbound.text_body)}
+                        </pre>
+                      ) : (
+                        <div className="p-6 text-sm text-slate-500 text-center">
+                          No message body stored for this email. Subject and sender are still shown —
+                          try asking the sender to resend, or check Resend → Receiving.
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-slate-700 p-3 space-y-2 bg-slate-900/60">
+                      <div className="text-xs text-slate-400">
+                        Reply to{' '}
+                        <span className="text-slate-200 font-mono">
+                          {String(selectedInbound.from_email)}
+                        </span>
+                        {' · '}
+                        Subject:{' '}
+                        <span className="text-slate-300">
+                          {replySubjectFor(String(selectedInbound.subject || ''))}
+                        </span>
+                      </div>
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        rows={4}
+                        placeholder="Write a reply…"
+                        className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={replyBusy || !replyText.trim()}
+                          onClick={() => void sendInboxReply()}
+                          className="px-3 py-1.5 rounded-lg bg-[#00d083] text-black text-sm font-semibold disabled:opacity-50"
+                        >
+                          {replyBusy ? 'Sending…' : 'Send reply'}
+                        </button>
+                        {replyNotice && (
+                          <span className="text-xs text-[#00d083]">{replyNotice}</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center flex-1 text-sm text-slate-500 p-6">
+                    Select a message
                   </div>
-                </li>
-              ))}
-            </ul>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}
