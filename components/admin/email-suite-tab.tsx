@@ -8,6 +8,7 @@ import {
   type SuiteTemplateDef,
   type AudiencePreset,
 } from '@/lib/email/suite-template-catalog'
+import { EmailSuiteInboxSetup } from '@/components/admin/email-suite-inbox-setup'
 
 type SuiteSubTab = 'inbox' | 'history' | 'templates' | 'campaigns' | 'automations' | 'settings'
 
@@ -1227,15 +1228,10 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
               From: {status?.fromEmail || '—'} · Reply-To: {status?.replyTo || '—'}
             </p>
             <p className="text-slate-500 text-xs">
-              Webhook URL for Resend: https://{city}.qwikker.com/api/webhooks/resend
-            </p>
-            <p className="text-slate-500 text-xs">
-              Paste the webhook signing secret (`whsec_…`) in City Configuration → Resend.
-            </p>
-            <p className="text-slate-500 text-xs">
               Failed sends (7d): {status?.failedLast7d ?? 0}
             </p>
           </div>
+          <EmailSuiteInboxSetup city={city} />
           <div>
             <h3 className="text-sm font-semibold text-slate-100 mb-2">Suppressions</h3>
             <ul className="space-y-1 max-h-64 overflow-auto">
