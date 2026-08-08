@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { renderSuiteTemplate, SUITE_TEMPLATES } from '@/lib/email/suite-templates'
 import { sendFranchiseEmail } from '@/lib/email/send-franchise-email'
 import { isEmailSuppressed } from '@/lib/email/suppressions'
-import { isCityEmailConfigured } from '@/lib/email/suite-config'
+import { getFranchiseTrialEmailDefaults, isCityEmailConfigured } from '@/lib/email/suite-config'
 import { resolveAudience, type AudiencePreset } from '@/lib/email/suite-audience'
 import { loadSuiteOfferIdeas } from '@/lib/email/suite-offers'
 import type { EmailCategory } from '@/lib/email/email-logger'
@@ -111,6 +111,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const trialDefaults =
+    body.templateKey === 'free_trial_nudge'
+      ? await getFranchiseTrialEmailDefaults(auth.city)
+      : null
+  const trialCtx = trialDefaults
+    ? {
+        trialDays: body.trialDays ?? trialDefaults.trialDays,
+        trialTier: trialDefaults.trialTierCode,
+        trialTierDisplayName: trialDefaults.trialTierDisplayName,
+        trialFeatures: trialDefaults.features,
+      }
+    : { trialDays: body.trialDays }
+
   // Dry-run: always return audience + sample preview — never send
   if (body.dryRun) {
     const sampleBiz = recipients[0]
@@ -128,7 +141,7 @@ export async function POST(request: NextRequest) {
       customSubject: body.customSubject,
       customText: body.customText,
       customHtml: body.customHtml,
-      trialDays: body.trialDays,
+      ...trialCtx,
       missingItems: body.missingItems,
       loyaltyUrl: body.loyaltyUrl,
       offers,
@@ -207,7 +220,7 @@ export async function POST(request: NextRequest) {
       customSubject: body.customSubject,
       customText: body.customText,
       customHtml: body.customHtml,
-      trialDays: body.trialDays,
+      ...trialCtx,
       missingItems: body.missingItems,
       loyaltyUrl: body.loyaltyUrl,
     })
@@ -267,7 +280,7 @@ export async function POST(request: NextRequest) {
         customSubject: body.customSubject,
         customText: body.customText,
         customHtml: body.customHtml,
-        trialDays: body.trialDays,
+        ...trialCtx,
         missingItems: body.missingItems,
         loyaltyUrl: body.loyaltyUrl,
         offers,

@@ -13,6 +13,7 @@ import {
 import { getFranchiseSupportEmail, getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
 import type { EmailTemplate } from '@/lib/email/email-service'
 import { buildUnsubUrl } from '@/lib/email/unsub-token'
+import { getTierFeatures } from '@/lib/utils/tier-limits'
 import {
   SUITE_TEMPLATES,
   type SuiteTemplateCategory,
@@ -36,6 +37,10 @@ export interface RenderContext {
   businessId?: string
   missingItems?: string[]
   trialDays?: number
+  /** Franchise default_trial_tier code, e.g. spotlight */
+  trialTier?: string
+  trialTierDisplayName?: string
+  trialFeatures?: string[]
   loyaltyUrl?: string
   claimUrl?: string
   demoUrl?: string
@@ -168,20 +173,25 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         supportEmail: support,
       })
       break
-    case 'free_trial_nudge':
+    case 'free_trial_nudge': {
+      const tierCode = (ctx.trialTier || 'featured').toLowerCase()
+      const tierDisplay =
+        ctx.trialTierDisplayName ||
+        tierCode.charAt(0).toUpperCase() + tierCode.slice(1)
       template = createFreeTierTrialNudgeEmail({
         firstName: first,
         businessName: ctx.businessName,
         city,
-        trialTierDisplayName: 'Featured',
+        trialTierDisplayName: tierDisplay,
         trialDays: ctx.trialDays || 30,
-        features: ['Priority AI placement', 'Exclusive offers', 'Secret Menu Club'],
+        features: ctx.trialFeatures?.length ? ctx.trialFeatures : getTierFeatures(tierCode),
         upgradeUrl: `${base}/dashboard/settings`,
         dashboardUrl: `${base}/dashboard`,
         supportEmail: support,
         assetBaseUrl: base,
       })
       break
+    }
     case 'spotlight_benefits': {
       const cityEsc = escapeHtml(city)
       template = shell(

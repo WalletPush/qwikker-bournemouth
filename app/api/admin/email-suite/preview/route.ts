@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireCityAdmin } from '@/lib/email/admin-email-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { renderSuiteTemplate } from '@/lib/email/suite-templates'
-import { isCityEmailConfigured } from '@/lib/email/suite-config'
+import { getFranchiseTrialEmailDefaults, isCityEmailConfigured } from '@/lib/email/suite-config'
 import { loadSuiteOfferIdeas } from '@/lib/email/suite-offers'
 
 const bodySchema = z.object({
@@ -78,6 +78,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const trialDefaults =
+      body.templateKey === 'free_trial_nudge'
+        ? await getFranchiseTrialEmailDefaults(auth.city)
+        : null
+
     const template = renderSuiteTemplate(body.templateKey, {
       city: auth.city,
       businessName,
@@ -87,7 +92,10 @@ export async function POST(request: NextRequest) {
       customSubject: body.customSubject,
       customText: body.customText,
       customHtml: body.customHtml,
-      trialDays: body.trialDays,
+      trialDays: body.trialDays ?? trialDefaults?.trialDays,
+      trialTier: trialDefaults?.trialTierCode,
+      trialTierDisplayName: trialDefaults?.trialTierDisplayName,
+      trialFeatures: trialDefaults?.features,
       missingItems: body.missingItems,
       loyaltyUrl: body.loyaltyUrl,
       offers: body.templateKey === 'offer_suggestions' ? offers : undefined,
