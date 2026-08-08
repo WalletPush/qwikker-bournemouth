@@ -56,6 +56,7 @@ interface EmailSuiteTabProps {
 }
 
 interface SuiteStatus {
+  city?: string
   configured: boolean
   fromEmail: string | null
   fromName: string | null
@@ -137,10 +138,13 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
   const [suppressions, setSuppressions] = useState<Array<Record<string, unknown>>>([])
   const [inbound, setInbound] = useState<Array<Record<string, unknown>>>([])
   const [selectedInboundId, setSelectedInboundId] = useState<string | null>(null)
+  const [threadMessages, setThreadMessages] = useState<Array<Record<string, unknown>>>([])
+  const [threadLoading, setThreadLoading] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [replyBusy, setReplyBusy] = useState(false)
   const [replyNotice, setReplyNotice] = useState<string | null>(null)
   const [hydrateBusy, setHydrateBusy] = useState(false)
+  const [syncBusy, setSyncBusy] = useState(false)
   const hydrateAttemptedRef = useRef<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -176,6 +180,12 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
     const url = new URL(window.location.href)
     url.searchParams.set('tab', 'email-suite')
     url.searchParams.set('emailTab', id)
+    // Inbox is city-wide — drop CRM business deep-link filter so it doesn't stick
+    if (id === 'inbox') {
+      url.searchParams.delete('businessId')
+      url.searchParams.delete('compose')
+      setSelectedRecipient(null)
+    }
     router.replace(url.pathname + url.search, { scroll: false })
   }
 
@@ -529,48 +539,134 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
     }
   }, [])
 
-  const selectedInbound = useMemo(
-    () => inbound.find((m) => String(m.id) === selectedInboundId) || null,
-    [inbound, selectedInboundId]
-  )
-
-  const hydrateInboundBody = useCallback(async (sendId: string) => {
-    setHydrateBusy(true)
+  const syncInboxFromResend = useCallback(async () => {
+    setSyncBusy(true)
     setReplyNotice(null)
     try {
       const res = await fetch('/api/admin/email-suite/inbox', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'hydrate_body', sendId }),
+        body: JSON.stringify({ action: 'sync_resend' }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setReplyNotice(json.error || 'Could not load message body from Resend')
+        setReplyNotice(json.error || 'Could not sync from Resend')
+        return
+      }
+      const n = typeof json.imported === 'number' ? json.imported : 0
+      setReplyNotice(
+        n > 0
+          ? `Imported ${n} message${n === 1 ? '' : 's'} from Resend`
+          : 'Inbox already up to date with Resend'
+      )
+      await loadInbox()
+      void loadStatus()
+    } catch {
+      setReplyNotice('Could not sync from Resend')
+    } finally {
+      setSyncBusy(false)
+    }
+  }, [loadInbox, loadStatus])
+
+  const selectedInbound = useMemo(
+    () => inbound.find((m) => String(m.id) === selectedInboundId) || null,
+    [inbound, selectedInboundId]
+  )
+
+  const activeParticipant = selectedInbound
+    ? String(selectedInbound.from_email || '')
+        .replace(/^.*<([^>]+)>.*$/, '$1')
+        .trim()
+        .toLowerCase()
+    : null
+
+  const activeThreadId = selectedInbound
+    ? String(selectedInbound.thread_id || selectedInbound.id)
+    : null
+
+  const loadThread = useCallback(async (participant: string, threadId: string | null) => {
+    setThreadLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (participant.includes('@')) params.set('participant', participant)
+      if (threadId) params.set('threadId', threadId)
+      const res = await fetch(`/api/admin/email-suite/inbox?${params.toString()}`)
+      if (!res.ok) {
+        setThreadMessages([])
+        return
+      }
+      const json = await res.json()
+      setThreadMessages((json.messages || []) as Array<Record<string, unknown>>)
+    } catch {
+      setThreadMessages([])
+    } finally {
+      setThreadLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!activeParticipant && !activeThreadId) {
+      setThreadMessages([])
+      return
+    }
+    void loadThread(activeParticipant || '', activeThreadId)
+  }, [activeParticipant, activeThreadId, loadThread])
+
+  const patchInbound = useCallback(async (sendId: string, action: 'hydrate_body' | 'mark_read') => {
+    if (action === 'hydrate_body') setHydrateBusy(true)
+    if (action === 'hydrate_body') setReplyNotice(null)
+    try {
+      const res = await fetch('/api/admin/email-suite/inbox', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, sendId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (action === 'hydrate_body') {
+          setReplyNotice(json.error || 'Could not load message body from Resend')
+        }
         return
       }
       if (json.message) {
         setInbound((prev) =>
           prev.map((m) => (String(m.id) === sendId ? { ...m, ...json.message } : m))
         )
-        if (json.hydrated) setReplyNotice('Message body loaded from Resend')
+        if (action === 'hydrate_body' && json.hydrated) {
+          setReplyNotice('Message body loaded from Resend')
+        }
+        if (action === 'mark_read') void loadStatus()
       }
     } catch {
-      setReplyNotice('Could not load message body from Resend')
+      if (action === 'hydrate_body') {
+        setReplyNotice('Could not load message body from Resend')
+      }
     } finally {
-      setHydrateBusy(false)
+      if (action === 'hydrate_body') setHydrateBusy(false)
     }
-  }, [])
+  }, [loadStatus])
+
+  const hydrateInboundBody = useCallback(
+    (sendId: string) => patchInbound(sendId, 'hydrate_body'),
+    [patchInbound]
+  )
 
   // Auto-fetch body once for older inbound rows stored without html/text
   useEffect(() => {
     if (!selectedInbound) return
     const id = String(selectedInbound.id)
     const hasBody = Boolean(selectedInbound.html_body || selectedInbound.text_body)
-    const resendId = selectedInbound.resend_message_id
-    if (hasBody || !resendId || hydrateBusy || hydrateAttemptedRef.current.has(id)) return
+    if (hasBody || hydrateBusy || hydrateAttemptedRef.current.has(id)) return
     hydrateAttemptedRef.current.add(id)
     void hydrateInboundBody(id)
   }, [selectedInbound, hydrateBusy, hydrateInboundBody])
+
+  // Mark selected inbound as read (clears Inbox unread badge)
+  useEffect(() => {
+    if (!selectedInbound) return
+    if (selectedInbound.unread === false) return
+    void patchInbound(String(selectedInbound.id), 'mark_read')
+  }, [selectedInbound, patchInbound])
 
   const replySubjectFor = (subject: string) =>
     /^re:\s/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim() || '(no subject)'}`
@@ -607,8 +703,11 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
         return
       }
       setReplyText('')
-      setReplyNotice('Reply sent — it will also appear in History')
+      setReplyNotice('Reply sent')
       void loadStatus()
+      if (activeParticipant || activeThreadId) {
+        void loadThread(activeParticipant || '', activeThreadId)
+      }
     } catch {
       setError('Reply failed')
     } finally {
@@ -619,6 +718,13 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
   useEffect(() => {
     loadStatus()
   }, [loadStatus])
+
+  // Landing on Inbox with a CRM businessId deep-link — strip it (Inbox is city-wide)
+  useEffect(() => {
+    if (subTab !== 'inbox') return
+    if (!businessId) return
+    clearRecipient()
+  }, [subTab, businessId, clearRecipient])
 
   useEffect(() => {
     if (subTab === 'history') loadHistory()
@@ -713,12 +819,28 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
           <h2 className="text-xl font-semibold text-slate-100">Email Suite</h2>
           <p className="text-sm text-slate-400">
             History, templates, campaigns &amp; automations for {city}
-            {selectedRecipient ? (
+            {subTab !== 'inbox' && selectedRecipient ? (
               <span className="ml-2 text-[#00d083]">
                 · {selectedRecipient.business_name}
+                <button
+                  type="button"
+                  onClick={clearRecipient}
+                  className="ml-2 underline text-slate-300 hover:text-white"
+                >
+                  Clear
+                </button>
               </span>
-            ) : businessId ? (
-              <span className="ml-2 text-[#00d083]">· filtered to one business</span>
+            ) : subTab !== 'inbox' && businessId ? (
+              <span className="ml-2 text-[#00d083]">
+                · filtered to one business
+                <button
+                  type="button"
+                  onClick={clearRecipient}
+                  className="ml-2 underline text-slate-300 hover:text-white"
+                >
+                  Clear
+                </button>
+              </span>
             ) : null}
           </p>
         </div>
@@ -802,9 +924,23 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
 
       {subTab === 'inbox' && (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-slate-400">
+              Replies to hello@{status?.city || '…'}.qwikker.com land here automatically. Inbox also
+              pulls any misses from Resend when you open it.
+            </p>
+            <button
+              type="button"
+              disabled={syncBusy}
+              onClick={() => void syncInboxFromResend()}
+              className="shrink-0 px-3 py-1.5 rounded-lg border border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-medium disabled:opacity-50"
+            >
+              {syncBusy ? 'Syncing…' : 'Sync from Resend'}
+            </button>
+          </div>
           {inbound.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-600 p-8 text-center text-slate-400 text-sm">
-              No inbound messages yet
+              No inbound messages yet — try Sync from Resend if you have mail in Receiving.
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -812,6 +948,7 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                 {inbound.map((m) => {
                   const id = String(m.id)
                   const active = id === selectedInboundId
+                  const unread = m.unread !== false
                   return (
                     <li key={id}>
                       <button
@@ -823,14 +960,32 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                         className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
                           active
                             ? 'border-[#00d083]/50 bg-[#00d083]/10'
-                            : 'border-slate-700 bg-slate-800/40 hover:border-slate-600'
+                            : unread
+                              ? 'border-slate-600 bg-slate-800/70 hover:border-slate-500'
+                              : 'border-slate-700 bg-slate-800/40 hover:border-slate-600'
                         }`}
                       >
-                        <div className="text-slate-100 font-medium truncate">
-                          {String(m.subject || '(no subject)')}
-                        </div>
-                        <div className="text-xs text-slate-400 truncate">
-                          From {String(m.from_email)} · {String(m.created_at)}
+                        <div className="flex items-start gap-2">
+                          {unread ? (
+                            <span
+                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#00d083]"
+                              aria-label="Unread"
+                            />
+                          ) : (
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className={`truncate ${
+                                unread ? 'text-slate-50 font-semibold' : 'text-slate-100 font-medium'
+                              }`}
+                            >
+                              {String(m.subject || '(no subject)')}
+                            </div>
+                            <div className="text-xs text-slate-400 truncate">
+                              From {String(m.from_email)} · {String(m.created_at)}
+                            </div>
+                          </div>
                         </div>
                       </button>
                     </li>
@@ -846,43 +1001,81 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                         {String(selectedInbound.subject || '(no subject)')}
                       </div>
                       <div className="text-xs text-slate-400">
-                        From {String(selectedInbound.from_email)} · To{' '}
-                        {String(selectedInbound.to_email)} · {String(selectedInbound.created_at)}
+                        Conversation with{' '}
+                        <span className="font-mono text-slate-300">
+                          {String(selectedInbound.from_email)}
+                        </span>
+                        {threadLoading ? ' · loading…' : ` · ${threadMessages.length || 1} messages`}
                       </div>
                     </div>
-                    <div className="flex-1 min-h-[200px] max-h-[45vh] overflow-auto bg-[#0a0a0a]">
-                      {selectedInbound.html_body ? (
-                        <EmailHtmlPreview
-                          html={String(selectedInbound.html_body)}
-                          title="Inbound email"
-                        />
-                      ) : selectedInbound.text_body ? (
-                        <pre className="p-4 text-sm text-slate-200 whitespace-pre-wrap font-sans">
-                          {String(selectedInbound.text_body)}
-                        </pre>
-                      ) : (
-                        <div className="p-6 text-sm text-slate-400 text-center space-y-3">
-                          <p>
-                            {hydrateBusy
-                              ? 'Loading message body from Resend…'
-                              : 'No message body stored yet. Resend webhooks only send metadata — we fetch the body separately.'}
-                          </p>
-                          {selectedInbound.resend_message_id ? (
-                            <button
-                              type="button"
-                              disabled={hydrateBusy}
-                              onClick={() => void hydrateInboundBody(String(selectedInbound.id))}
-                              className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium disabled:opacity-50"
-                            >
-                              {hydrateBusy ? 'Loading…' : 'Load body from Resend'}
-                            </button>
-                          ) : (
-                            <p className="text-xs text-slate-500">
-                              This row has no Resend id, so the body cannot be retrieved.
-                            </p>
-                          )}
-                        </div>
-                      )}
+                    <div className="flex-1 min-h-[200px] max-h-[45vh] overflow-auto bg-[#0a0a0a] p-3 space-y-3">
+                      {(threadMessages.length > 0 ? threadMessages : [selectedInbound]).map((msg) => {
+                        const isOut = String(msg.direction) === 'outbound'
+                        const bodyHtml = msg.html_body ? String(msg.html_body) : null
+                        const bodyText = msg.text_body ? String(msg.text_body) : null
+                        return (
+                          <div
+                            key={String(msg.id)}
+                            className={`rounded-lg border px-3 py-2 ${
+                              isOut
+                                ? 'border-[#00d083]/30 bg-[#00d083]/5 ml-4'
+                                : 'border-slate-700 bg-slate-900/80 mr-4'
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                              <span
+                                className={`text-[10px] uppercase font-semibold ${
+                                  isOut ? 'text-[#00d083]' : 'text-sky-300'
+                                }`}
+                              >
+                                {isOut ? 'You (sent)' : 'Inbound'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {String(msg.sent_at || msg.created_at || '')}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400 mb-2 truncate">
+                              {isOut ? 'To' : 'From'}{' '}
+                              <span className="font-mono text-slate-300">
+                                {String(isOut ? msg.to_email : msg.from_email)}
+                              </span>
+                            </div>
+                            {bodyHtml ? (
+                              <div className="rounded-md overflow-hidden border border-slate-800">
+                                <EmailHtmlPreview html={bodyHtml} title="Thread message" />
+                              </div>
+                            ) : bodyText ? (
+                              <pre className="text-sm text-slate-200 whitespace-pre-wrap font-sans">
+                                {bodyText}
+                              </pre>
+                            ) : String(msg.id) === String(selectedInbound.id) ? (
+                              <div className="text-sm text-slate-400 space-y-2">
+                                <p>
+                                  {hydrateBusy
+                                    ? 'Loading message body from Resend…'
+                                    : 'No message body stored yet.'}
+                                </p>
+                                {selectedInbound.resend_message_id ? (
+                                  <button
+                                    type="button"
+                                    disabled={hydrateBusy}
+                                    onClick={() =>
+                                      void hydrateInboundBody(String(selectedInbound.id))
+                                    }
+                                    className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium disabled:opacity-50"
+                                  >
+                                    {hydrateBusy ? 'Loading…' : 'Load body from Resend'}
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-500">
+                                {String(msg.subject || '(no body)')}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                     <div className="border-t border-slate-700 p-3 space-y-2 bg-slate-900/60">
                       <div className="text-xs text-slate-400">

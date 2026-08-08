@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { recordEmailEvent, updateEmailSendStatus, logEmailSend } from '@/lib/email/email-logger'
+import { recordEmailEvent, updateEmailSendStatus } from '@/lib/email/email-logger'
 import { suppressEmail } from '@/lib/email/suppressions'
 import { verifyResendWebhookSignature } from '@/lib/email/verify-resend-webhook'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
-import { fetchReceivedEmailContent } from '@/lib/email/fetch-received-email'
+import { normalizeEmailAddress } from '@/lib/email/normalize-email'
+import { upsertInboundReceivedEmail } from '@/lib/email/upsert-inbound'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Resend webhook — delivery / bounce / open / click / complained / received.
@@ -96,10 +97,12 @@ export async function POST(request: NextRequest) {
 
   const type = String(payload.type || '')
   const data = (payload.data || {}) as Record<string, unknown>
+
+  // Receiving webhooks use data.email_id; sent-event webhooks use data.email_id too.
+  // Do not fall back to unrelated nested ids for inbound — wrong id skips/corrupts rows.
   const emailId =
-    (data.email_id as string) ||
-    (data.id as string) ||
-    ((data.email as { id?: string } | undefined)?.id) ||
+    (typeof data.email_id === 'string' && data.email_id) ||
+    (typeof data.id === 'string' && data.id) ||
     null
 
   const tags = (data.tags as Array<{ name?: string; value?: string }> | Record<string, string>) || []
@@ -111,72 +114,71 @@ export async function POST(request: NextRequest) {
   }
 
   const toList = (data.to as string[] | string | undefined) || []
+  const receivedFor = (data.received_for as string[] | string | undefined) || []
   const from = (data.from as string) || null
   const toFirst = Array.isArray(toList) ? toList[0] : toList
-  city = city || cityFromEmail(from) || cityFromEmail(toFirst)
+  const receivedForFirst = Array.isArray(receivedFor) ? receivedFor[0] : receivedFor
+  // Inbound: prefer recipient address (hello@ / no-reply@ city…) over tags/from for city
+  if (type === 'email.received') {
+    city =
+      hostCity ||
+      cityFromEmail(toFirst) ||
+      cityFromEmail(receivedForFirst) ||
+      city ||
+      cityFromEmail(from)
+  } else {
+    city = city || cityFromEmail(from) || cityFromEmail(toFirst)
+  }
 
   if (!city) {
     console.warn('[resend-webhook] could not resolve city', type, emailId)
     return NextResponse.json({ ok: true, ignored: true, reason: 'no_city' })
   }
 
-  // If host city known, refuse cross-tenant payload city mismatch
-  if (hostCity && city !== hostCity) {
+  // If host city known, refuse cross-tenant payload city mismatch (skip for received —
+  // tenant is the webhook URL; payload city tags are unreliable on inbound).
+  if (type !== 'email.received' && hostCity && city !== hostCity) {
     console.warn('[resend-webhook] city mismatch', { hostCity, city, type })
     return NextResponse.json({ error: 'City mismatch' }, { status: 403 })
+  }
+  if (type === 'email.received' && hostCity) {
+    city = hostCity
   }
 
   const status = mapEventToStatus(type)
   let emailSendId: string | null = null
 
   if (type === 'email.received') {
-    let subject = String(data.subject || '(no subject)')
-    let html = (data.html as string) || null
-    let text = (data.text as string) || null
-
-    // Webhook payload is metadata-only — pull html/text from Receiving REST API
-    if (emailId && secrets.apiKey) {
-      const full = await fetchReceivedEmailContent(secrets.apiKey, emailId)
-      if (full) {
-        html = full.html || html
-        text = full.text || text
-        if (full.subject) subject = full.subject
+    if (!emailId) {
+      console.warn('[resend-webhook] email.received missing email_id')
+    } else {
+      const receivedId =
+        typeof data.email_id === 'string' && data.email_id ? data.email_id : emailId
+      const result = await upsertInboundReceivedEmail({
+        city,
+        resendEmailId: receivedId,
+        fromRaw: from,
+        toRaw: toFirst
+          ? String(toFirst)
+          : receivedForFirst
+            ? String(receivedForFirst)
+            : null,
+        subject: typeof data.subject === 'string' ? data.subject : null,
+        html: typeof data.html === 'string' ? data.html : null,
+        text: typeof data.text === 'string' ? data.text : null,
+        // Insert row first; body hydrate after — never drop a reply if Resend body is slow
+        fetchBody: Boolean(secrets.apiKey),
+        apiKey: secrets.apiKey,
+      })
+      emailSendId = result.emailSendId
+      if (result.created) {
+        console.info('[resend-webhook] inbound stored', {
+          city,
+          emailSendId,
+          from: normalizeEmailAddress(from) || from,
+          resendEmailId: receivedId,
+        })
       }
-    }
-
-    const fromAddr = String(from || 'unknown')
-    const supabase = createAdminClient()
-    const { data: prior } = await supabase
-      .from('email_sends')
-      .select('id, business_id, thread_id')
-      .eq('city', city)
-      .eq('direction', 'outbound')
-      .ilike('to_email', fromAddr)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const threadId = prior?.thread_id || prior?.id || null
-    emailSendId = await logEmailSend({
-      city,
-      toEmail: String(toFirst || `hello@${city}.qwikker.com`),
-      fromEmail: fromAddr,
-      subject,
-      htmlBody: html,
-      textBody: text,
-      templateKey: 'inbound',
-      category: 'system',
-      resendMessageId: emailId,
-      status: 'received',
-      businessId: prior?.business_id || null,
-      direction: 'inbound',
-      threadId: threadId || undefined,
-      inReplyToSendId: prior?.id || null,
-      metadata: { resend_event: type },
-    })
-
-    if (emailSendId && !threadId) {
-      await supabase.from('email_sends').update({ thread_id: emailSendId }).eq('id', emailSendId)
     }
   } else if (status && emailId) {
     emailSendId = await updateEmailSendStatus({

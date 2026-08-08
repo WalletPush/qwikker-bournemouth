@@ -21,12 +21,13 @@ export async function GET(request: NextRequest) {
       .eq('direction', 'outbound')
       .eq('status', 'failed')
       .gte('created_at', since),
+    // Unread = inbound with no metadata.read_at (set when admin opens the message)
     supabase
       .from('email_sends')
       .select('id', { count: 'exact', head: true })
       .eq('city', auth.city)
       .eq('direction', 'inbound')
-      .eq('status', 'received'),
+      .filter('metadata->>read_at', 'is', null),
   ])
 
   return NextResponse.json({
