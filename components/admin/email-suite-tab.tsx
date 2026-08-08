@@ -703,11 +703,6 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
 
       {subTab === 'inbox' && (
         <div className="space-y-3">
-          <p className="text-sm text-slate-400">
-            Inbox fills when Resend Receiving is enabled for hello@{city}.qwikker.com and webhooks
-            point at /api/webhooks/resend. Until then, replies may go nowhere (Cloudflare forwarding
-            was never set up).
-          </p>
           {inbound.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-600 p-8 text-center text-slate-400 text-sm">
               No inbound messages yet
