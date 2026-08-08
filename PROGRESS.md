@@ -4,76 +4,41 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
-## 📧 Email Suite — `feat/email-suite` (Aug 8, 2026)
+## 📧 Email Suite — MERGED TO MAIN (Aug 8, 2026)
 
-**Plan (do not edit unless asked):** `/Users/qwikker/.cursor/plans/email_suite_architecture_13e5e711.plan.md`  
-**Branch:** `feat/email-suite` (parked WIP for wallet/chat is in `stash@{0}` — do not mix).
+**Plan:** `/Users/qwikker/.cursor/plans/email_suite_architecture_13e5e711.plan.md`  
+**Shipped:** `main` @ `de0a4543` (was `feat/email-suite`). Roadmap: `email-suite-phase1`…`phase2b` **done**; `email-suite-phase3` (Inbox/Receiving) **pending ops**.
 
-### Shipped on this branch (code complete; needs migration + Resend webhook ops)
-1. **Migration** `supabase/migrations/20260808120000_email_suite_foundation.sql` — tables: `email_send_batches`, `email_campaigns`, `email_automations`, `email_sends`, `email_send_events`, `email_suppressions` (RLS on, service-role APIs). **Must apply on Supabase before History/Campaigns work in prod.**
-2. **Logger** — `lib/email/email-logger.ts` + optional `logMeta` on `sendFranchiseEmail` (non-fatal). Claim invites also backfill `outreach_tracked_links.resend_message_id`.
-3. **Suite UI** — admin tab `email-suite` (sidebar **Email** + Quick Action): Inbox · History · Templates · Campaigns · Automations · Settings (`components/admin/email-suite-tab.tsx`).
-4. **APIs** — `/api/admin/email-suite/{status,history,templates,preview,send,campaigns,automations,inbox,suppressions}`; webhook `/api/webhooks/resend`; unsub `/e/unsub/[token]`; cron `/api/cron/email-digest` (Mon 08:00 UTC in `vercel.json`, `Bearer CRON_SECRET`).
-5. **CRM / Contacts deep-links** — CRM card “Email history” / “Send email”; Contacts “View emails” / “Send” → `?tab=email-suite&businessId=…`.
-6. **Suppressions** — Qwikker-owned `email_suppressions`; marketing templates get unsub footer. Digests **off by default** per city.
+### Live / usable now (outbound)
+1. **Migration** `supabase/migrations/20260808120000_email_suite_foundation.sql` — applied on the DB we’ve been using; **confirm prod Supabase if separate**.
+2. **Logger** — `logMeta` on `sendFranchiseEmail`; claim invites + Suite sends land in History.
+3. **Suite UI** — Control Center **Email Suite** (New badge): Inbox · History · Templates · Campaigns · Automations · Settings.
+4. **Templates (ops-facing only)** — claim invitation (1:1), claim reminder (campaigns), completion, free→trial, Spotlight, try loyalty, offer suggestions, trial extension, custom. System receipts (welcome / approval / loyalty ready / digest) hidden from picker; loyalty ready auto-sends on admin activate.
+5. **Recipient picker** — search business / name / email; CRM envelope + Send email deep-link to Suite.
+6. **Campaigns** — claim reminder for unclaimed; hard cap 50; dry-run → preview ack → confirm.
+7. **History** — full HTML snapshot; search subject/email/business; “Show all” clears business filter.
+8. **Webhooks / unsub / digest cron** — `/api/webhooks/resend`, `/e/unsub/[token]`, Mon 08:00 UTC digest (off by default). Bournemouth: send verified + webhook secret saved; **Receiving MX still Failed**.
 
-### Ops / potential breaks (trace carefully)
-| Risk | Detail |
+### Still needed
+| Item | Notes |
 |---|---|
-| **Migration not applied** | Suite APIs will 500 on missing tables; claim send still works (logging fails soft). |
-| **HTML in Postgres** | Snapshots kept ~90d via `html_purge_after` — purge job not wired yet; do **not** leave forever. Pair with `db-retention-cost-guard` before heavy campaigns. |
-| **Resend webhooks** | Delivery/open/bounce/Inbox need HQ/franchise webhook → `/api/webhooks/resend`. Without it, History shows sent/failed only. |
-| **hello@ replies** | Still nowhere until Receiving or CF routing (never set up). Inbox empty until Receiving ON. |
-| **vercel.json crons** | Added digest cron — Vercel Hobby may limit cron count; needs `CRON_SECRET` env. Digests only for cities with `email_automations.weekly_digest.enabled=true`. |
-| **CRM Email button** | No longer opens `mailto:` — opens Suite compose (intentional). Personal Gmail From rejected by product decision. |
-| **Campaign send-now** | Internal `fetch` to `/api/admin/email-suite/send` with cookie — same-origin only. |
-| **Unrelated stash** | Wallet race/shortlinks + chat polish parked in stash — restore separately; not part of this branch. |
-| **Spotlight `${First_Name}`** | Separate bug in wallet push (not this branch). |
+| **Phase 3 Inbox** | Cloudflare MX for `bournemouth` → Resend inbound; then test `hello@` → Inbox |
+| **Other cities** | Resend domain + webhook `whsec_` + Receiving when ready |
+| **Automations** | Wire `trial_ending` / `completion_nudge` crons |
+| **Deliverability** | List-Unsubscribe header, bounce auto-pause, HTML purge, `db-retention-cost-guard` before volume |
+| **Training** | Update EP3 (still says leave Receiving off) |
+| **Users audience** | Not started |
 
-### Plan completion (honest scorecard — Aug 8 afternoon)
-| Piece | Status |
-|---|---|
-| History + logger + webhook route + CRM deep-links | Code done — **needs migration applied** |
-| Templates (branded shell) | Done after pass: all Suite templates use `wrapInLayout` |
-| Custom message | Done: Qwikker shell + subject/body fields + preview ack |
-| Campaigns audience pairing | Done: only campaign-safe templates; audience constrained (no completion→live) |
-| Preview → confirm → send | Done: dry-run audience, checkbox ack, confirm ≥2, **hard cap 50** |
-| Bulk/spam / domain safety | **Partial** — confirm + cap + pacing + suppressions; NOT yet: cool-downs, weekend blocks, List-Unsubscribe header, bounce auto-pause |
-| Automations timing | **Partial** — weekly_digest cron Mon 08:00 UTC, **off by default**; trial_ending / completion_nudge **not wired** |
-| Offer suggestions | Loads existing Acquisition `business_enrichments` offers — **does not re-run AI**. Re-enrich in Acquisition Engine first |
-| Inbox / Receiving | Stub only — needs Resend Receiving DNS |
-| Users audience | Not started |
-
-### Domain reputation plan (do not skip)
-1. Hard cap **50**/send (enforced). Prefer smaller batches.
-2. Marketing must honour `email_suppressions` + unsub footer.
-3. Complaints → suppress via webhook.
-4. **Still needed before volume:** bounce rate pause, List-Unsubscribe header, HTML purge, `db-retention-cost-guard`.
-5. Digests stay opt-in per city. Never silent bulk.
-
-### Not done / follow-ups
-- HTML purge cron + object-storage move for snapshots
-- ~~Resend webhook signature verify~~ — column `franchise_crm_configs.resend_webhook_secret` in Email Suite migration + City Config field; verify on `/api/webhooks/resend`
-- Wire trial_ending / completion_nudge automation crons (catalogue exists; only weekly_digest runs)
-- List-Unsubscribe headers on marketing sends
-- Offer-suggestion “re-run acquisition stage” button (today: use Acquisition Engine enrich)
-- Users audience + consent (Phase 3)
-- Apply migration + configure one city webhook for live test (Jerry / Zanzibar History urgency)
-
-### Roadmap IDs
-`email-suite-phase1` … `email-suite-phase3` + keep `db-retention-cost-guard` ahead of volume.
+### Same commit extras (not Email Suite)
+- Acquisition **Claimed** KPI fixed (invite cohort, not unclaimed-only list).
+- AI Companion: conversational stopwords + plural stem for menu match; rentals filtered on food queries (Mel’s / burgers).
 
 ---
 
-## 🐛 KNOWN ISSUE (Jul 27, 2026) — AI chat can't find businesses by dish or partial name
+## 🐛 AI chat dish retrieval — PARTIAL FIX (Aug 8, 2026)
 
-**Reported:** the AI didn't recognise "wonderful kitchen" or "crispy aromatic duck" — yet asking "Chinese restaurant" returned **Wonderful Kitchen Lounge & Garden** *with* its featured items + prices (Aromatic Crispy Duck £13.50…).
-
-**Not a data/save bug** — `menu_preview` is saved and injected correctly (that's why the items show once the business is found). It's a **retrieval** gap:
-- `lib/ai/relevance-scorer.ts` scores on category / business_name / KB content / vibe_tags / KB-semantic **only** — it never matches `menu_preview` item names/descriptions, so a **dish query scores 0** and returns "couldn't find". `menu_preview` is only used to *decorate* the answer after a business is selected (`hybrid-chat.ts` ~1664), never to *find* it.
-- **No cold "find business by partial name" path** — the name/detail lock (`hybrid-chat.ts` ~935) only fires as a *follow-up* when a business is already in context (`lastSlug`), so a cold "tell me about wonderful kitchen" never resolves.
-
-**Fix (chat retrieval only — no DB/migration, no re-enrich):** (A) score `menu_preview` item names/descriptions against query keywords/cuisine terms; (B) add a cold, fuzzy business-name lookup across all 3 tiers. Critical for the Acquisition Engine value prop (enriched listings must be findable by dish + name). Tracked in roadmap as **`ai-chat-menu-item-retrieval`**. **NOT YET BUILT.**
+**Was:** dish queries / “what about the best burgers” could score Mel’s menu at 0 and surface junk (e.g. scooter rental).  
+**Shipped on main:** `scoreMenuPreviewMatch` stopwords (`what`/`which`/…) + plural stem; food sanity filter excludes scooter/rental/hire. Roadmap `ai-chat-menu-item-retrieval` — **partial** (cold fuzzy business-name lookup still open).
 
 ## 🚀 Prospecting Present Mode + Acquisition Engine — SHIPPING TO MAIN (Jul 23, 2026)
 
