@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recordEmailEvent, updateEmailSendStatus, logEmailSend } from '@/lib/email/email-logger'
 import { suppressEmail } from '@/lib/email/suppressions'
 import { verifyResendWebhookSignature } from '@/lib/email/verify-resend-webhook'
 import { getCityFromHostname } from '@/lib/utils/city-detection'
+import { fetchReceivedEmailContent } from '@/lib/email/fetch-received-email'
 
 /**
  * Resend webhook — delivery / bounce / open / click / complained / received.
@@ -134,21 +134,13 @@ export async function POST(request: NextRequest) {
     let html = (data.html as string) || null
     let text = (data.text as string) || null
 
-    // Prefer full body from Receiving API when SDK/key available
+    // Webhook payload is metadata-only — pull html/text from Receiving REST API
     if (emailId && secrets.apiKey) {
-      try {
-        const resend = new Resend(secrets.apiKey)
-        const receiving = (resend as unknown as { emails: { receiving?: { get: (id: string) => Promise<{ data?: { html?: string; text?: string; subject?: string } }> } } }).emails.receiving
-        if (receiving?.get) {
-          const { data: full } = await receiving.get(emailId)
-          if (full) {
-            html = full.html || html
-            text = full.text || text
-            if (full.subject) subject = full.subject
-          }
-        }
-      } catch (e) {
-        console.warn('[resend-webhook] receiving.get failed', e)
+      const full = await fetchReceivedEmailContent(secrets.apiKey, emailId)
+      if (full) {
+        html = full.html || html
+        text = full.text || text
+        if (full.subject) subject = full.subject
       }
     }
 

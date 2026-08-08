@@ -43,10 +43,24 @@ export function wrapInLayout(content: string, city: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Business emails always greet the venue — never a personal first name.
+ * (Imported/unclaimed listings often have no contact first name.)
+ */
+function hiBusiness(businessName: string): string {
+  const name = businessName.trim() || 'team'
+  return `Hi ${name},`
+}
+
+// ---------------------------------------------------------------------------
 // Interfaces
 // ---------------------------------------------------------------------------
 
 export interface BusinessWelcomeEmailData {
+  /** @deprecated Ignored — greetings use businessName */
   firstName: string
   businessName: string
   city: string
@@ -196,12 +210,12 @@ export interface ClaimInvitationEmailData {
 // ---------------------------------------------------------------------------
 
 export function createBusinessWelcomeEmail(data: BusinessWelcomeEmailData): EmailTemplate {
-  const subject = `Welcome to QWIKKER, ${data.firstName}`
+  const subject = `Welcome to QWIKKER — ${data.businessName}`
 
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Welcome to QWIKKER.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Thanks for registering <strong style="color:#fff;">${data.businessName}</strong>. Your dashboard is ready and waiting.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;">
@@ -225,7 +239,7 @@ export function createBusinessWelcomeEmail(data: BusinessWelcomeEmailData): Emai
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Welcome to QWIKKER, ${data.firstName}\n\nThanks for registering ${data.businessName}. Your dashboard is ready.\n\nBefore you go live, complete your profile: logo, photo, description, hours, and tagline. Then hit Submit for Review.\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+  const text = `Welcome to QWIKKER — ${data.businessName}\n\n${hiBusiness(data.businessName)}\n\nThanks for registering ${data.businessName}. Your dashboard is ready.\n\nBefore you go live, complete your profile: logo, photo, description, hours, and tagline. Then hit Submit for Review.\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -233,7 +247,8 @@ export function createBusinessWelcomeEmail(data: BusinessWelcomeEmailData): Emai
 export function createFreeTierTrialNudgeEmail(data: FreeTierTrialNudgeEmailData): EmailTemplate {
   const tier = data.trialTierDisplayName
   const days = data.trialDays
-  const subject = `${data.firstName}, try ${tier} free for ${days} days`
+  const subject = `${data.businessName}: try ${tier} free for ${days} days`
+  const welcomeHeading = `Welcome to QWIKKER.`
 
   // Derive capabilities from the tier's REAL feature list (single source of
   // truth = getTierFeatures) so a benefit only appears if the tier includes it.
@@ -303,7 +318,8 @@ export function createFreeTierTrialNudgeEmail(data: FreeTierTrialNudgeEmailData)
 
   const html = wrapInLayout(`
     <div class="qw-pad" style="padding:40px 34px;">
-      <h2 style="font-size:23px;font-weight:700;color:#ffffff;margin:0 0 18px;line-height:1.35;letter-spacing:-0.3px;">Welcome to QWIKKER, ${data.firstName}.</h2>
+      <h2 style="font-size:23px;font-weight:700;color:#ffffff;margin:0 0 18px;line-height:1.35;letter-spacing:-0.3px;">${welcomeHeading}</h2>
+      <p style="font-size:15px;line-height:1.75;color:#d8d8d8;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.75;color:#d8d8d8;margin:0 0 16px;"><strong style="color:#fff;">${data.businessName}</strong> is now live on the free listing. Before you settle in, there&rsquo;s something worth knowing: you can unlock the full <strong style="color:#fff;">${tier}</strong> experience <strong style="color:#00d083;">free for ${days} days</strong> &mdash; with nothing to lose.</p>
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:26px 0;">
@@ -351,7 +367,7 @@ export function createFreeTierTrialNudgeEmail(data: FreeTierTrialNudgeEmailData)
   if (hasPush) textBenefits.push('- Reach them instantly: send offers straight to customers\' phones, no ad budget.')
   if (hasAnalytics) textBenefits.push('- See what works: track views, saves and redemptions, so you stop guessing.')
 
-  const text = `Welcome to QWIKKER, ${data.firstName}\n\n${data.businessName} is now live on the free listing. You can unlock the full ${tier} experience free for ${days} days — no commitment, no card required, cancel anytime.\n\nHow ${tier} helps you win and keep customers:\n${textBenefits.join('\n')}\n\nDid you know? Industry research puts the cost of winning a new customer at roughly five times the cost of keeping one you already have — getting found by the right people, and giving them a reason to return, is where the growth is.\n\nStart your free trial: ${data.upgradeUrl}\nOr look around first: ${data.dashboardUrl}\n\nQuestions? Simply reply, or email ${data.supportEmail}.\n\nBest,\nThe QWIKKER Team`
+  const text = `Welcome to QWIKKER\n\n${hiBusiness(data.businessName)}\n\n${data.businessName} is now live on the free listing. You can unlock the full ${tier} experience free for ${days} days — no commitment, no card required, cancel anytime.\n\nHow ${tier} helps you win and keep customers:\n${textBenefits.join('\n')}\n\nDid you know? Industry research puts the cost of winning a new customer at roughly five times the cost of keeping one you already have — getting found by the right people, and giving them a reason to return, is where the growth is.\n\nStart your free trial: ${data.upgradeUrl}\nOr look around first: ${data.dashboardUrl}\n\nQuestions? Simply reply, or email ${data.supportEmail}.\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -362,7 +378,7 @@ export function createBusinessSubmittedEmail(data: BusinessSubmittedEmailData): 
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">We're on it.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;"><strong style="color:#fff;">${data.businessName}</strong> has been submitted for review. Our team will check your listing and get back to you within 24 hours.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -381,7 +397,7 @@ export function createBusinessSubmittedEmail(data: BusinessSubmittedEmailData): 
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `${data.businessName} is under review\n\nHi ${data.firstName},\n\n${data.businessName} has been submitted for review. Our team will check your listing within 24 hours.\n\nWe'll email you when it's approved.\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+  const text = `${data.businessName} is under review\n\n${hiBusiness(data.businessName)}\n\n${data.businessName} has been submitted for review. Our team will check your listing within 24 hours.\n\nWe'll email you when it's approved.\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -392,7 +408,7 @@ export function createBusinessApprovalEmail(data: BusinessApprovalEmailData): Em
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">You're live.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;"><strong style="color:#fff;">${data.businessName}</strong> has been approved and is now visible to QWIKKER users in ${data.city}.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -415,7 +431,7 @@ export function createBusinessApprovalEmail(data: BusinessApprovalEmailData): Em
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `${data.businessName} is now live on QWIKKER\n\nHi ${data.firstName},\n\n${data.businessName} has been approved and is now visible to QWIKKER users in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `${data.businessName} is now live on QWIKKER\n\n${hiBusiness(data.businessName)}\n\n${data.businessName} has been approved and is now visible to QWIKKER users in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -426,7 +442,7 @@ export function createOfferApprovalEmail(data: OfferApprovalEmailData): EmailTem
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Offer approved.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your offer for <strong style="color:#fff;">${data.businessName}</strong> is live and visible to customers in ${data.city}.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -443,7 +459,7 @@ export function createOfferApprovalEmail(data: OfferApprovalEmailData): EmailTem
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:16px 0 0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Offer approved: ${data.offerName}\n\nHi ${data.firstName},\n\nYour offer for ${data.businessName} is live on QWIKKER.\n\nOffer: ${data.offerName}\nValue: ${data.offerValue}\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `Offer approved: ${data.offerName}\n\n${hiBusiness(data.businessName)}\n\nYour offer for ${data.businessName} is live on QWIKKER.\n\nOffer: ${data.offerName}\nValue: ${data.offerValue}\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -454,7 +470,7 @@ export function createMenuApprovalEmail(data: MenuApprovalEmailData): EmailTempl
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Menu approved.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your menu for <strong style="color:#fff;">${data.businessName}</strong> has been approved and added to our AI knowledge base.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -476,7 +492,7 @@ export function createMenuApprovalEmail(data: MenuApprovalEmailData): EmailTempl
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:16px 0 0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Menu approved: ${data.menuName}\n\nHi ${data.firstName},\n\nYour menu for ${data.businessName} has been approved.\n\nMenu: ${data.menuName}\nType: ${data.menuType.replace('_', ' ')}\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `Menu approved: ${data.menuName}\n\n${hiBusiness(data.businessName)}\n\nYour menu for ${data.businessName} has been approved.\n\nMenu: ${data.menuName}\nType: ${data.menuType.replace('_', ' ')}\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -487,7 +503,7 @@ export function createBusinessRejectionEmail(data: BusinessRejectionEmailData): 
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Updates required.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">We've reviewed your application for <strong style="color:#fff;">${data.businessName}</strong> in ${data.city} and need a few things before we can approve it.</p>
 
       ${data.rejectionReason ? `
@@ -501,7 +517,7 @@ export function createBusinessRejectionEmail(data: BusinessRejectionEmailData): 
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Action needed: ${data.businessName} application\n\nHi ${data.firstName},\n\nWe need a few things before we can approve ${data.businessName}.\n\n${data.rejectionReason ? `Feedback: ${data.rejectionReason}` : ''}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+  const text = `Action needed: ${data.businessName} application\n\n${hiBusiness(data.businessName)}\n\nWe need a few things before we can approve ${data.businessName}.\n\n${data.rejectionReason ? `Feedback: ${data.rejectionReason}` : ''}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -512,7 +528,7 @@ export function createEventApprovalEmail(data: EventApprovalEmailData): EmailTem
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Event approved.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your event for <strong style="color:#fff;">${data.businessName}</strong> has been approved and is visible to QWIKKER users in ${data.city}.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -529,7 +545,7 @@ export function createEventApprovalEmail(data: EventApprovalEmailData): EmailTem
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:16px 0 0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Event approved: ${data.eventName}\n\nHi ${data.firstName},\n\nYour event for ${data.businessName} is now live in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `Event approved: ${data.eventName}\n\n${hiBusiness(data.businessName)}\n\nYour event for ${data.businessName} is now live in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -540,7 +556,7 @@ export function createSecretMenuApprovalEmail(data: SecretMenuApprovalEmailData)
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Secret menu item approved.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your secret menu item for <strong style="color:#fff;">${data.businessName}</strong> is now available to QWIKKER users in ${data.city}.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
@@ -557,7 +573,7 @@ export function createSecretMenuApprovalEmail(data: SecretMenuApprovalEmailData)
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:16px 0 0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Secret menu item approved: ${data.itemName}\n\nHi ${data.firstName},\n\nYour secret menu item for ${data.businessName} is now available in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `Secret menu item approved: ${data.itemName}\n\n${hiBusiness(data.businessName)}\n\nYour secret menu item for ${data.businessName} is now available in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -568,7 +584,7 @@ export function createImageApprovalEmail(data: ImageApprovalEmailData): EmailTem
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Image update approved.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your <strong style="color:#fff;">${data.imageType}</strong> update for <strong style="color:#fff;">${data.businessName}</strong> is now live on QWIKKER in ${data.city}.</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Quality visuals make a real difference. Your listing is looking sharp.</p>
 
@@ -579,7 +595,7 @@ export function createImageApprovalEmail(data: ImageApprovalEmailData): EmailTem
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:16px 0 0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Image update approved\n\nHi ${data.firstName},\n\nYour ${data.imageType} update for ${data.businessName} is now live on QWIKKER in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
+  const text = `Image update approved\n\n${hiBusiness(data.businessName)}\n\nYour ${data.imageType} update for ${data.businessName} is now live on QWIKKER in ${data.city}.\n\nDashboard: ${data.dashboardUrl}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -594,7 +610,7 @@ export function createChangeRejectionEmail(data: ChangeRejectionEmailData): Emai
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Update required.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your ${itemLabel} for <strong style="color:#fff;">${data.businessName}</strong> wasn't approved in its current form. Review the feedback below and resubmit from your dashboard.</p>
 
       ${data.rejectionReason ? `
@@ -611,7 +627,7 @@ export function createChangeRejectionEmail(data: ChangeRejectionEmailData): Emai
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Update required: your ${itemLabel} for ${data.businessName}\n\nHi ${data.firstName},\n\nYour ${itemLabel} for ${data.businessName} wasn't approved.\n\n${data.rejectionReason ? `Feedback: ${data.rejectionReason}` : ''}\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+  const text = `Update required: your ${itemLabel} for ${data.businessName}\n\n${hiBusiness(data.businessName)}\n\nYour ${itemLabel} for ${data.businessName} wasn't approved.\n\n${data.rejectionReason ? `Feedback: ${data.rejectionReason}` : ''}\n\nDashboard: ${data.dashboardUrl}\n\nQuestions? ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
@@ -633,7 +649,7 @@ export function createCompletionReminderEmail(data: CompletionReminderEmailData)
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
       <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">You're almost there.</h2>
-      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${data.firstName},</p>
+      <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiBusiness(data.businessName)}</p>
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your listing for <strong style="color:#fff;">${data.businessName}</strong> is <strong style="color:#00d083;">${data.completionPercentage}% complete</strong>. Just a few more details and you'll be ready to go live and start reaching customers in ${data.city.charAt(0).toUpperCase() + data.city.slice(1)}.</p>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:24px 0;">
@@ -653,7 +669,7 @@ export function createCompletionReminderEmail(data: CompletionReminderEmailData)
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `You're almost there.\n\nHi ${data.firstName},\n\nYour listing for ${data.businessName} is ${data.completionPercentage}% complete. Just a few more details and you'll be ready to go live.\n\nStill to complete:\n${data.missingItems.map((i) => `• ${i}`).join('\n')}\n\nOnce everything's filled in, hit Submit for Review and our team will check it within 24 hours.\n\nFinish your listing: ${data.dashboardUrl}\n\nNeed help completing your listing? Reach out to us here: ${data.contactCentreUrl} — or email ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
+  const text = `You're almost there.\n\n${hiBusiness(data.businessName)}\n\nYour listing for ${data.businessName} is ${data.completionPercentage}% complete. Just a few more details and you'll be ready to go live.\n\nStill to complete:\n${data.missingItems.map((i) => `• ${i}`).join('\n')}\n\nOnce everything's filled in, hit Submit for Review and our team will check it within 24 hours.\n\nFinish your listing: ${data.dashboardUrl}\n\nNeed help completing your listing? Reach out to us here: ${data.contactCentreUrl} — or email ${data.supportEmail}\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }

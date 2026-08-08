@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
                     </h2>
                     
                     <p style="color: #525252; margin: 0 0 32px 0; font-size: 15px; text-align: center;">
-                      Hi ${escapeHtml(claim.first_name || 'there')}, your claim for <strong style="color: #0a0a0a;">${escapeHtml(claim.business.business_name)}</strong> has been approved.
+                      Hi ${escapeHtml(claim.business.business_name)}, your claim has been approved.
                     </p>
                     
                     <!-- CTA Button -->

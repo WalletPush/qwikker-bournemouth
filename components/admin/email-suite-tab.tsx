@@ -140,6 +140,8 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
   const [replyText, setReplyText] = useState('')
   const [replyBusy, setReplyBusy] = useState(false)
   const [replyNotice, setReplyNotice] = useState<string | null>(null)
+  const [hydrateBusy, setHydrateBusy] = useState(false)
+  const hydrateAttemptedRef = useRef<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sendBusy, setSendBusy] = useState(false)
@@ -532,6 +534,44 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
     [inbound, selectedInboundId]
   )
 
+  const hydrateInboundBody = useCallback(async (sendId: string) => {
+    setHydrateBusy(true)
+    setReplyNotice(null)
+    try {
+      const res = await fetch('/api/admin/email-suite/inbox', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'hydrate_body', sendId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setReplyNotice(json.error || 'Could not load message body from Resend')
+        return
+      }
+      if (json.message) {
+        setInbound((prev) =>
+          prev.map((m) => (String(m.id) === sendId ? { ...m, ...json.message } : m))
+        )
+        if (json.hydrated) setReplyNotice('Message body loaded from Resend')
+      }
+    } catch {
+      setReplyNotice('Could not load message body from Resend')
+    } finally {
+      setHydrateBusy(false)
+    }
+  }, [])
+
+  // Auto-fetch body once for older inbound rows stored without html/text
+  useEffect(() => {
+    if (!selectedInbound) return
+    const id = String(selectedInbound.id)
+    const hasBody = Boolean(selectedInbound.html_body || selectedInbound.text_body)
+    const resendId = selectedInbound.resend_message_id
+    if (hasBody || !resendId || hydrateBusy || hydrateAttemptedRef.current.has(id)) return
+    hydrateAttemptedRef.current.add(id)
+    void hydrateInboundBody(id)
+  }, [selectedInbound, hydrateBusy, hydrateInboundBody])
+
   const replySubjectFor = (subject: string) =>
     /^re:\s/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim() || '(no subject)'}`
 
@@ -821,9 +861,26 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                           {String(selectedInbound.text_body)}
                         </pre>
                       ) : (
-                        <div className="p-6 text-sm text-slate-500 text-center">
-                          No message body stored for this email. Subject and sender are still shown —
-                          try asking the sender to resend, or check Resend → Receiving.
+                        <div className="p-6 text-sm text-slate-400 text-center space-y-3">
+                          <p>
+                            {hydrateBusy
+                              ? 'Loading message body from Resend…'
+                              : 'No message body stored yet. Resend webhooks only send metadata — we fetch the body separately.'}
+                          </p>
+                          {selectedInbound.resend_message_id ? (
+                            <button
+                              type="button"
+                              disabled={hydrateBusy}
+                              onClick={() => void hydrateInboundBody(String(selectedInbound.id))}
+                              className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium disabled:opacity-50"
+                            >
+                              {hydrateBusy ? 'Loading…' : 'Load body from Resend'}
+                            </button>
+                          ) : (
+                            <p className="text-xs text-slate-500">
+                              This row has no Resend id, so the body cannot be retrieved.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

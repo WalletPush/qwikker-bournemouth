@@ -90,10 +90,13 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
   const city = ctx.city
   const support = getFranchiseSupportEmail(city)
   const base = getFranchiseBaseUrl(city)
-  const first = ctx.firstName || 'there'
+  // Business emails greet the venue — never a personal first name
   const def = SUITE_TEMPLATES.find((t) => t.key === key)
   const biz = escapeHtml(ctx.businessName)
-  const firstEsc = escapeHtml(first)
+  const hiHtml = `Hi ${biz},`
+  const hiText = `Hi ${ctx.businessName},`
+  // Kept only for create* call sites that still accept firstName (ignored in greetings)
+  const first = ''
 
   let template: EmailTemplate
 
@@ -116,7 +119,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       template = shell(
         `<div style="padding:36px 30px;">
           <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Quick reminder — your listing is waiting</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi there,</p>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Just checking in &mdash; <strong style="color:#fff;">${biz}</strong> is already on <strong style="color:#00d083;">QWIKKER ${cityEsc}</strong>, but it hasn&rsquo;t been claimed yet.</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Your listing is built and ready. Claiming is free and takes a few minutes &mdash; then you can edit details, add offers, and take control of how locals find you.</p>
 
@@ -138,7 +141,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `Reminder: claim your QWIKKER listing for ${ctx.businessName}`,
-        `Quick reminder — your listing is waiting\n\nHi there,\n\nJust checking in — ${ctx.businessName} is already on QWIKKER ${city}, but it hasn't been claimed yet.\n\nYour listing is built and ready. Claiming is free and takes a few minutes.\n\nClaim: ${claimUrl}\nPreview: ${demoUrl}\n\nQuestions? ${support}\n\nBest,\nThe QWIKKER ${cityLabel} Team`
+        `Quick reminder — your listing is waiting\n\n${hiText}\n\nJust checking in — ${ctx.businessName} is already on QWIKKER ${city}, but it hasn't been claimed yet.\n\nYour listing is built and ready. Claiming is free and takes a few minutes.\n\nClaim: ${claimUrl}\nPreview: ${demoUrl}\n\nQuestions? ${support}\n\nBest,\nThe QWIKKER ${cityLabel} Team`
       )
       break
     }
@@ -196,8 +199,8 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       const cityEsc = escapeHtml(city)
       template = shell(
         `<div style="padding:36px 30px;">
-          <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Unlock Spotlight, ${firstEsc}</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${firstEsc},</p>
+          <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Unlock Spotlight for ${biz}</h2>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;"><strong style="color:#fff;">${biz}</strong> is already on QWIKKER ${cityEsc}. Spotlight is how local businesses get found first — when nearby customers are deciding where to go, not scrolling past an ad.</p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:24px 0;">
@@ -246,7 +249,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `${ctx.businessName} — unlock Spotlight on Qwikker`,
-        `Hi ${first},\n\nSpotlight puts ${ctx.businessName} at the front of discovery in ${city}: priority AI placement, push, loyalty, and analytics.\n\nSee plans: ${base}/dashboard/settings\n\n${support}`
+        `${hiText}\n\nSpotlight puts ${ctx.businessName} at the front of discovery in ${city}: priority AI placement, push, loyalty, and analytics.\n\nSee plans: ${base}/dashboard/settings\n\n${support}`
       )
       break
     }
@@ -255,7 +258,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       template = shell(
         `<div style="padding:36px 30px;">
           <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Turn first-timers into regulars</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${firstEsc},</p>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Paper stamp cards get lost. With <strong style="color:#fff;">Spotlight</strong> on QWIKKER ${cityEsc}, <strong style="color:#fff;">${biz}</strong> gets a digital loyalty card that lives in your customers&rsquo; Apple or Google Wallet — no app for them to download, and <strong style="color:#fff;">no till or POS integration</strong> for you to install.</p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:24px 0;">
@@ -312,7 +315,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `${ctx.businessName} — try Qwikker loyalty (Spotlight)`,
-        `Hi ${first},\n\nSpotlight on Qwikker includes digital loyalty for ${ctx.businessName}:\n- Stamp card in Apple/Google Wallet (no app)\n- No till/POS integration — staff stamp with a QR scan\n- Progress tracked toward the reward\n- AI companion can remind customers they're close to a freebie\n\nExplore: ${base}/dashboard/loyalty\nPlans: ${base}/dashboard/settings\n\n${support}`
+        `${hiText}\n\nSpotlight on Qwikker includes digital loyalty for ${ctx.businessName}:\n- Stamp card in Apple/Google Wallet (no app)\n- No till/POS integration — staff stamp with a QR scan\n- Progress tracked toward the reward\n- AI companion can remind customers they're close to a freebie\n\nExplore: ${base}/dashboard/loyalty\nPlans: ${base}/dashboard/settings\n\n${support}`
       )
       break
     }
@@ -354,7 +357,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       template = shell(
         `<div style="padding:36px 30px;">
           <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Fresh offer ideas for ${biz}</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${firstEsc},</p>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Offers are how QWIKKER turns discovery into footfall. ${
             offers.length
               ? `Here are ideas drafted for <strong style="color:#fff;">${biz}</strong> from your listing — edit, swap, or publish in a few taps.`
@@ -380,7 +383,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `Fresh offer ideas for ${ctx.businessName}`,
-        `Hi ${first},\n\nOffer ideas for ${ctx.businessName}:\n${offers.map((o) => `• ${o.name} — ${o.value}`).join('\n') || '• Weekday special\n• First-visit welcome'}\n\n${base}/dashboard/offers`
+        `${hiText}\n\nOffer ideas for ${ctx.businessName}:\n${offers.map((o) => `• ${o.name} — ${o.value}`).join('\n') || '• Weekday special\n• First-visit welcome'}\n\n${base}/dashboard/offers`
       )
       break
     }
@@ -388,7 +391,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       const days = ctx.trialDays || 7
       template = shell(
         `<div style="padding:36px 30px;">
-          <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Great news, ${firstEsc}</h2>
+          <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Great news for ${biz}</h2>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">We&rsquo;ve extended the free trial for <strong style="color:#fff;">${biz}</strong> by <strong style="color:#00d083;">${days} days</strong> — so you have more time to see what Spotlight / Featured can do for you.</p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:24px 0;">
@@ -418,7 +421,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         'Your Qwikker trial has been extended',
-        `Great news, ${first}. We've extended the free trial for ${ctx.businessName} by ${days} days.\n\n${base}/dashboard\n\n${support}`
+        `Great news for ${ctx.businessName}. We've extended the free trial by ${days} days.\n\n${base}/dashboard\n\n${support}`
       )
       break
     }
@@ -427,7 +430,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       template = shell(
         `<div style="padding:36px 30px;">
           <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Your loyalty card is ready</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${firstEsc},</p>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">The digital stamp card for <strong style="color:#fff;">${biz}</strong> is live. It sits in your customers&rsquo; Apple or Google Wallet — no app to download, no paper cards to lose.</p>
 
           <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:20px;margin:0 0 20px;">
@@ -463,7 +466,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `Your loyalty card is ready — ${ctx.businessName}`,
-        `Hi ${first},\n\nYour Qwikker loyalty program for ${ctx.businessName} is ready to share.\n${loyaltyUrl}\n\n${support}`
+        `${hiText}\n\nYour Qwikker loyalty program for ${ctx.businessName} is ready to share.\n${loyaltyUrl}\n\n${support}`
       )
       break
     }
@@ -477,7 +480,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
       template = shell(
         `<div style="padding:36px 30px;">
           <h2 style="font-size:22px;font-weight:700;color:#ffffff;margin:0 0 20px;">Your Qwikker week</h2>
-          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">Hi ${firstEsc},</p>
+          <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 16px;">${hiHtml}</p>
           <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0 0 20px;">Here&rsquo;s what QWIKKER did for <strong style="color:#fff;">${biz}</strong> in the last ${days} days — real activity from your listing, not vanity estimates.</p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:0 0 20px;">
@@ -530,7 +533,7 @@ export function renderSuiteTemplate(key: string, ctx: RenderContext): EmailTempl
         </div>`,
         city,
         `${ctx.businessName}: your Qwikker week in ${city}`,
-        `Hi ${first},\n\nLast ${days} days for ${ctx.businessName}:\n- Views: ${views}\n- Claims: ${claims}\n- Saves: ${saves}\n\n${base}/dashboard/analytics`
+        `${hiText}\n\nLast ${days} days for ${ctx.businessName}:\n- Views: ${views}\n- Claims: ${claims}\n- Saves: ${saves}\n\n${base}/dashboard/analytics`
       )
       break
     }
