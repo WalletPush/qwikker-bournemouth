@@ -23,12 +23,14 @@ interface FranchiseConfig {
   resend_api_key?: string | null // Masked when returned from API
   resend_from_email?: string
   resend_from_name?: string
+  resend_webhook_secret?: string | null // Masked — Resend webhook signing secret (whsec_)
   openai_api_key?: string | null // Masked
   anthropic_api_key?: string | null // Masked
   google_places_api_key?: string | null // Masked
   
   // "has_*" flags indicate if a secret is configured (without exposing value)
   has_resend_api_key?: boolean
+  has_resend_webhook_secret?: boolean
   has_openai_api_key?: boolean
   has_anthropic_api_key?: boolean
   has_google_places_api_key?: boolean
@@ -143,6 +145,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
   // State for showing/hiding API keys
   const [showKeys, setShowKeys] = useState({
     resend: false,
+    resendWebhook: false,
     openai: false,
     anthropic: false,
     googlePlaces: false,
@@ -212,6 +215,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
             resend_api_key: '',
             resend_from_email: `no-reply@${city.toLowerCase()}.qwikker.com`,
             resend_from_name: `QWIKKER ${city.charAt(0).toUpperCase() + city.slice(1)}`,
+            resend_webhook_secret: '',
             openai_api_key: '',
             anthropic_api_key: '',
             
@@ -1079,6 +1083,45 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         Create at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:underline">resend.com/api-keys</a>
                       </p>
                     </div>
+                    <div>
+                      <Label className="text-slate-300 text-sm mb-2 block">
+                        Resend Webhook Signing Secret
+                        {config.has_resend_webhook_secret ? (
+                          <span className="ml-2 text-[10px] text-emerald-400 font-normal">saved</span>
+                        ) : null}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type={showKeys.resendWebhook ? 'text' : 'password'}
+                          value={config.resend_webhook_secret || ''}
+                          onChange={(e) => setConfig({ ...config, resend_webhook_secret: e.target.value })}
+                          className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg font-mono text-sm pr-10"
+                          placeholder="whsec_..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKeys({ ...showKeys, resendWebhook: !showKeys.resendWebhook })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                        >
+                          {showKeys.resendWebhook ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        From Resend → Webhooks → your endpoint signing secret. Endpoint URL:{' '}
+                        <span className="font-mono text-slate-300">
+                          https://{config.subdomain || config.city || 'yourcity'}.qwikker.com/api/webhooks/resend
+                        </span>
+                      </p>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-slate-300 text-sm mb-2 block">From Name</Label>
@@ -1104,6 +1147,28 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                           Auto-generated from your subdomain. Reply-to: <span className="font-mono text-slate-300">hello@{config.subdomain || config.city || 'yourcity'}.qwikker.com</span>
                         </p>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveSection('resend', [
+                            'resend_api_key',
+                            'resend_from_name',
+                            'resend_webhook_secret',
+                          ])
+                        }
+                        disabled={sectionStatus.resend === 'saving'}
+                        className="px-4 py-2 bg-[#00d083] hover:bg-[#00b86f] text-black text-sm font-semibold rounded-lg disabled:opacity-50"
+                      >
+                        {sectionStatus.resend === 'saving' ? 'Saving…' : 'Save Resend settings'}
+                      </button>
+                      {sectionStatus.resend === 'saved' && (
+                        <span className="text-sm text-green-400 font-medium">Saved</span>
+                      )}
+                      {sectionStatus.resend === 'error' && (
+                        <span className="text-sm text-red-400 font-medium">Save failed</span>
+                      )}
                     </div>
                   </div>
                 </div>

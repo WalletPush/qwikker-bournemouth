@@ -20,7 +20,17 @@ const MENU_QUERY_STOPWORDS = new Set([
   'serving', 'serve', 'food', 'something', 'good', 'best', 'like', 'about',
   'from', 'here', 'there', 'they', 'them', 'know', 'tell', 'recommend',
   'suggestion', 'suggestions', 'around', 'nearby', 'local', 'today', 'tonight',
+  // Conversational lead-ins — without these, "what about the best burgers"
+  // becomes a multi-word query and skips cuisine/dish matching.
+  'what', 'which', 'who', 'how', 'why', 'when',
 ])
+
+/** Simple plural stem so "burgers" matches menu item "Mel's Burger". */
+function stemMenuToken(word: string): string {
+  if (word.length >= 5 && word.endsWith('ies')) return `${word.slice(0, -3)}y`
+  if (word.length >= 4 && word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1)
+  return word
+}
 
 /**
  * Score enriched featured items (menu_preview) against the user query.
@@ -46,7 +56,11 @@ export function scoreMenuPreviewMatch(
     .map((w) => w.trim())
     .filter((w) => w.length >= 3 && !MENU_QUERY_STOPWORDS.has(w))
 
-  for (const word of words) terms.add(word)
+  for (const word of words) {
+    terms.add(word)
+    const stem = stemMenuToken(word)
+    if (stem !== word && stem.length >= 3) terms.add(stem)
+  }
   for (let i = 0; i < words.length - 1; i++) {
     terms.add(`${words[i]} ${words[i + 1]}`)
   }
@@ -74,7 +88,9 @@ export function scoreMenuPreviewMatch(
     if (!name && !desc) continue
     const hay = `${name} ${desc}`
 
-    const matchedWords = words.filter((w) => hay.includes(w))
+    const matchedWords = words.filter(
+      (w) => hay.includes(w) || hay.includes(stemMenuToken(w))
+    )
     const phraseHit = words.length >= 2 && (
       name.includes(words.join(' ')) ||
       hay.includes(words.join(' ')) ||
@@ -85,8 +101,16 @@ export function scoreMenuPreviewMatch(
     if (isMultiWordDishQuery) {
       if (phraseHit || matchedWords.length >= 2) {
         best = Math.max(best, 5)
+        continue
       }
-      // Ignore single-token hits for multi-word dish asks
+      // Still score strong cuisine/dish terms (e.g. residual "burgers" + filler)
+      for (const term of intent.cuisineTerms) {
+        const t = String(term || '').toLowerCase().trim()
+        if (t.length < 3) continue
+        if (hay.includes(t) || hay.includes(stemMenuToken(t))) {
+          best = Math.max(best, 5)
+        }
+      }
       continue
     }
 

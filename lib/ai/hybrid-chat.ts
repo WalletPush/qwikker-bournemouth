@@ -1711,7 +1711,10 @@ export async function generateHybridAIResponse(
       'dentist', 'dental', 'doctor', 'medical', 'clinic',
       'car wash', 'auto', 'garage', 'mechanic',
       'gym', 'fitness', 'yoga studio',
-      'bank', 'atm', 'finance'
+      'bank', 'atm', 'finance',
+      // Rentals / tourism — never answer food queries with scooter shops
+      'scooter', 'motorcycle', 'moped', 'bike rental', 'bicycle rental',
+      'car rental', 'vehicle rental', 'rental', 'hire', 'motorbike',
     ]
     
     sortedForContext = sortedForContext.filter(b => {

@@ -62,6 +62,9 @@ function sanitizeConfigForClient(data: any) {
     
     resend_api_key: maskSecret(data.resend_api_key),
     has_resend_api_key: !!data.resend_api_key,
+
+    resend_webhook_secret: maskSecret(data.resend_webhook_secret),
+    has_resend_webhook_secret: !!data.resend_webhook_secret,
     
     openai_api_key: maskSecret(data.openai_api_key),
     has_openai_api_key: !!data.openai_api_key,
@@ -271,6 +274,7 @@ export async function POST(request: NextRequest) {
     addIfPresent('slack_webhook_url', config.slack_webhook_url)
     addIfPresent('stripe_webhook_secret', config.stripe_webhook_secret)
     addIfPresent('resend_api_key', config.resend_api_key)
+    addIfPresent('resend_webhook_secret', config.resend_webhook_secret)
     addIfPresent('openai_api_key', config.openai_api_key)
     addIfPresent('anthropic_api_key', config.anthropic_api_key)
     addIfPresent('google_places_api_key', config.google_places_api_key)

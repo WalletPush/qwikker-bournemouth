@@ -278,6 +278,22 @@ export function ContactsTab({ city, cityDisplayName }: ContactsTabProps) {
                         </p>
                         <p className="text-slate-300">
                           <span className="font-medium">Email:</span> {contact.email}
+                          {contact.id ? (
+                            <span className="ml-2 inline-flex gap-2 text-xs">
+                              <a
+                                href={`/admin?tab=email-suite&emailTab=history&businessId=${contact.id}`}
+                                className="text-cyan-400 hover:underline"
+                              >
+                                View emails
+                              </a>
+                              <a
+                                href={`/admin?tab=email-suite&emailTab=templates&compose=1&businessId=${contact.id}`}
+                                className="text-[#00d083] hover:underline"
+                              >
+                                Send
+                              </a>
+                            </span>
+                          ) : null}
                         </p>
                         <p className="text-slate-300">
                           <span className="font-medium">Phone:</span> {contact.phone}

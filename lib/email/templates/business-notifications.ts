@@ -4,8 +4,9 @@ const LOGO_URL = process.env.CLOUDINARY_LOGO_URL || 'https://res.cloudinary.com/
 
 /**
  * Shared dark premium email shell — fully inline-styled for Gmail compatibility.
+ * Exported for Email Suite templates that must match transactional branding.
  */
-function wrapInLayout(content: string, city: string): string {
+export function wrapInLayout(content: string, city: string): string {
   const cityDisplay = city.charAt(0).toUpperCase() + city.slice(1)
   return `
 <!DOCTYPE html>

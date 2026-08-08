@@ -5,5 +5,11 @@
     }
   },
   "buildCommand": "pnpm build",
-  "installCommand": "pnpm install"
+  "installCommand": "pnpm install",
+  "crons": [
+    {
+      "path": "/api/cron/email-digest",
+      "schedule": "0 8 * * 1"
+    }
+  ]
 }

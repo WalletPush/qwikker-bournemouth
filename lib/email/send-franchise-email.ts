@@ -9,6 +9,7 @@ import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resend as globalResend, EMAIL_CONFIG } from './resend-client'
 import type { EmailTemplate } from './email-service'
+import { logEmailSend, type EmailCategory } from './email-logger'
 
 /**
  * Returns the correct base URL for a franchise city.
@@ -31,6 +32,16 @@ interface FranchiseEmailOptions {
   tags?: Array<{ name: string; value: string }>
   /** Optional file attachments (e.g. the Present Mode PDF). */
   attachments?: Array<{ filename: string; content: Buffer | string }>
+  /** Email Suite logging metadata (optional — never blocks send). */
+  logMeta?: {
+    businessId?: string
+    templateKey?: string
+    category?: EmailCategory
+    sentBy?: string
+    campaignId?: string
+    batchId?: string
+    skipLog?: boolean
+  }
 }
 
 interface FranchiseResendConfig {
@@ -129,12 +140,53 @@ export async function sendWithRetry(
   return { data: null, error: { name: 'retry_exhausted', message: 'All retry attempts failed' } }
 }
 
+async function persistSendLog(params: {
+  city: string
+  to: string | string[]
+  fromEmail: string
+  replyTo: string
+  template: EmailTemplate
+  messageId?: string
+  success: boolean
+  error?: string
+  logMeta?: FranchiseEmailOptions['logMeta']
+  tags: Array<{ name: string; value: string }>
+}): Promise<string | undefined> {
+  if (params.logMeta?.skipLog) return undefined
+  const recipients = Array.isArray(params.to) ? params.to : [params.to]
+  const typeTag = params.tags.find((t) => t.name === 'type' || t.name === 'category')?.value
+  let lastId: string | undefined
+  for (const toEmail of recipients) {
+    const id = await logEmailSend({
+      city: params.city,
+      toEmail,
+      fromEmail: params.fromEmail,
+      replyTo: params.replyTo,
+      subject: params.template.subject,
+      htmlBody: params.template.html,
+      textBody: params.template.text,
+      templateKey: params.logMeta?.templateKey || typeTag || null,
+      category: params.logMeta?.category || (typeTag === 'claim_invitation' ? 'outreach' : 'transactional'),
+      resendMessageId: params.messageId || null,
+      status: params.success ? 'sent' : 'failed',
+      sentBy: params.logMeta?.sentBy || null,
+      businessId: params.logMeta?.businessId || null,
+      campaignId: params.logMeta?.campaignId || null,
+      batchId: params.logMeta?.batchId || null,
+      metadata: params.error ? { error: params.error } : {},
+    })
+    if (id) lastId = id
+  }
+  return lastId
+}
+
 export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promise<{
   success: boolean
   messageId?: string
   error?: string
+  emailSendId?: string
 }> {
-  const { city, to, bcc, template, replyTo, tags = [], attachments } = options
+  const { city, to, bcc, template, replyTo, tags = [], attachments, logMeta } = options
 
   const franchiseConfig = await getFranchiseResendConfig(city)
 
@@ -170,11 +222,33 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
 
       if (result.error) {
         console.error(`❌ [${city}] Franchise Resend error:`, result.error)
+        await persistSendLog({
+          city,
+          to,
+          fromEmail,
+          replyTo: replyToEmail,
+          template,
+          success: false,
+          error: result.error.message,
+          logMeta,
+          tags: allTags,
+        })
         return { success: false, error: result.error.message }
       }
 
       console.log(`✅ [${city}] Franchise email sent:`, result.data?.id)
-      return { success: true, messageId: result.data?.id }
+      const emailSendId = await persistSendLog({
+        city,
+        to,
+        fromEmail,
+        replyTo: replyToEmail,
+        template,
+        messageId: result.data?.id,
+        success: true,
+        logMeta,
+        tags: allTags,
+      })
+      return { success: true, messageId: result.data?.id, emailSendId }
     }
 
     // Fallback to global Resend
@@ -184,12 +258,14 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
     }
 
     console.log(`📧 [${city}] Falling back to global Resend for: ${Array.isArray(to) ? to.join(', ') : to}`)
+    const fromEmail = EMAIL_CONFIG.from
+    const replyToEmail = replyTo || EMAIL_CONFIG.replyTo
 
     const result = await sendWithRetry(globalResend, {
-      from: EMAIL_CONFIG.from,
+      from: fromEmail,
       to: Array.isArray(to) ? to : [to],
       ...(bcc ? { bcc: Array.isArray(bcc) ? bcc : [bcc] } : {}),
-      replyTo: replyTo || EMAIL_CONFIG.replyTo,
+      replyTo: replyToEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
@@ -199,11 +275,33 @@ export async function sendFranchiseEmail(options: FranchiseEmailOptions): Promis
 
     if (result.error) {
       console.error(`❌ [${city}] Global Resend error:`, result.error)
+      await persistSendLog({
+        city,
+        to,
+        fromEmail,
+        replyTo: replyToEmail,
+        template,
+        success: false,
+        error: result.error.message,
+        logMeta,
+        tags: allTags,
+      })
       return { success: false, error: result.error.message }
     }
 
     console.log(`✅ [${city}] Global email sent:`, result.data?.id)
-    return { success: true, messageId: result.data?.id }
+    const emailSendId = await persistSendLog({
+      city,
+      to,
+      fromEmail,
+      replyTo: replyToEmail,
+      template,
+      messageId: result.data?.id,
+      success: true,
+      logMeta,
+      tags: allTags,
+    })
+    return { success: true, messageId: result.data?.id, emailSendId }
   } catch (error) {
     console.error(`❌ [${city}] Email send failed:`, error)
     return {

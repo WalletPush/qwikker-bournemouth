@@ -200,6 +200,7 @@ export async function sendClaimInvite(
 
   let claimUrl = claimTarget
   let demoUrl = demoTarget
+  let trackedCodes: string[] = []
   try {
     const tracked = await createClaimInviteTrackedLinks(supabaseAdmin, {
       businessId: business.id,
@@ -211,6 +212,7 @@ export async function sendClaimInvite(
     })
     claimUrl = tracked.claim.trackedUrl
     demoUrl = tracked.demo.trackedUrl
+    trackedCodes = [tracked.claim.code, tracked.demo.code]
   } catch (e) {
     // Never block the invite if tracking tables aren't migrated yet — fall back to raw URLs.
     console.warn(`send-claim-invite: tracked links failed for ${business.id}, using raw URLs`, e)
@@ -228,11 +230,29 @@ export async function sendClaimInvite(
     template,
     attachments,
     tags: [{ name: 'type', value: 'claim_invitation' }],
+    logMeta: {
+      businessId: business.id,
+      templateKey: 'claim_invitation',
+      category: 'outreach',
+      sentBy: adminId,
+    },
   })
 
   if (!emailResult.success) {
     console.error(`❌ [${city}] Claim invite failed for ${business.email}: ${emailResult.error}`)
     return { ok: false, error: emailResult.error || 'Failed to send email' }
+  }
+
+  // Backfill Resend id onto the tracked links created for this send
+  if (emailResult.messageId && trackedCodes.length > 0) {
+    try {
+      await supabaseAdmin
+        .from('outreach_tracked_links')
+        .update({ resend_message_id: emailResult.messageId })
+        .in('code', trackedCodes)
+    } catch (e) {
+      console.warn('send-claim-invite: could not backfill resend_message_id', e)
+    }
   }
 
   await recordInviteSent(supabaseAdmin, business, adminId)

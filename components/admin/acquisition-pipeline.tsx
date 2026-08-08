@@ -100,6 +100,12 @@ const BUCKET_TONE: Record<'ready' | 'warn' | 'muted', { border: string; dot: str
 
 export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: string }) {
   const [rows, setRows] = useState<PipelineRow[]>([])
+  /** Server claim KPIs (invite cohort) — not derived from unclaimed-only rows. */
+  const [serverClaimKpis, setServerClaimKpis] = useState<{
+    claimed: number
+    emailsSent: number
+    claimRate: number
+  } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -170,6 +176,22 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load')
       setRows(data.rows || [])
+      if (
+        data.counts &&
+        typeof data.counts.claimed === 'number' &&
+        typeof data.counts.emailsSent === 'number'
+      ) {
+        setServerClaimKpis({
+          claimed: data.counts.claimed,
+          emailsSent: data.counts.emailsSent,
+          claimRate:
+            typeof data.counts.claimRate === 'number'
+              ? data.counts.claimRate
+              : data.counts.emailsSent > 0
+                ? Math.round((data.counts.claimed / data.counts.emailsSent) * 1000) / 10
+                : 0,
+        })
+      }
       setSelected(new Set())
       if (data.meta?.truncated && process.env.NODE_ENV !== 'production') {
         console.warn(
@@ -303,8 +325,13 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
 
   const counts = useMemo(() => {
     const by = (s: string) => rows.filter((r) => r.stage === s).length
-    const emailsSent = rows.filter((r) => r.sentAt).length
-    const claimed = by('claimed')
+    // Prefer server claim KPIs — rows are loaded with unclaimed=1, so claimed
+    // businesses disappear from the client list after they claim.
+    const emailsSent = serverClaimKpis?.emailsSent ?? rows.filter((r) => r.sentAt).length
+    const claimed = serverClaimKpis?.claimed ?? by('claimed')
+    const claimRate =
+      serverClaimKpis?.claimRate ??
+      (emailsSent > 0 ? Math.round((claimed / emailsSent) * 1000) / 10 : 0)
     return {
       total: rows.length,
       enriched: rows.filter((r) => r.enrichment?.status === 'ready').length,
@@ -315,9 +342,9 @@ export function AcquisitionPipeline({ cityDisplayName }: { cityDisplayName: stri
       sent: by('sent'),
       claimed,
       emailsSent,
-      claimRate: emailsSent > 0 ? Math.round((claimed / emailsSent) * 1000) / 10 : 0,
+      claimRate,
     }
-  }, [rows, enrichingIds])
+  }, [rows, enrichingIds, serverClaimKpis])
 
   // Distinct categories for the "focus a category" picker.
   const categories = useMemo(() => {

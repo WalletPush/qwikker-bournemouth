@@ -31,6 +31,7 @@ import { BusinessCard } from '@/components/user/business-card'
 import { AdminBusinessPreview } from './admin-business-preview'
 import { PlaceholderSelector } from './placeholder-selector'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import { EmailSuiteTab } from '@/components/admin/email-suite-tab'
 
 interface Business {
   id: string
@@ -81,12 +82,12 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const searchParams = useSearchParams()
   
   // Get initial tab from URL or default to 'pending'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config' | 'acquisition'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'updates' | 'live' | 'unclaimed' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'email-suite' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config' | 'acquisition'>(() => {
     const urlTab = searchParams.get('tab')
     // Backward compat: old ?tab=setup or ?tab=pricing → city-config
     if (urlTab === 'setup' || urlTab === 'pricing') return 'city-config'
     if (urlTab === 'ai-test') return 'ai-management'
-    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-management', 'city-config']
+    const validTabs = ['overview', 'pending', 'updates', 'live', 'unclaimed', 'incomplete', 'expired', 'rejected', 'knowledge', 'analytics', 'contacts', 'contact-centre', 'email-suite', 'import', 'claims', 'loyalty-queue', 'qr-management', 'ai-management', 'city-config', 'acquisition']
     return validTabs.includes(urlTab || '') ? (urlTab as any) : 'overview'
   })
 
@@ -523,7 +524,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const { showSuccess, showError, showConfirm, ModalComponent } = useElegantModal()
 
   // Function to update tab and URL
-  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config') => {
+  const updateActiveTab = (newTab: 'overview' | 'pending' | 'updates' | 'live' | 'incomplete' | 'expired' | 'rejected' | 'knowledge' | 'analytics' | 'contacts' | 'contact-centre' | 'email-suite' | 'import' | 'claims' | 'loyalty-queue' | 'qr-management' | 'ai-management' | 'city-config' | 'acquisition' | 'unclaimed') => {
     setActiveTab(newTab)
     setIsMobileMenuOpen(false) // Close mobile menu when tab is selected
     // Reset filters so listings always show on every tab
@@ -533,6 +534,11 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     // Update URL without page refresh
     const url = new URL(window.location.href)
     url.searchParams.set('tab', newTab)
+    // Sidebar / overview navigation = fresh view. Drop stale Email Suite
+    // compose filters (CRM deep-links set these via full navigation instead).
+    url.searchParams.delete('businessId')
+    url.searchParams.delete('compose')
+    url.searchParams.delete('emailTab')
     router.replace(url.pathname + url.search, { scroll: false })
   }
 
@@ -1562,6 +1568,21 @@ Qwikker Admin Team`
               </button>
 
               <button
+                onClick={() => updateActiveTab('email-suite')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  activeTab === 'email-suite'
+                    ? 'bg-[#00d083] text-black'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>Email Suite</span>
+                <span className={`ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded ${activeTab === 'email-suite' ? 'bg-black/20 text-black' : 'bg-[#00d083]/20 text-[#00d083]'}`}>New</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('knowledge')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === 'knowledge' 
@@ -1658,6 +1679,7 @@ Qwikker Admin Team`
                 {activeTab === 'city-config' && 'City Configuration'}
                 {activeTab === 'contacts' && 'Business Contacts'}
                 {activeTab === 'contact-centre' && 'Contact Centre'}
+                {activeTab === 'email-suite' && 'Email Suite'}
                 {activeTab === 'loyalty-queue' && 'Loyalty Queue'}
                 {activeTab === 'import' && 'Import Businesses'}
                 {activeTab === 'acquisition' && 'Acquisition Engine'}
@@ -2048,7 +2070,7 @@ Qwikker Admin Team`
                   incompleteCount={incompleteBusinesses.length}
                   claimsCount={pendingClaims.length}
                   walletPassesCount={walletPassesCount}
-                  onNavigateToTab={(tab: string) => setActiveTab(tab as typeof activeTab)}
+                  onNavigateToTab={(tab: string) => updateActiveTab(tab as Parameters<typeof updateActiveTab>[0])}
                 />
               )}
 
@@ -3790,6 +3812,11 @@ Qwikker Admin Team`
               {/* AI Management Tab */}
               {activeTab === 'ai-management' && (
                 <AIManagementPage city={city} />
+              )}
+
+              {/* Email Suite */}
+              {activeTab === 'email-suite' && (
+                <EmailSuiteTab city={city} />
               )}
 
               {/* Acquisition Engine Tab */}

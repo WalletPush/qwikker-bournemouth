@@ -832,22 +832,16 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   }
 
   const handleEmail = () => {
-    // No email on file → prompt to add one instead of opening an empty mailto
+    // Deep-link into Email Suite (compose) — branded From via Resend, not personal mailto
     if (!contactEmail) {
       setShowAddEmailModal(true)
       return
     }
-    const subject = encodeURIComponent(`Qwikker Business Update - ${business.business_name}`)
-    const body = encodeURIComponent(`Hi ${business.first_name || 'there'},\n\nI hope this email finds you well. I wanted to reach out regarding your Qwikker business profile for ${business.business_name}.\n\nBest regards,\nQwikker Team`)
-    window.open(`mailto:${contactEmail}?subject=${subject}&body=${body}`)
-    const now = new Date()
-    contactHistory.unshift({
-      id: now.getTime(),
-      type: 'email',
-      date: now.toISOString().split('T')[0],
-      subject: `Business Update - ${business.business_name}`,
-      status: 'sent'
-    })
+    window.location.href = `/admin?tab=email-suite&emailTab=templates&compose=1&businessId=${business.id}`
+  }
+
+  const handleViewEmails = () => {
+    window.location.href = `/admin?tab=email-suite&emailTab=history&businessId=${business.id}`
   }
 
 
@@ -1058,9 +1052,9 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             {/* Right: Quick Actions */}
             <div className="flex items-center gap-2 flex-shrink-0 @min-[480px]:ml-4">
               <button
-                onClick={() => contactEmail ? window.open(`mailto:${contactEmail}`) : setShowAddEmailModal(true)}
+                onClick={handleEmail}
                 className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
-                title={contactEmail ? 'Email' : 'Add email'}
+                title={contactEmail ? 'Email Suite — compose' : 'Add email'}
               >
                 <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1474,6 +1468,17 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             Call
           </Button>
           <Button
+            onClick={handleViewEmails}
+            size="sm"
+            variant="outline"
+            className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Email history
+          </Button>
+          <Button
             onClick={handleEmail}
             size="sm"
             variant="outline"
@@ -1482,7 +1487,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            Email
+            Send email
           </Button>
           <Button
             size="sm"

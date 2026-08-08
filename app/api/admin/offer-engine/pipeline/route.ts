@@ -83,14 +83,15 @@ export async function GET(request: NextRequest) {
       .filter((id) => id && !businessById.has(id))
 
     if (missingEnrichmentIds.length > 0) {
-      let missingQuery = supabase
+      // Do NOT apply unclaimedOnly here. Invited businesses that later claim
+      // still have enrichments (sent_at) and must stay in the payload so the
+      // Claimed KPI / claim rate can see them.
+      const { data: missingBiz } = await supabase
         .from('business_profiles')
         .select(
           'id, business_name, business_town, city, owner_user_id, email, phone, contact_methods, rating, review_count, google_place_id, website_url, display_category, system_category, business_type'
         )
         .in('id', missingEnrichmentIds)
-      if (unclaimedOnly) missingQuery = missingQuery.is('owner_user_id', null)
-      const { data: missingBiz } = await missingQuery
       for (const b of missingBiz || []) {
         businessById.set(b.id, b)
       }
@@ -238,11 +239,31 @@ export async function GET(request: NextRequest) {
     if (enriched === 'yes') rows = rows.filter((r) => r.enrichment?.status === 'ready')
     if (enriched === 'no') rows = rows.filter((r) => r.enrichment?.status !== 'ready')
 
-    // Dashboard counts. Note "emailsSent" counts every invite ever sent (including
-    // businesses that later claimed) so claim rate matches "claimed / emails sent".
+    // Journey column counts from the (mostly unclaimed) row list.
     const stageCount = (s: Stage) => rows.filter((r) => r.stage === s).length
-    const emailsSent = rows.filter((r) => enrichmentMap.get(r.id)?.sentAt).length
-    const claimed = stageCount('claimed')
+
+    // Claim KPIs from the full invite cohort — independent of unclaimed=1 so
+    // businesses that claimed after an invite still count.
+    const sentInviteIds = [
+      ...new Set(
+        (cityEnrichments || [])
+          .filter((e) => e.sent_at)
+          .map((e) => e.business_id)
+          .filter(Boolean)
+      ),
+    ] as string[]
+    let claimedAmongInvites = 0
+    if (sentInviteIds.length > 0) {
+      const { count: claimedCount } = await supabase
+        .from('business_profiles')
+        .select('id', { count: 'exact', head: true })
+        .in('id', sentInviteIds)
+        .not('owner_user_id', 'is', null)
+      claimedAmongInvites = claimedCount || 0
+    }
+    const emailsSent = sentInviteIds.length
+    const claimed = claimedAmongInvites
+
     const counts = {
       total: rows.length,
       imported: stageCount('imported'),
