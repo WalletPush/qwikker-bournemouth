@@ -124,20 +124,30 @@ function truncateWords(input: string, maxLen: number): string {
   return trimmed.replace(/[\s,&+\-–—]+$/, '') + '…'
 }
 
+/** Short offer label for vibe copy — e.g. "Free Tiramisu with…" → "Free Tiramisu". */
+function offerForVibeCopy(offerName: string): string {
+  const clean = (offerName || '').replace(/\s+/g, ' ').trim()
+  const beforeWith = clean.split(/\s+with\s+/i)[0]?.trim()
+  const base = beforeWith && beforeWith.length >= 3 ? beforeWith : clean
+  return truncateWords(base, 36)
+}
+
 /** Build expiry vibe CTA copy + deep link into business vibe sheet. */
 export function buildExpiryVibeMessage(params: {
   offerName: string
   businessName: string
   city: string
   walletPassId: string
+  firstName?: string | null
   businessSlug?: string | null
 }): string {
-  const shortOffer = truncateWords(params.offerName, 40)
+  const shortOffer = offerForVibeCopy(params.offerName)
   const shortBusiness = truncateWords(params.businessName, 28)
+  const name = (params.firstName || '').trim() || 'there'
   const slug = params.businessSlug?.trim() || slugifyBusinessName(params.businessName)
   const city = (params.city || 'bournemouth').toLowerCase()
   const vibeUrl = `https://${city}.qwikker.com/user/business/${slug}?vibe=1&wallet_pass_id=${encodeURIComponent(params.walletPassId)}`
-  return `How was "${shortOffer}" at ${shortBusiness}? Tap to leave a quick vibe:\n${vibeUrl}`
+  return `How was your ${shortOffer}, ${name}? Tap to leave a quick vibe for ${shortBusiness}.\n${vibeUrl}`
 }
 
 async function syncActivationToWallet(params: {
@@ -369,7 +379,7 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
     .limit(limit)
 
   for (const row of rows || []) {
-    const [{ data: offer }, { data: business }] = await Promise.all([
+    const [{ data: offer }, { data: business }, { data: passUser }] = await Promise.all([
       supabase
         .from('business_offers')
         .select('offer_name, activation_window_minutes')
@@ -379,6 +389,11 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
         .from('business_profiles')
         .select('business_name, city')
         .eq('id', row.business_id)
+        .maybeSingle(),
+      supabase
+        .from('app_users')
+        .select('first_name, name')
+        .eq('wallet_pass_id', row.wallet_pass_id)
         .maybeSingle(),
     ])
     const isClear =
@@ -411,13 +426,16 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
     }
 
     const windowEnded = new Date(row.active_until).getTime() <= Date.now()
+    const firstName =
+      passUser?.first_name?.trim() || passUser?.name?.split(/\s+/)[0] || null
     const clearMessage =
       isClear && windowEnded
         ? buildExpiryVibeMessage({
-            offerName: offer?.offer_name || 'Offer',
+            offerName: offer?.offer_name || 'offer',
             businessName: business?.business_name || 'Business',
             city: business?.city || 'bournemouth',
             walletPassId: row.wallet_pass_id,
+            firstName,
           })
         : undefined
 
