@@ -158,11 +158,30 @@ export async function updateMainPassOffer(
     walletpushDashboardUrl
   )
 
-  // Apple Wallet: if MORE THAN ONE field with changeMessage changes in the same
-  // pass fetch, iOS collapses the lock-screen alert to generic "Store Card Changed".
-  // So for activate/warning we push Last_Message alone first, then silently morph
-  // Current_Offer after a short delay (same sequential pattern as loyalty).
+  // Order: silent Current_Offer first, then Last_Message with the only push.
+  // One APNs → device fetches both changes; only Last_Message should alert
+  // (Current_Offer Change Message must stay blank in WalletPush).
+  // 500ms gap — WalletPush drops concurrent PUTs to the same pass.
   const shouldPush = !input.clearOffer
+
+  if (!input.lastMessageOnly) {
+    const offerResponse = await fetch(offerUrl, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ value: passDisplayText, push: false }),
+    })
+    if (!offerResponse.ok) {
+      const errorText = await offerResponse.text()
+      console.error('Current_Offer API error:', offerResponse.status, errorText)
+      return {
+        success: false,
+        error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
+        status: 500,
+        currentOffer: passDisplayText,
+      }
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
 
   const messageResponse = await fetch(messageUrl, {
     method: 'PUT',
@@ -183,33 +202,7 @@ export async function updateMainPassOffer(
         status: 500,
       }
     }
-    // Activate path: still try Current_Offer below
-  }
-
-  if (!input.lastMessageOnly) {
-    // Let WalletPush settle — concurrent PUTs to the same pass get dropped
-    await new Promise((r) => setTimeout(r, 500))
-
-    const offerResponse = await fetch(offerUrl, {
-      method: 'PUT',
-      headers: authHeaders,
-      // Never push here — front-of-pass morph only. A second pushed field
-      // change would trigger Apple's generic "Store Card Changed".
-      body: JSON.stringify({ value: passDisplayText, push: false }),
-    })
-    if (!offerResponse.ok) {
-      const errorText = await offerResponse.text()
-      console.error('Current_Offer API error:', offerResponse.status, errorText)
-      // Last_Message (and its push) may already have succeeded
-      if (input.clearOffer) {
-        return {
-          success: false,
-          error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
-          status: 500,
-          currentOffer: passDisplayText,
-        }
-      }
-    }
+    // Activate: Current_Offer may have succeeded — soft success
   }
 
   return {
