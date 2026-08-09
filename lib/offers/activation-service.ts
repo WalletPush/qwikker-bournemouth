@@ -133,7 +133,7 @@ function offerForVibeCopy(offerName: string): string {
 }
 
 /** Build expiry vibe CTA copy + deep link into business vibe sheet. */
-export function buildExpiryVibeMessage(params: {
+function buildExpiryVibeMessage(params: {
   offerName: string
   businessName: string
   city: string
