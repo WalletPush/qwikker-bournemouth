@@ -54,9 +54,12 @@ function persistActiveMap(userId: string, map: Record<string, ActiveOfferEntry>)
 export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserOffersPageProps) {
   const currentCity = currentCityProp || getClientCityFallback()
   const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
-  const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  /** Browse available / Saved / Active — primary navigation */
+  const [listMode, setListMode] = useState<'all' | 'claimed' | 'redeemed'>('all')
+  /** Type refine: % off, 2-for-1, ending soon, favourites */
+  const [typeFilter, setTypeFilter] = useState<'all' | 'percentage_off' | 'two_for_one' | 'ending_soon' | 'favorites'>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [showAllCategories, setShowAllCategories] = useState(false) // NEW: Show More toggle
+  const [showAllCategories, setShowAllCategories] = useState(false)
   const searchParams = useSearchParams()
   const urlWalletPassId = searchParams.get('wallet_pass_id')
   // Use prop first, then URL, then null - this ensures consistency with server-side logic
@@ -299,7 +302,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         showSuccessMessage(
           'Added to your wallet!',
           `"${offerTitle}" from ${businessName} is now in your wallet. Explore more local offers below.`,
-          () => setSelectedFilter('all')
+          () => setListMode('all')
         )
       } catch (error) {
         console.error('Auto-claim failed:', error)
@@ -364,24 +367,17 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   
   const activeOfferIds = Object.keys(activeByOfferId).filter((id) => isOfferActive(id))
 
-  // Dynamic filter counts that update with state changes
-  const getFilters = () => [
-    { id: 'all', label: 'All Offers', count: allOffers.length },
-    { id: 'claimed', label: 'Saved', count: Array.from(claimedOffers).filter(id => {
-      const offer = allOffers.find(o => o.id === id)
-      return offer && !isOfferActive(id)
-    }).length },
-    { id: 'redeemed', label: 'Active', count: activeOfferIds.filter(id => {
-      return allOffers.find(o => o.id === id) !== undefined
-    }).length },
-    { id: 'favorites', label: 'My Favorites', count: Array.from(favoriteOffers).filter(id => {
-      return allOffers.find(o => o.id === id) !== undefined
-    }).length },
-    { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
-    { id: 'ending_soon', label: 'Ending Soon', count: allOffers.filter(o => o.isEndingSoon).length },
-    { id: 'two_for_one', label: '2-for-1', count: allOffers.filter(o => o.type === 'two_for_one').length },
-    { id: 'percentage_off', label: 'Percentage Off', count: allOffers.filter(o => o.type === 'percentage_off').length },
-  ]
+  const browseCount = allOffers.filter((o) => !claimedOffers.has(o.id)).length
+  const savedCount = Array.from(claimedOffers).filter((id) => !isOfferActive(id)).length
+  const activeCount = activeOfferIds.length
+  const favoritesCount = Array.from(favoriteOffers).filter((id) =>
+    allOffers.some((o) => o.id === id)
+  ).length
+
+  const resetRefineFilters = () => {
+    setTypeFilter('all')
+    setSelectedCategory('all')
+  }
 
   const toggleFavorite = (offerId: string) => {
     const userId = walletPassId || 'anonymous-user'
@@ -500,7 +496,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     modal.querySelector('#view-saved')?.addEventListener('click', () => {
       closeModal()
-      setSelectedFilter('claimed')
+      setListMode('claimed')
     })
     
     modal.querySelector('#redeem-now')?.addEventListener('click', async () => {
@@ -645,40 +641,32 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   const getFilteredOffers = () => {
     let filtered = allOffers
 
-    // Filter by type
-    if (selectedFilter === 'claimed') {
+    if (listMode === 'claimed') {
       // Saved but not currently in an activation window
-      filtered = filtered.filter((o) => {
-        const isClaimed = claimedOffers.has(o.id)
-        return isClaimed && !isOfferActive(o.id)
-      })
-    } else if (selectedFilter === 'redeemed') {
-      // Currently active activation (any claim type)
+      filtered = filtered.filter((o) => claimedOffers.has(o.id) && !isOfferActive(o.id))
+    } else if (listMode === 'redeemed') {
       filtered = filtered.filter((o) => isOfferActive(o.id))
     } else {
-      // For ALL other filters, show available offers
-      // Hide claimed offers AND single-use offers that have been activated (even if window ended)
+      // Browse available — hide saved + single-use already activated
       filtered = filtered.filter((o) => {
         if (claimedOffers.has(o.id)) return false
         if (isOfferActive(o.id) && o.claimType === 'single') return false
         return true
       })
-      
-      // Then apply specific filters
-      if (selectedFilter === 'favorites') {
-      filtered = filtered.filter(o => favoriteOffers.has(o.id))
-    } else if (selectedFilter === 'ending_soon') {
-      filtered = filtered.filter(o => o.isEndingSoon)
-    } else if (selectedFilter === 'two_for_one') {
-      filtered = filtered.filter(o => o.type === 'two_for_one')
-    } else if (selectedFilter === 'percentage_off') {
-      filtered = filtered.filter(o => o.type === 'percentage_off')
-      }
     }
 
-    // Filter by category
+    if (typeFilter === 'favorites') {
+      filtered = filtered.filter((o) => favoriteOffers.has(o.id))
+    } else if (typeFilter === 'ending_soon') {
+      filtered = filtered.filter((o) => o.isEndingSoon)
+    } else if (typeFilter === 'two_for_one') {
+      filtered = filtered.filter((o) => o.type === 'two_for_one')
+    } else if (typeFilter === 'percentage_off') {
+      filtered = filtered.filter((o) => o.type === 'percentage_off')
+    }
+
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(o => o.businessCategory === selectedCategory)
+      filtered = filtered.filter((o) => o.businessCategory === selectedCategory)
     }
 
     return filtered
@@ -1226,163 +1214,124 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </p>
       </div>
 
-      {/* Clickable Filter Cards - Mobile First */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'all' 
-              ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
-              : 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30 hover:border-blue-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('all')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-blue-300 mb-1">Total Offers</p>
-          <p className="text-lg font-bold text-blue-400">{allOffers.filter(o => !claimedOffers.has(o.id)).length}</p>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'percentage_off' 
-              ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
-              : 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30 hover:border-green-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('percentage_off')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-green-300 mb-1">% Off Deals</p>
-          <p className="text-lg font-bold text-green-400">{allOffers.filter(o => o.type === 'percentage_off' && !claimedOffers.has(o.id)).length}</p>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'two_for_one' 
-              ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
-              : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('two_for_one')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-purple-300 mb-1">2-for-1 Deals</p>
-          <p className="text-lg font-bold text-purple-400">{allOffers.filter(o => o.type === 'two_for_one' && !claimedOffers.has(o.id)).length}</p>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'ending_soon' 
-              ? 'bg-gradient-to-br from-red-600/30 to-red-500/30 border-red-400/50 ring-2 ring-red-400/30' 
-              : 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/30 hover:border-red-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('ending_soon')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-red-300 mb-1">Ending Soon</p>
-          <p className="text-lg font-bold text-red-400">{allOffers.filter(o => o.isEndingSoon && !claimedOffers.has(o.id)).length}</p>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'claimed' 
-              ? 'bg-gradient-to-br from-amber-600/30 to-amber-500/30 border-amber-400/50 ring-2 ring-amber-400/30' 
-              : 'bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-700/30 hover:border-amber-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('claimed')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">Saved</p>
-          <p className="text-lg font-bold text-amber-400">{Array.from(claimedOffers).filter(id => !isOfferActive(id)).length}</p>
-        </Card>
-
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'redeemed' 
-              ? 'bg-gradient-to-br from-emerald-600/30 to-emerald-500/30 border-emerald-400/50 ring-2 ring-emerald-400/30' 
-              : 'bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 hover:border-emerald-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('redeemed')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-emerald-300 mb-1">Active</p>
-          <p className="text-lg font-bold text-emerald-400">{activeOfferIds.length}</p>
-        </Card>
-        
-        <Card 
-          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-            selectedFilter === 'favorites' 
-              ? 'bg-gradient-to-br from-pink-600/30 to-pink-500/30 border-pink-400/50 ring-2 ring-pink-400/30' 
-              : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
-          }`}
-          onClick={() => {
-            setSelectedFilter('favorites')
-            scrollToResults()
-          }}
-        >
-          <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Favourites</p>
-          <p className="text-lg font-bold text-pink-400">{Array.from(favoriteOffers).filter(id => allOffers.find(o => o.id === id)).length}</p>
-        </Card>
+      {/* Primary: All / Saved / Active */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {(
+          [
+            { id: 'all' as const, label: 'All Offers', count: browseCount },
+            { id: 'claimed' as const, label: 'Saved', count: savedCount },
+            { id: 'redeemed' as const, label: 'Active', count: activeCount },
+          ]
+        ).map((tab) => {
+          const isSelected = listMode === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setListMode(tab.id)
+                resetRefineFilters()
+                scrollToResults()
+              }}
+              className={`rounded-xl border px-2 py-3 sm:px-4 sm:py-3.5 text-center transition-colors ${
+                isSelected
+                  ? 'border-[#00d083]/50 bg-[#00d083]/10 ring-1 ring-[#00d083]/25'
+                  : 'border-slate-700/60 bg-slate-800/40 hover:border-slate-600 hover:bg-slate-800/70'
+              }`}
+            >
+              <p className={`text-xs sm:text-sm font-medium mb-0.5 ${isSelected ? 'text-[#00d083]' : 'text-slate-400'}`}>
+                {tab.label}
+              </p>
+              <p className={`text-xl sm:text-2xl font-semibold tabular-nums ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                {tab.count}
+              </p>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Category Filter Pills */}
-      {uniqueCategories.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-slate-400 mb-3">Filter by Category</h3>
-          <div className="flex flex-wrap gap-2">
+      {/* Sticky type + category filters */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-slate-950/92 backdrop-blur-md border-b border-slate-800/80">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {(
+            [
+              { id: 'all' as const, label: 'All types' },
+              { id: 'percentage_off' as const, label: '% Off' },
+              { id: 'two_for_one' as const, label: '2-for-1' },
+              { id: 'ending_soon' as const, label: 'Ending soon' },
+              { id: 'favorites' as const, label: favoritesCount > 0 ? `Favourites (${favoritesCount})` : 'Favourites' },
+            ]
+          ).map((chip) => {
+            const isSelected = typeFilter === chip.id
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => {
+                  setTypeFilter(chip.id)
+                  scrollToResults()
+                }}
+                className={`shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isSelected
+                    ? 'bg-[#00d083] text-slate-950'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/80'
+                }`}
+              >
+                {chip.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {uniqueCategories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto mt-2 pt-2 border-t border-slate-800/60 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
+              type="button"
               onClick={() => {
                 setSelectedCategory('all')
                 scrollToResults()
               }}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 selectedCategory === 'all'
-                  ? 'bg-[#00d083] text-white'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                  ? 'bg-slate-200 text-slate-900'
+                  : 'bg-transparent text-slate-400 hover:text-slate-200 border border-slate-700/60'
               }`}
             >
-              All <span className="hidden sm:inline">({allOffers.filter(o => !claimedOffers.has(o.id)).length})</span>
+              All categories
             </button>
-            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 5)).map(cat => (
+            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 6)).map((cat) => (
               <button
                 key={cat}
+                type="button"
                 onClick={() => {
                   setSelectedCategory(cat)
                   scrollToResults()
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   selectedCategory === cat
-                    ? 'bg-[#00d083] text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                    ? 'bg-slate-200 text-slate-900'
+                    : 'bg-transparent text-slate-400 hover:text-slate-200 border border-slate-700/60'
                 }`}
               >
-                {cat} <span className="hidden sm:inline">({getCategoryCount(cat)})</span>
+                {cat}
+                <span className="ml-1 text-xs opacity-70 hidden sm:inline">({getCategoryCount(cat)})</span>
               </button>
             ))}
-            {uniqueCategories.length > 5 && (
+            {uniqueCategories.length > 6 && (
               <button
+                type="button"
                 onClick={() => setShowAllCategories(!showAllCategories)}
-                className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-slate-800/50 text-slate-400 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600"
+                className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300"
               >
-                {showAllCategories ? '← Show Less' : `More (${uniqueCategories.length - 5}) →`}
+                {showAllCategories ? 'Less' : `+${uniqueCategories.length - 6} more`}
               </button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-
-      {/* AI Companion Card - Replace Search & Filters */}
-      <div className="mb-4">
+      {/* AI Companion Card */}
+      <div className="mb-2">
         <AiCompanionCard 
           title="Find Your Perfect Deal"
           description="Skip the searching - just tell our AI what you're craving! From specific cuisines to budget ranges, we'll find the perfect offers for you instantly."
@@ -1395,24 +1344,30 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         />
       </div>
 
-      {/* Results Title - Centered */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-slate-100">
-          {selectedFilter === 'all' ? 'All Available Offers' :
-           selectedFilter === 'claimed' ? 'Saved Offers' :
-           selectedFilter === 'redeemed' ? 'Active on your pass' :
-           selectedFilter === 'favorites' ? 'My Favourite Offers' :
-           selectedFilter === 'ending_soon' ? 'Ending Soon' :
-           selectedFilter === 'two_for_one' ? '2-for-1 Deals' :
-           'Percentage Off Deals'}
+      {/* Results Title */}
+      <div className="text-center mb-4">
+        <h2 className="text-xl sm:text-2xl font-semibold text-slate-100">
+          {listMode === 'claimed'
+            ? 'Saved Offers'
+            : listMode === 'redeemed'
+              ? 'Active on your pass'
+              : typeFilter === 'favorites'
+                ? 'Favourite Offers'
+                : typeFilter === 'ending_soon'
+                  ? 'Ending Soon'
+                  : typeFilter === 'two_for_one'
+                    ? '2-for-1 Deals'
+                    : typeFilter === 'percentage_off'
+                      ? '% Off Deals'
+                      : 'Available Offers'}
         </h2>
-        {selectedFilter === 'claimed' && (
-          <p className="text-slate-400 text-sm text-center mt-3 max-w-md mx-auto">
+        {listMode === 'claimed' && (
+          <p className="text-slate-400 text-sm text-center mt-2 max-w-md mx-auto">
             Redeem when you&apos;re at the venue — that starts the timer on your Wallet pass.
           </p>
         )}
-        {selectedFilter === 'redeemed' && (
-          <p className="text-slate-400 text-sm text-center mt-3 max-w-md mx-auto">
+        {listMode === 'redeemed' && (
+          <p className="text-slate-400 text-sm text-center mt-2 max-w-md mx-auto">
             Show your Wallet pass to staff before the timer ends.
           </p>
         )}
@@ -1429,28 +1384,28 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       {getFilteredOffers().length === 0 && (
         <Card className="bg-slate-800/50 border-slate-700 text-center p-12">
           <div className="text-6xl mb-4"></div>
-          {selectedFilter === 'claimed' ? (
+          {listMode === 'claimed' && typeFilter === 'all' && selectedCategory === 'all' ? (
             <>
               <h3 className="text-xl font-bold text-slate-100 mb-2">You haven&apos;t saved any offers yet</h3>
               <p className="text-slate-400 mb-4">Explore amazing deals from local businesses and start saving!</p>
-              <Button onClick={() => {setSelectedFilter('all'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
+              <Button onClick={() => { setListMode('all'); resetRefineFilters() }} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
                 Explore Offers
               </Button>
             </>
-          ) : selectedFilter === 'redeemed' ? (
+          ) : listMode === 'redeemed' && typeFilter === 'all' && selectedCategory === 'all' ? (
             <>
               <h3 className="text-xl font-bold text-slate-100 mb-2">Nothing active right now</h3>
               <p className="text-slate-400 mb-4">Redeem a saved offer when you&apos;re at the venue to start the timer.</p>
-              <Button onClick={() => {setSelectedFilter('claimed'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
+              <Button onClick={() => { setListMode('claimed'); resetRefineFilters() }} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
                 View saved
               </Button>
             </>
-          ) : selectedFilter === 'favorites' ? (
+          ) : typeFilter === 'favorites' ? (
             <>
-              <h3 className="text-xl font-bold text-slate-100 mb-2">You haven't favourited any offers yet</h3>
-              <p className="text-slate-400 mb-4">Tap the heart icon on offers you love to save them here!</p>
-              <Button onClick={() => {setSelectedFilter('all'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
-                Browse Offers
+              <h3 className="text-xl font-bold text-slate-100 mb-2">No favourites here</h3>
+              <p className="text-slate-400 mb-4">Tap the heart on offers you love — or clear this filter to browse everything.</p>
+              <Button onClick={() => { setTypeFilter('all'); setSelectedCategory('all') }} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
+                Clear favourites filter
               </Button>
             </>
           ) : realOffers.length === 0 ? (
@@ -1460,11 +1415,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             </>
           ) : (
             <>
-          <h3 className="text-xl font-bold text-slate-100 mb-2">No offers match your filters</h3>
-          <p className="text-slate-400 mb-4">Try adjusting your filters or check back later for new deals!</p>
-              <Button onClick={() => {setSelectedFilter('all'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
-            Show All Offers
-          </Button>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">No offers match your filters</h3>
+              <p className="text-slate-400 mb-4">Try adjusting your filters or check back later for new deals!</p>
+              <Button onClick={() => { setListMode('all'); resetRefineFilters() }} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
+                Show All Offers
+              </Button>
             </>
           )}
         </Card>
@@ -1485,7 +1440,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => {
             setActivateSuccess(null)
-            setSelectedFilter('redeemed')
+            setListMode('redeemed')
+            resetRefineFilters()
             scrollToResults()
           }}
         >
@@ -1523,7 +1479,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl"
               onClick={() => {
                 setActivateSuccess(null)
-                setSelectedFilter('redeemed')
+                setListMode('redeemed')
+                resetRefineFilters()
                 scrollToResults()
               }}
             >
