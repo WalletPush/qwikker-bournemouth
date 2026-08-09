@@ -96,6 +96,7 @@ export async function createOffer(userId: string, offerData: {
   startDate?: string
   endDate?: string
   offerImage?: string | null
+  activationWindowMinutes?: number
 }) {
   try {
     // Use regular client for user operations, admin client for admin operations
@@ -130,7 +131,13 @@ export async function createOffer(userId: string, offerData: {
           offer_terms: offerData.offerTerms,
           offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : null,
           offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : null,
-          offer_image: offerData.offerImage
+          offer_image: offerData.offerImage,
+          activation_window_minutes:
+            offerData.activationWindowMinutes === 30 ||
+            offerData.activationWindowMinutes === 60 ||
+            offerData.activationWindowMinutes === 120
+              ? offerData.activationWindowMinutes
+              : 60,
         },
         status: 'pending'
       })
@@ -196,6 +203,7 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
   startDate?: string
   endDate?: string
   offerImage?: string | null
+  activationWindowMinutes?: number
 }) {
   try {
     const supabaseAdmin = createAdminClient()
@@ -250,7 +258,13 @@ export async function updateOffer(userId: string, offerId: string, offerData: {
           offer_terms: offerData.offerTerms || existingOffer.offer_terms,
           offer_start_date: offerData.startDate && offerData.startDate.trim() !== '' ? offerData.startDate : existingOffer.offer_start_date,
           offer_end_date: offerData.endDate && offerData.endDate.trim() !== '' ? offerData.endDate : existingOffer.offer_end_date,
-          offer_image: offerData.offerImage !== undefined ? offerData.offerImage : existingOffer.offer_image
+          offer_image: offerData.offerImage !== undefined ? offerData.offerImage : existingOffer.offer_image,
+          activation_window_minutes:
+            offerData.activationWindowMinutes === 30 ||
+            offerData.activationWindowMinutes === 60 ||
+            offerData.activationWindowMinutes === 120
+              ? offerData.activationWindowMinutes
+              : (existingOffer.activation_window_minutes || 60),
         },
         status: 'pending'
       })

@@ -178,6 +178,12 @@ export async function POST(request: NextRequest) {
             offer_start_date: change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null,
             offer_end_date: change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null,
             offer_image: change.change_data.offer_image,
+            activation_window_minutes:
+              change.change_data.activation_window_minutes === 30 ||
+              change.change_data.activation_window_minutes === 60 ||
+              change.change_data.activation_window_minutes === 120
+                ? change.change_data.activation_window_minutes
+                : 60,
             status: 'approved',
             approved_at: new Date().toISOString(),
             display_order: currentOfferCount + 1
@@ -312,6 +318,12 @@ export async function POST(request: NextRequest) {
           offer_start_date: change.change_data.offer_start_date !== undefined ? (change.change_data.offer_start_date && change.change_data.offer_start_date.trim() !== '' ? change.change_data.offer_start_date : null) : existingOffer.offer_start_date,
           offer_end_date: change.change_data.offer_end_date !== undefined ? (change.change_data.offer_end_date && change.change_data.offer_end_date.trim() !== '' ? change.change_data.offer_end_date : null) : existingOffer.offer_end_date,
           offer_image: change.change_data.offer_image !== undefined ? change.change_data.offer_image : existingOffer.offer_image,
+          activation_window_minutes:
+            change.change_data.activation_window_minutes === 30 ||
+            change.change_data.activation_window_minutes === 60 ||
+            change.change_data.activation_window_minutes === 120
+              ? change.change_data.activation_window_minutes
+              : (existingOffer.activation_window_minutes || 60),
           updated_at: new Date().toISOString()
         }
         

@@ -36,6 +36,7 @@ export function OffersPage({ profile }: OffersPageProps) {
     offerTerms: '',
     startDate: '',
     endDate: '',
+    activationWindowMinutes: '60',
   })
 
   const [offerImageFile, setOfferImageFile] = useState<File | null>(null)
@@ -64,6 +65,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       offerTerms: profile.offer_terms || '',
       startDate: profile.offer_start_date || '',
       endDate: profile.offer_end_date || '',
+      activationWindowMinutes: String((profile as { activation_window_minutes?: number }).activation_window_minutes || 60),
     })
     setIsEditMode(true)
     setShowCreateForm(true)
@@ -80,6 +82,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       offerTerms: '',
       startDate: '',
       endDate: '',
+      activationWindowMinutes: '60',
     })
     setIsEditMode(false)
     setShowCreateForm(true)
@@ -163,6 +166,7 @@ export function OffersPage({ profile }: OffersPageProps) {
       const offerData = {
         ...formData,
         offerImage: offerImageUrl,
+        activationWindowMinutes: Number(formData.activationWindowMinutes) || 60,
       }
 
       const result = await createOffer(profile.user_id, offerData)
@@ -178,9 +182,11 @@ export function OffersPage({ profile }: OffersPageProps) {
           offerType: '',
           offerValue: '',
           offerClaimAmount: '',
+          offerDescription: '',
           offerTerms: '',
           startDate: '',
           endDate: '',
+          activationWindowMinutes: '60',
         })
         setOfferImageFile(null)
         setOfferImagePreview(null)
@@ -206,9 +212,11 @@ export function OffersPage({ profile }: OffersPageProps) {
       offerType: '',
       offerValue: '',
       offerClaimAmount: '',
+      offerDescription: '',
       offerTerms: '',
       startDate: '',
       endDate: '',
+      activationWindowMinutes: '60',
     })
     setOfferImageFile(null)
     setOfferImagePreview(null)
@@ -518,9 +526,11 @@ export function OffersPage({ profile }: OffersPageProps) {
                                 offerType: offer.offer_type,
                                 offerValue: offer.offer_value,
                                 offerClaimAmount: offer.offer_claim_amount || 'multiple',
+                                offerDescription: offer.offer_description || '',
                                 offerTerms: offer.offer_terms || '',
                                 startDate: offer.offer_start_date || '',
                                 endDate: offer.offer_end_date || '',
+                                activationWindowMinutes: String(offer.activation_window_minutes || 60),
                               })
                               setEditingOfferId(offer.id)
                               setIsEditMode(true)
@@ -701,6 +711,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                                 offerTerms: offer.offer_terms || '',
                                 startDate: offer.offer_start_date || '',
                                 endDate: '', // Clear end date for re-activation
+                                activationWindowMinutes: String(offer.activation_window_minutes || 60),
                               })
                               setShowCreateForm(true)
                             }}
@@ -954,6 +965,22 @@ export function OffersPage({ profile }: OffersPageProps) {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
+                    <Label htmlFor="activationWindowMinutes" className="text-white font-medium mb-2 block">
+                      How long it stays on the customer&apos;s Wallet after they tap Redeem
+                    </Label>
+                    <select
+                      id="activationWindowMinutes"
+                      value={formData.activationWindowMinutes}
+                      onChange={(e) => handleInputChange('activationWindowMinutes', e.target.value)}
+                      className="w-full bg-slate-900/50 text-white border border-slate-600 focus:border-[#00d083] focus:ring-1 focus:ring-[#00d083]/20 hover:border-slate-500 transition-colors rounded-lg p-3 h-11 mb-4"
+                    >
+                      <option value="30">30 minutes — drinks, takeaway, quick checkout</option>
+                      <option value="60">60 minutes — default; most cafés / casual</option>
+                      <option value="120">120 minutes — sit-down meals</option>
+                    </select>
+                    <p className="text-slate-400 text-xs mb-4">
+                      Customers should only redeem when they&apos;re ready to show staff. After this time the offer clears from their Wallet.
+                    </p>
                     <Label htmlFor="offerClaimAmount" className="text-white font-medium mb-2 block">
                       Claim Amount <span className="text-red-400">*</span>
                     </Label>

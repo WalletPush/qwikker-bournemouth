@@ -130,6 +130,8 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       offer_start_date,
       offer_end_date,
       offer_image,
+      offer_claim_amount,
+      activation_window_minutes,
       display_order,
       created_at,
       business_id,
@@ -209,7 +211,10 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
     offer_description: offer.offer_description,
     offer_terms: offer.offer_terms,
     offer_start_date: offer.offer_start_date,
-    offer_end_date: offer.offer_end_date
+    offer_end_date: offer.offer_end_date,
+    claimType: offer.offer_claim_amount || 'single',
+    offer_claim_amount: offer.offer_claim_amount || 'single',
+    activationWindowMinutes: offer.activation_window_minutes || 60,
   }))
   
   // Debug: Log tier info for first few offers

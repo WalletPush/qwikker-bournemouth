@@ -216,15 +216,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
     { id: 'all', label: 'All Offers', count: allOffers.length },
-    { id: 'claimed', label: 'My Claimed', count: Array.from(claimedOffers).filter(id => {
+    { id: 'claimed', label: 'Saved', count: Array.from(claimedOffers).filter(id => {
       const offer = allOffers.find(o => o.id === id)
-      // Only count if offer exists (not expired) AND (not in wallet OR is multiple-use)
-      return offer && (!walletOffers.has(id) || offer?.claimType !== 'single')
+      // Saved but not currently active
+      return offer && !walletOffers.has(id)
     }).length },
-    { id: 'redeemed', label: 'My Redeemed', count: Array.from(walletOffers).filter(id => {
-      const offer = allOffers.find(o => o.id === id)
-      // Only count if offer exists (not expired) AND is single-use
-      return offer && offer?.claimType === 'single'
+    { id: 'redeemed', label: 'Active', count: Array.from(walletOffers).filter(id => {
+      return allOffers.find(o => o.id === id) !== undefined
     }).length },
     { id: 'favorites', label: 'My Favorites', count: Array.from(favoriteOffers).filter(id => {
       // Only count favorites that are still active (not expired)
@@ -256,44 +254,45 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
   const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
     const userId = walletPassId || 'anonymous-user'
-    
-    // Find the offer to get its claim type
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to save offers.')
+      return
+    }
+
     const offer = allOffers.find(o => o.id === offerId)
-    const claimType = offer?.claimType || offer?.offer_claim_amount || 'single'
-    
-    // Update UI immediately
+    const windowMins = offer?.activationWindowMinutes || 60
+
+    // Optimistic UI — Save (intent only)
     setClaimedOffers(prev => {
       const newClaimed = new Set([...prev, offerId])
-      // Save to localStorage as backup
       if (typeof window !== 'undefined') {
         localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
-        
-        // Track badge progress
-        const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
-        const badgeTracker = getBadgeTracker(walletPassId)
-        badgeTracker.trackAction('offer_claimed')
+        try {
+          const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+          getBadgeTracker(walletPassId).trackAction('offer_claimed')
+        } catch { /* ignore */ }
       }
       return newClaimed
     })
-    
-    // Store in database AND update wallet pass
+
     try {
-      const { claimOffer: claimOfferAction } = await import('@/lib/actions/offer-claim-actions')
-      const result = await claimOfferAction({
-        offerId,
-        offerTitle,
-        businessName,
-        visitorWalletPassId: walletPassId
+      const res = await fetch('/api/offers/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletPassId,
+          offerId,
+          source: 'offers',
+        }),
       })
-      
-      // Show success message - wallet pass should be updated
-      console.log('✅ Offer claimed and wallet pass updated:', result)
-      console.log('📊 Full result data:', JSON.stringify(result, null, 2))
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Failed to save offer')
+      }
     } catch (error) {
-      console.error('Failed to claim offer:', error)
-      // UI already updated, so don't fail the user experience
+      console.error('Failed to save offer:', error)
+      // keep optimistic save; user can still Redeem now
     }
-    // Create center modal popup with three action buttons
     const modalOverlay = document.createElement('div')
     modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
     
@@ -306,30 +305,24 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Saved</h3>
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-6">What would you like to do next?</p>
+        <p class="text-slate-300 text-sm mb-6">Redeem when you're ready to show staff.</p>
         
         <div class="space-y-3">
-          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            View Claimed Offers
-          </button>
-          
-          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add to Wallet
+          <button id="redeem-now" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
+            Redeem now
           </button>
           
           <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3 mb-2">
-            <p class="text-amber-200 text-sm font-semibold text-center mb-1">Important: 12-Hour Expiry</p>
-            <p class="text-amber-100 text-xs text-center">Once added to your wallet, this offer will automatically expire after 12 hours</p>
+            <p class="text-amber-200 text-sm font-semibold text-center mb-1">About ${windowMins} minutes on your Wallet</p>
+            <p class="text-amber-100 text-xs text-center">Only redeem when you're ready to show staff. After that it clears from your pass.</p>
           </div>
+
+          <button id="view-saved" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
+            View saved
+          </button>
           
           <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
             Dismiss
@@ -341,13 +334,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     modalOverlay.appendChild(modal)
     document.body.appendChild(modalOverlay)
     
-    // Animate in
     setTimeout(() => {
       modalOverlay.style.opacity = '1'
       modal.style.transform = 'scale(1)'
     }, 50)
     
-    // Close modal function
     const closeModal = () => {
       modalOverlay.style.opacity = '0'
       modal.style.transform = 'scale(0.95)'
@@ -358,79 +349,17 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       }, 300)
     }
     
-    // Button event handlers
-    modal.querySelector('#view-claimed')?.addEventListener('click', () => {
+    modal.querySelector('#view-saved')?.addEventListener('click', () => {
       closeModal()
-      // Navigate to claimed offers
       setSelectedFilter('claimed')
     })
     
-    modal.querySelector('#add-to-wallet')?.addEventListener('click', async () => {
+    modal.querySelector('#redeem-now')?.addEventListener('click', async () => {
       closeModal()
-      
-      // Check if already in wallet
-      if (walletOffers.has(offerId)) {
-        alert('This offer is already in your wallet!')
-        return
-      }
-      
-      // Trigger wallet pass update directly
-      try {
-        const response = await fetch('/api/walletpass/update-main-pass', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userWalletPassId: walletPassId,
-            currentOffer: offerTitle,
-            offerDetails: { businessName, offerId }
-          })
-        })
-        
-        if (response.ok) {
-          // Mark as added to wallet
-          setWalletOffers(prev => {
-            const newWallet = new Set([...prev, offerId])
-            if (typeof window !== 'undefined') {
-              const userId = walletPassId || 'anonymous-user'
-              localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...newWallet]))
-            }
-            return newWallet
-          })
-          
-          // Handle different claim types
-          if (claimType === 'single') {
-            // Single-use offers: Remove from claimed (they disappear forever)
-            setClaimedOffers(prev => {
-              const newClaimed = new Set([...prev])
-              newClaimed.delete(offerId)
-              if (typeof window !== 'undefined') {
-                localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
-              }
-              return newClaimed
-            })
-            
-            // Show success and navigate back to offers
-            showSuccessMessage('Added to Wallet!', 'This single-use offer has been added to your wallet and will expire in 12 hours.', () => {
-              setSelectedFilter('all') // Go back to main offers
-            })
-          } else {
-            // Multiple-use offers: Keep in claimed, but remove from current view and go back to offers
-            showSuccessMessage('Added to Wallet!', 'This offer has been added to your wallet and will expire in 12 hours. You can claim it again later!', () => {
-              setSelectedFilter('all') // Go back to main offers
-            })
-          }
-        } else {
-          throw new Error('Failed to update wallet pass')
-        }
-      } catch (error) {
-        console.error('Error adding to wallet:', error)
-        alert('Sorry, there was an error adding the offer to your wallet. Please try again.')
-      }
+      await handleAddToWallet(offerId, offerTitle, businessName)
     })
     
     modal.querySelector('#modal-dismiss')?.addEventListener('click', closeModal)
-    
-    // Close on overlay click
     modalOverlay.addEventListener('click', (e) => {
       if (e.target === modalOverlay) closeModal()
     })
@@ -447,70 +376,81 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }
   }
 
-  // Handle adding offer to wallet
-  const handleAddToWallet = async (offerId: string, offerTitle: string, businessName: string) => {
-    if (walletOffers.has(offerId)) {
-      alert('This offer is already in your wallet!')
+  // Redeem now — activate timed wallet window
+  const handleAddToWallet = async (
+    offerId: string,
+    offerTitle: string,
+    businessName: string,
+    confirmReplace = false
+  ) => {
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to redeem offers.')
       return
     }
-    
+    if (walletOffers.has(offerId) && !confirmReplace) {
+      alert('This offer is already active on your pass.')
+      return
+    }
+
+    const offer = allOffers.find(o => o.id === offerId)
+    const windowMins = offer?.activationWindowMinutes || 60
+
     try {
-      const response = await fetch('/api/walletpass/update-main-pass', {
+      const response = await fetch('/api/offers/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userWalletPassId: walletPassId,
-          currentOffer: offerTitle,
-          offerDetails: { businessName, offerId }
-        })
+          walletPassId,
+          offerId,
+          source: 'offers',
+          confirmReplace,
+        }),
       })
-      
-      if (response.ok) {
-        // Update database status to 'wallet_added'
-        try {
-          const { updateOfferClaimStatus } = await import('@/lib/actions/offer-claim-actions')
-          await updateOfferClaimStatus(offerId, walletPassId, 'wallet_added')
-        } catch (error) {
-          console.error('Failed to update claim status in database:', error)
+      const body = await response.json().catch(() => ({}))
+
+      if (body.error === 'needs_replace_confirm' && body.active) {
+        const ok = window.confirm(
+          `You already have an active offer at ${body.active.business_name} with about ${body.active.minutes_left} minutes left. Activating this will end it. Continue?`
+        )
+        if (ok) {
+          await handleAddToWallet(offerId, offerTitle, businessName, true)
         }
-        
-        // Mark as added to wallet in UI state
-        setWalletOffers(prev => {
-          const newWallet = new Set([...prev, offerId])
-          if (typeof window !== 'undefined') {
-            const userId = walletPassId || 'anonymous-user'
-            localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...newWallet]))
-          }
-          return newWallet
-        })
-        
-        // Find the offer to check claim type
-        const offer = allOffers.find(o => o.id === offerId)
-        const claimType = offer?.claimType || 'single'
-        
-        if (claimType === 'single') {
-          // Single-use offers: Remove from claimed (move to redeemed)
-          setClaimedOffers(prev => {
-            const newClaimed = new Set([...prev])
-            newClaimed.delete(offerId)
-            if (typeof window !== 'undefined') {
-              const userId = walletPassId || 'anonymous-user'
-              localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
-            }
-            return newClaimed
-          })
-          
-          showSuccessMessage('Added to Wallet!', 'This offer has been redeemed and moved to "My Redeemed" section. It will expire in 12 hours.')
-        } else {
-          // Multiple-use offers: Keep in claimed
-          showSuccessMessage('Added to Wallet!', 'This offer has been added to your wallet and will expire in 12 hours. You can claim it again later!')
-        }
-      } else {
-        throw new Error('Failed to update wallet pass')
+        return
       }
+
+      if (!response.ok || !body.success) {
+        throw new Error(body.error || 'Failed to activate offer')
+      }
+
+      const userId = walletPassId || 'anonymous-user'
+      setWalletOffers(prev => {
+        const next = new Set([...prev, offerId])
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...next]))
+        }
+        return next
+      })
+      setClaimedOffers(prev => {
+        const next = new Set([...prev, offerId])
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...next]))
+        }
+        return next
+      })
+
+      showSuccessMessage(
+        body.walletSynced === false ? 'Activated (in-app)' : 'Activated',
+        body.message ||
+          `Show your Qwikker pass to staff. It stays active for about ${windowMins} minutes.`,
+        () => setSelectedFilter('redeemed')
+      )
     } catch (error) {
-      console.error('Error adding to wallet:', error)
-      alert('Sorry, there was an error adding the offer to your wallet. Please try again.')
+      console.error('Error activating offer:', error)
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Sorry, there was an error activating this offer. Please try again.'
+      )
     }
   }
 
@@ -766,7 +706,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                   size="sm"
                 >
-                  Claim Offer
+                  Save
                 </Button>
               ) : (
                 isInWallet ? (
@@ -786,7 +726,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold"
                     size="sm"
                   >
-                    Add to Wallet
+                    Redeem now
                   </Button>
                 )
               )}
@@ -949,7 +889,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   onClick={() => claimOffer(offer.id, offer.title, businessName)}
                   className="w-full h-[44px] text-base bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200"
                 >
-                  Claim Offer
+                  Save
                 </Button>
               ) : (
                 isInWallet ? (
@@ -970,7 +910,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    Add to Wallet
+                    Redeem now
                   </Button>
                 )
               )}
@@ -1087,7 +1027,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                     }}
                     className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-lg rounded-xl transition-all duration-200"
                   >
-                    Claim Offer
+                    Save
                   </Button>
                 ) : (
                   !isInWallet && (
@@ -1098,7 +1038,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                       }}
                       className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200"
                     >
-                      Add to Wallet
+                      Redeem now
                     </Button>
                   )
                 )}

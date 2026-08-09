@@ -1,195 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
-import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
-import { getWalletPushFieldUrl, getWalletPushAuthHeader, WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
+import { updateMainPassOffer } from '@/lib/wallet/update-main-pass-offer'
 
 export async function POST(request: NextRequest) {
   try {
     const requestBody = await request.json()
-    const { userWalletPassId, currentOffer, offerDetails } = requestBody
-
-    if (!userWalletPassId) {
-      return NextResponse.json({ error: 'Missing userWalletPassId' }, { status: 400 })
-    }
-
-    // Basic validation: Ensure wallet_pass_id exists and is not a test/guest ID
-    if (userWalletPassId === 'guest' || userWalletPassId === 'test' || userWalletPassId.length < 10) {
-      return NextResponse.json({ 
-        error: 'Invalid wallet pass ID. Please sign up through the GHL form first.' 
-      }, { status: 400 })
-    }
-    
-    // Get user's data including pass_type_identifier
-    const supabase = createServiceRoleClient()
-    const { data: user, error: userError } = await supabase
-      .from('app_users')
-      .select('city, ghl_contact_id, email, name, first_name, last_name, pass_type_identifier')
-      .eq('wallet_pass_id', userWalletPassId)
-      .single()
-
-    if (userError || !user) {
-      console.error('❌ User not found:', userError)
-      return NextResponse.json({
-        error: 'Wallet pass not found. Please contact support if you believe this is an error.'
-      }, { status: 404 })
-    }
-
-    // Additional security: Check if wallet pass is active
-    if (!user.email || user.email.length < 5) {
-      return NextResponse.json({
-        error: 'Invalid wallet pass. Please contact support.'
-      }, { status: 403 })
-    }
-    
-    const firstName = user?.first_name || user?.name?.split(' ')[0] || 'User'
-    
-    // Use stored pass_type_identifier or fallback to default
-    const passTypeId = user.pass_type_identifier || 'pass.come.globalwalletpush'
-    const serialNumber = userWalletPassId
-
-    // SECURITY: Use validated city from user record or request context
-    let userCity = user.city
-    if (!userCity) {
-      try {
-        userCity = await getSafeCurrentCity()
-      } catch (error) {
-        console.error('❌ Could not determine franchise city for wallet pass update:', error)
-        return NextResponse.json(
-          { error: 'Unable to determine franchise city for wallet pass update' },
-          { status: 400 }
-        )
-      }
-    }
-    
-    const credentials = await getWalletPushCredentials(userCity)
-    const appKey = credentials.apiKey
-    const walletpushDashboardUrl = credentials.dashboardUrl
-
-    if (!appKey) {
-      console.error('❌ Missing WalletPush API key for update-main-pass request')
-      return NextResponse.json({ error: 'WalletPush credentials not configured' }, { status: 500 })
-    }
-    
-    // Calculate 12-hour expiry from now (in UK timezone)
-    const now = new Date()
-    const expiryTime = new Date(now.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
-    
-    // Format expiry as "29 Sep 09:17" in UK timezone
-    const expiryFormatted = expiryTime.toLocaleDateString('en-GB', { 
-      day: '2-digit', 
-      month: 'short',
-      timeZone: 'Europe/London'
-    }) + ' ' + expiryTime.toLocaleTimeString('en-GB', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Europe/London'
+    const result = await updateMainPassOffer({
+      userWalletPassId: requestBody.userWalletPassId,
+      currentOffer: requestBody.currentOffer,
+      clearOffer: Boolean(requestBody.clearOffer),
+      lastMessageOnly: Boolean(requestBody.lastMessageOnly),
+      lastMessageOverride: requestBody.lastMessageOverride,
+      offerDetails: requestBody.offerDetails,
     })
-    
-    // Get business name and offer name from request
-    const businessName = requestBody.offerDetails?.businessName || 'Business'
-    const offerName = currentOffer || 'Offer'
 
-    // The "Current Offer" field on the pass front is a single line that WalletPush
-    // auto-shrinks to fit — long strings render as tiny, unreadable text. Businesses
-    // often put a full description in the offer title, so we truncate each part at a
-    // word boundary to keep the pass readable.
-    const truncateAtWord = (input: string, maxLen: number): string => {
-      const clean = (input || '').replace(/\s+/g, ' ').trim()
-      if (clean.length <= maxLen) return clean
-      const cut = clean.slice(0, maxLen)
-      const lastSpace = cut.lastIndexOf(' ')
-      const trimmed = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut
-      return trimmed.replace(/[\s,&+\-–—]+$/, '') + '…'
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to update pass' },
+        { status: result.status || 500 }
+      )
     }
 
-    // Businesses often cram a description into the offer title, e.g.
-    // "Sunset Tapas & Sangria Deal (Qwikker Exclusive) 2 Tapas + 2 Drinks for €24".
-    // If there's a parenthetical, the clean name is reliably the part BEFORE it.
-    // We deliberately do NOT strip on digits, so numeric names like
-    // "Buy 1 Get 1 Free Cocktails" or "2 for 1 Cocktails" stay intact.
-    const extractHeadline = (input: string): string => {
-      const clean = (input || '').replace(/\s+/g, ' ').trim()
-      const beforeParen = clean.split('(')[0].replace(/[\s,&+\-–—]+$/, '').trim()
-      return beforeParen.length >= 3 ? beforeParen : clean
-    }
-
-    const headline = extractHeadline(offerName)
-    // Safety nets so a pathological name/business can't blow the field up again.
-    const shortOffer = truncateAtWord(headline, 50)
-    const shortBusiness = truncateAtWord(businessName, 34)
-    // Front "Current Offer" = clean offer headline + business name (needed so generic
-    // offers like "Buy 1 Get 1 Free" still show WHERE to redeem). The expiry moves to
-    // the back (Last_Message), which keeps the front short enough to render large.
-    const passDisplayText = `${shortOffer} @ ${shortBusiness}`
-    
-    // Two PUT calls: update Current_Offer (pass content) + Last_Message (triggers push)
-    
-    const offerUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.CURRENT_OFFER, walletpushDashboardUrl)
-    
-    const offerResponse = await fetch(offerUrl, {
-      method: 'PUT',
-      headers: getWalletPushAuthHeader(appKey),
-      body: JSON.stringify({ value: passDisplayText })
-    })
-    
-    if (!offerResponse.ok) {
-      const errorText = await offerResponse.text()
-      console.error('❌ Current_Offer API error:', offerResponse.status, errorText)
-      return NextResponse.json({
-        error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
-        details: errorText
-      }, { status: 500 })
-    }
-
-    const offerResult = await offerResponse.json()
-    
-    // Last_Message shows on the BACK of the pass (and fires the push). Put the
-    // expiry here so the front can stay clean while the user still sees when it ends.
-    const pushMessage = `🎉 ${firstName}, "${headline}" at ${shortBusiness} is in your wallet. ⏰ Expires ${expiryFormatted} — show this pass to redeem.`
-    const messageUrl = getWalletPushFieldUrl(passTypeId, serialNumber, WALLET_PASS_FIELDS.LAST_MESSAGE, walletpushDashboardUrl)
-
-    const messageResponse = await fetch(messageUrl, {
-      method: 'PUT',
-      headers: getWalletPushAuthHeader(appKey),
-      body: JSON.stringify({ value: pushMessage, push: true })
-    })
-    
-    if (!messageResponse.ok) {
-      const errorText = await messageResponse.text()
-      console.error('❌ Last_Message API error:', messageResponse.status, errorText)
-      // Don't fail the whole request if push fails - the offer was still updated
-      console.log('⚠️ Offer updated but push notification failed')
-    }
-
-    const messageResult = messageResponse.ok ? await messageResponse.json() : null
-    
     return NextResponse.json({
       success: true,
-      message: 'Wallet pass updated and push notification sent via Direct API!',
-      userWalletPassId,
-      currentOffer: passDisplayText,
-      pushMessage: pushMessage,
-      apiResponses: {
-        offerUpdate: offerResult,
-        pushNotification: messageResult
-      },
+      message: 'Wallet pass updated',
+      userWalletPassId: requestBody.userWalletPassId,
+      currentOffer: result.currentOffer,
+      pushMessage: result.pushMessage,
       debug: {
-        approach: 'WalletPush Direct API - Two PUT calls for update + push',
-        passTypeId: passTypeId,
-        serialNumber: serialNumber,
-        firstName: firstName,
-        businessName: businessName,
-        expiryTime: expiryFormatted
-      }
+        expiryTime: result.expiryTime,
+      },
     })
-    
   } catch (error) {
-    console.error('❌ [WEBHOOK] Error calling WalletPush webhook:', error)
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message
-    }, { status: 500 })
+    console.error('update-main-pass error:', error)
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
   }
 }

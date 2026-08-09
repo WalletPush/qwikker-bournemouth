@@ -10,10 +10,12 @@ export interface BusinessAnalytics {
   anonymousViewers: number
   viewTrend: number
 
-  // Offer Analytics
+  // Offer Analytics (totalOfferClaims = activations in last 30d; honest "Activated")
   totalOfferClaims: number
   activeOffers: number
   claimTrend: number
+  offerSaves30d: number
+  currentlyActiveActivations: number
   topOffers: Array<{
     id: string
     offerName: string
@@ -181,16 +183,82 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
     const registeredViewers = views?.filter(v => v.user_id || v.wallet_pass_id).length || 0
     const anonymousViewers = views?.filter(v => !v.user_id && !v.wallet_pass_id).length || 0
 
-    // 2. OFFER ANALYTICS (user_offer_claims has business_id directly — no join needed)
-    const [
-      { data: claims },
-      { data: previousClaims },
-      { data: activeOffersData },
-    ] = await Promise.all([
-      supabase.from('user_offer_claims').select('id, offer_id, offer_name, offer_title, offer_value, claimed_at').eq('business_id', businessId).gte('claimed_at', thirtyDaysAgo.toISOString()),
-      supabase.from('user_offer_claims').select('id').eq('business_id', businessId).gte('claimed_at', sixtyDaysAgo.toISOString()).lt('claimed_at', thirtyDaysAgo.toISOString()),
-      supabase.from('business_offers').select('id').eq('business_id', businessId).eq('status', 'approved'),
+    // 2. OFFER ANALYTICS — prefer activations/saves (Save/Redeem); fall back to legacy claims
+    const nowIso = new Date().toISOString()
+    let claims: Array<{
+      id: string
+      offer_id?: string
+      offer_name?: string
+      offer_title?: string
+      offer_value?: string
+      claimed_at?: string
+    }> | null = null
+    let previousClaims: Array<{ id: string }> | null = null
+    let offerSaves30d = 0
+    let currentlyActiveActivations = 0
+
+    const activationQuery = await Promise.all([
+      supabase
+        .from('offer_activations')
+        .select('id, offer_id, activated_at')
+        .eq('business_id', businessId)
+        .gte('activated_at', thirtyDaysAgo.toISOString()),
+      supabase
+        .from('offer_activations')
+        .select('id')
+        .eq('business_id', businessId)
+        .gte('activated_at', sixtyDaysAgo.toISOString())
+        .lt('activated_at', thirtyDaysAgo.toISOString()),
+      supabase
+        .from('user_saved_offers')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .is('removed_at', null)
+        .gte('saved_at', thirtyDaysAgo.toISOString()),
+      supabase
+        .from('offer_activations')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .eq('status', 'active')
+        .gt('active_until', nowIso),
+      supabase.from('business_offers').select('id, offer_name, offer_value').eq('business_id', businessId).eq('status', 'approved'),
     ])
+
+    const activationErr = activationQuery[0].error
+    const { data: activeOffersData } = activationQuery[4]
+
+    if (!activationErr) {
+      const activations = activationQuery[0].data || []
+      previousClaims = activationQuery[1].data
+      offerSaves30d = activationQuery[2].count || 0
+      currentlyActiveActivations = activationQuery[3].count || 0
+      const offerMeta = new Map(
+        (activeOffersData || []).map((o) => [o.id, { name: o.offer_name, value: o.offer_value }])
+      )
+      claims = activations.map((a) => ({
+        id: a.id,
+        offer_id: a.offer_id,
+        offer_title: offerMeta.get(a.offer_id)?.name || 'Offer',
+        offer_value: offerMeta.get(a.offer_id)?.value || '',
+        claimed_at: a.activated_at,
+      }))
+    } else {
+      const legacy = await Promise.all([
+        supabase
+          .from('user_offer_claims')
+          .select('id, offer_id, offer_name, offer_title, offer_value, claimed_at')
+          .eq('business_id', businessId)
+          .gte('claimed_at', thirtyDaysAgo.toISOString()),
+        supabase
+          .from('user_offer_claims')
+          .select('id')
+          .eq('business_id', businessId)
+          .gte('claimed_at', sixtyDaysAgo.toISOString())
+          .lt('claimed_at', thirtyDaysAgo.toISOString()),
+      ])
+      claims = legacy[0].data
+      previousClaims = legacy[1].data
+    }
 
     const totalOfferClaims = claims?.length || 0
     const claimTrend = (previousClaims?.length || 0) > 0
@@ -448,6 +516,8 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
       totalOfferClaims,
       activeOffers: activeOffersData?.length || 0,
       claimTrend,
+      offerSaves30d,
+      currentlyActiveActivations,
       topOffers,
       totalSaves,
       saveTrend,
@@ -483,6 +553,8 @@ export async function getBusinessAnalytics(businessId: string, periodDays: numbe
       totalOfferClaims: 0,
       activeOffers: 0,
       claimTrend: 0,
+      offerSaves30d: 0,
+      currentlyActiveActivations: 0,
       topOffers: [],
       totalSaves: 0,
       saveTrend: 0,
