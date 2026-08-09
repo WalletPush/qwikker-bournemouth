@@ -162,7 +162,10 @@ export async function updateMainPassOffer(
   // One APNs → device fetches both changes; only Last_Message should alert
   // (Current_Offer Change Message must stay blank in WalletPush).
   // 500ms gap — WalletPush drops concurrent PUTs to the same pass.
-  const shouldPush = !input.clearOffer
+  // Clear path: silent unless lastMessageOverride is set (expiry vibe CTA).
+  const shouldPush = input.clearOffer
+    ? Boolean(input.lastMessageOverride?.trim())
+    : true
 
   if (!input.lastMessageOnly) {
     const offerResponse = await fetch(offerUrl, {

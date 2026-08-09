@@ -63,6 +63,14 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   // 💚 Vibe Prompt State (triggered by post-visit actions only)
   const [showVibePrompt, setShowVibePrompt] = useState(false)
 
+  // Expiry Wallet push: /user/business/{slug}?vibe=1 opens the sheet immediately
+  useEffect(() => {
+    if (searchParams.get('vibe') === '1') {
+      setShowVibePrompt(true)
+      setActiveTab('reviews')
+    }
+  }, [searchParams])
+
   // 💾 Saved Businesses State
   const [isSaved, setIsSaved] = useState(false)
   

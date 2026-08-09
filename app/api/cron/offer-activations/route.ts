@@ -7,8 +7,8 @@ import {
 /**
  * Offer activation lifecycle cron:
  * - mid-window warning (once)
- * - silent expiry → ended + clear_pending
- * - wallet outbox retry (activate + clear)
+ * - expiry → ended + clear_pending
+ * - wallet outbox: clear Current_Offer + vibe CTA Last_Message push
  *
  * Auth: Bearer CRON_SECRET
  */

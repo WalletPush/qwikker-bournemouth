@@ -108,6 +108,38 @@ export async function unsaveOffer(input: {
   return { success: true }
 }
 
+function slugifyBusinessName(name: string): string {
+  return (name || 'business')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'business'
+}
+
+function truncateWords(input: string, maxLen: number): string {
+  const clean = (input || '').replace(/\s+/g, ' ').trim()
+  if (clean.length <= maxLen) return clean
+  const cut = clean.slice(0, maxLen)
+  const lastSpace = cut.lastIndexOf(' ')
+  const trimmed = lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut
+  return trimmed.replace(/[\s,&+\-–—]+$/, '') + '…'
+}
+
+/** Build expiry vibe CTA copy + deep link into business vibe sheet. */
+export function buildExpiryVibeMessage(params: {
+  offerName: string
+  businessName: string
+  city: string
+  walletPassId: string
+  businessSlug?: string | null
+}): string {
+  const shortOffer = truncateWords(params.offerName, 40)
+  const shortBusiness = truncateWords(params.businessName, 28)
+  const slug = params.businessSlug?.trim() || slugifyBusinessName(params.businessName)
+  const city = (params.city || 'bournemouth').toLowerCase()
+  const vibeUrl = `https://${city}.qwikker.com/user/business/${slug}?vibe=1&wallet_pass_id=${encodeURIComponent(params.walletPassId)}`
+  return `How was "${shortOffer}" at ${shortBusiness}? Tap to leave a quick vibe:\n${vibeUrl}`
+}
+
 async function syncActivationToWallet(params: {
   walletPassId: string
   offerName: string
@@ -116,15 +148,20 @@ async function syncActivationToWallet(params: {
   windowMinutes: number
   mode?: 'activate' | 'clear' | 'warning'
   warningMessage?: string
+  /** Expiry clear: Last_Message CTA (pushes). Omit for silent clear. */
+  clearMessage?: string
 }): Promise<{ ok: boolean; error?: string }> {
   try {
     const { updateMainPassOffer } = await import('@/lib/wallet/update-main-pass-offer')
+    const isClear = params.mode === 'clear'
     const result = await updateMainPassOffer({
       userWalletPassId: params.walletPassId,
-      currentOffer: params.mode === 'clear' ? '' : params.offerName,
-      clearOffer: params.mode === 'clear',
+      currentOffer: isClear ? '' : params.offerName,
+      clearOffer: isClear,
       lastMessageOnly: params.mode === 'warning',
-      lastMessageOverride: params.warningMessage,
+      lastMessageOverride: isClear
+        ? params.clearMessage
+        : params.warningMessage,
       offerDetails: {
         businessName: params.businessName,
         activationWindowMinutes: params.windowMinutes,
@@ -340,12 +377,49 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
         .maybeSingle(),
       supabase
         .from('business_profiles')
-        .select('business_name')
+        .select('business_name, city')
         .eq('id', row.business_id)
         .maybeSingle(),
     ])
     const isClear =
       row.wallet_sync_status === 'clear_pending' || row.wallet_sync_status === 'clear_failed'
+
+    // Never wipe the pass if a newer activation is already live
+    if (isClear) {
+      const { data: stillActive } = await supabase
+        .from('offer_activations')
+        .select('id')
+        .eq('wallet_pass_id', row.wallet_pass_id)
+        .eq('status', 'active')
+        .gt('active_until', new Date().toISOString())
+        .neq('id', row.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (stillActive?.id) {
+        await supabase
+          .from('offer_activations')
+          .update({
+            wallet_sync_status: 'cleared',
+            wallet_sync_attempts: (row.wallet_sync_attempts || 0) + 1,
+            wallet_sync_last_error: null,
+          })
+          .eq('id', row.id)
+        cleared++
+        continue
+      }
+    }
+
+    const windowEnded = new Date(row.active_until).getTime() <= Date.now()
+    const clearMessage =
+      isClear && windowEnded
+        ? buildExpiryVibeMessage({
+            offerName: offer?.offer_name || 'Offer',
+            businessName: business?.business_name || 'Business',
+            city: business?.city || 'bournemouth',
+            walletPassId: row.wallet_pass_id,
+          })
+        : undefined
 
     const sync = await syncActivationToWallet({
       walletPassId: row.wallet_pass_id,
@@ -354,6 +428,7 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
       activeUntil: row.active_until,
       windowMinutes: offer?.activation_window_minutes || 60,
       mode: isClear ? 'clear' : 'activate',
+      clearMessage,
     })
 
     if (sync.ok) {
