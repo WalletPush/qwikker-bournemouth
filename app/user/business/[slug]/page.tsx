@@ -98,6 +98,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       business_hours,
       business_hours_structured,
       business_images,
+      hero_media_id,
       logo,
       phone,
       offer_name,
@@ -153,6 +154,15 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     isBusinessTrialActive((business as any).business_subscriptions)
   )
   
+  const { getHeroPresentationsByBusinessIds } = await import('@/lib/media/media-service')
+  const heroByBusiness = await getHeroPresentationsByBusinessIds(
+    currentCity,
+    (activeBusinesses || []).map((b) => b.id)
+  ).catch((err) => {
+    console.warn('[business-detail] media_assets hero batch failed (pre-migration?):', err)
+    return {} as Record<string, import('@/lib/media/types').MediaPresentation>
+  })
+
   // Transform real businesses to match expected format
   // (vibes fetched only for the viewed listing below — same match logic, less work)
   const realBusinesses = (activeBusinesses || []).map(business => {
@@ -187,6 +197,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
       images: business.business_images || ['/placeholder-business.jpg'],
+      heroMedia: heroByBusiness[business.id] || null,
       logo: business.logo || '/placeholder-logo.jpg',
       // ✅ MATCH CHAT SLUG LOGIC: Use DB slug if available, otherwise generate consistently
       slug: business.slug || business.business_name?.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,

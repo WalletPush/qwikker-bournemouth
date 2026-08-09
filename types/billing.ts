@@ -145,6 +145,13 @@ export interface BusinessCRMData {
   created_at?: string | null
   updated_at?: string | null
   business_offers?: any[] | null
+  menu_preview?: Array<{
+    name: string
+    price?: string
+    description?: string
+    image_url?: string
+  }> | null
+  plan?: string | null
   
   // Visibility control
   visibility?: 'discover_only' | 'ai_enabled' | 'hidden' | null
@@ -201,7 +208,11 @@ export interface BusinessCRMData {
     itemName: string
     description?: string
     price?: string
+    image_url?: string
+    ordering_instructions?: string
     created_at: string
+    status?: string
+    approved_at?: string
   }> | null
   
   // Trial calculations

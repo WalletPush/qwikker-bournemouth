@@ -194,6 +194,33 @@ export async function POST(request: NextRequest) {
         }
         
         console.log(`✅ NEW OFFER CREATED: ${change.change_data.offer_name} for ${change.business?.business_name} (${currentOfferCount + 1}/${maxOffers})`)
+
+        // Index offer artwork in media_assets + set offer_media_id pointer
+        if (change.change_data.offer_image && typeof change.change_data.offer_image === 'string') {
+          try {
+            const { createMediaAsset } = await import('@/lib/media/media-service')
+            const { data: bizCity } = await supabaseAdmin
+              .from('business_profiles')
+              .select('city')
+              .eq('id', change.business_id)
+              .single()
+            if (bizCity?.city) {
+              await createMediaAsset({
+                city: bizCity.city,
+                businessId: change.business_id,
+                offerId: newOffer.id,
+                sourceUrl: change.change_data.offer_image,
+                assetType: 'offer_artwork',
+                reviewStatus: 'approved',
+                setAsOfferMedia: true,
+                fit: 'cover',
+                gravityMode: 'auto',
+              })
+            }
+          } catch (mediaErr) {
+            console.warn('[media_assets] offer artwork index failed:', mediaErr)
+          }
+        }
         
         // 📚 ADD OFFER TO KNOWLEDGE BASE with embeddings (so AI chat can see it!)
         try {
@@ -365,20 +392,59 @@ export async function POST(request: NextRequest) {
           menu_url: change.change_data.menu_url
         }
       } else if (change.change_type === 'business_images') {
-        // Approve business image - add to existing images
-        const { data: currentProfile } = await supabaseAdmin
-          .from('business_profiles')
-          .select('business_images')
-          .eq('id', change.business_id)
-          .single()
-        
-        const existingImages = currentProfile?.business_images || []
-        const newImages = Array.isArray(existingImages) 
-          ? [...existingImages, change.change_data.new_business_image] 
-          : [change.change_data.new_business_image]
-        
-        updateData = {
-          business_images: newImages
+        // Promote pending media_assets row (or create) and set as display hero
+        const newUrl = change.change_data.new_business_image as string | undefined
+        if (newUrl) {
+          try {
+            const { data: biz } = await supabaseAdmin
+              .from('business_profiles')
+              .select('city, hero_media_id, business_images')
+              .eq('id', change.business_id)
+              .single()
+
+            const { data: pending } = await supabaseAdmin
+              .from('media_assets')
+              .select('id')
+              .eq('business_id', change.business_id)
+              .eq('source_url', newUrl)
+              .eq('status', 'active')
+              .eq('review_status', 'pending')
+              .maybeSingle()
+
+            const { promotePendingMedia, createMediaAsset, selectHeroMedia } = await import(
+              '@/lib/media/media-service'
+            )
+
+            if (pending?.id && biz?.city) {
+              await promotePendingMedia(biz.city, pending.id, null, true)
+            } else if (biz?.city) {
+              const asset = await createMediaAsset({
+                city: biz.city,
+                businessId: change.business_id,
+                sourceUrl: newUrl,
+                assetType: 'business_photo',
+                reviewStatus: 'approved',
+                setAsHero: true,
+              })
+              await selectHeroMedia(biz.city, change.business_id, asset.id)
+            }
+
+            // selectHeroMedia syncs business_images; skip raw updateData overwrite
+            updateData = {}
+          } catch (mediaErr) {
+            console.warn('[media_assets] approve business_images failed, falling back:', mediaErr)
+            const { data: currentProfile } = await supabaseAdmin
+              .from('business_profiles')
+              .select('business_images')
+              .eq('id', change.business_id)
+              .single()
+            const existingImages = currentProfile?.business_images || []
+            updateData = {
+              business_images: Array.isArray(existingImages)
+                ? [...existingImages, newUrl]
+                : [newUrl],
+            }
+          }
         }
       }
       

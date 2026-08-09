@@ -39,10 +39,22 @@ export interface OffersSectionConfig {
   max?: number
 }
 
+export interface CategoryTileImageConfig {
+  source_url: string
+  media_id?: string | null
+  focal_x?: number | null
+  focal_y?: number | null
+  zoom?: number | null
+  fit?: 'cover' | 'contain'
+  gravity_mode?: 'auto' | 'centre' | 'manual'
+}
+
 export interface CategoryTilesConfig {
   enabled?: boolean
   heading?: string | null
   categories?: string[] | null
+  /** Per-category display images keyed by system category id */
+  images?: Record<string, CategoryTileImageConfig> | null
 }
 
 // Publish state controlled by the CITY ADMIN (distinct from the HQ lifecycle

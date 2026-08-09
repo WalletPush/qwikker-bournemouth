@@ -496,6 +496,7 @@ export function CityLandingPage({
         headingClass={flavor.heading}
         variant={template.id}
         wash={heroWash}
+        tileImages={landingConfig.category_tiles?.images || null}
       />
     ),
   }

@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import { PendingLink } from '@/components/ui/nav-pending'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ImageCarousel } from '@/components/ui/image-carousel'
 import { BusinessCardImage } from '@/components/ui/business-card-image'
-import { getPlaceholderVariationWithOverride } from '@/lib/placeholders/getPlaceholderImage'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
@@ -139,27 +137,21 @@ export function BusinessCard({
           <div className="flex flex-row items-stretch gap-4 p-3 relative min-h-[156px]">
             {/* Left: Image Thumbnail - REASONABLE SIZE (80px square) */}
             <div className="relative flex-shrink-0 rounded-xl overflow-hidden" style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px', maxWidth: '140px', maxHeight: '140px', padding: 0, margin: 0, lineHeight: 0, fontSize: 0 }}>
-              <img 
-                src={business.images && business.images.length > 0 && business.images[0] !== '/placeholder-business.jpg' 
-                  ? business.images[0] 
-                  : (business.placeholder_custom_url || getPlaceholderVariationWithOverride(systemCategory, business.id, business.placeholder_variant).url)}
-                alt={business.name}
-                style={{ 
-                  display: 'block',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  margin: 0,
-                  padding: 0,
-                  border: 'none'
-                }}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholders/default/00.webp';
-                }}
+              <BusinessCardImage
+                businessName={business.name}
+                businessId={business.id}
+                systemCategory={systemCategory}
+                heroMedia={business.heroMedia || null}
+                heroImage={
+                  business.images && business.images.length > 0 && business.images[0] !== '/placeholder-business.jpg'
+                    ? business.images[0]
+                    : null
+                }
+                placeholderVariant={business.placeholder_variant}
+                customPlaceholderUrl={business.placeholder_custom_url}
+                showUnclaimedBadge={false}
+                preset="card_mobile"
+                className="h-full w-full"
               />
               {business.status === 'unclaimed' && (
                 <div className="absolute bottom-2 left-2 z-[1] bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-slate-200 font-medium flex items-center gap-1 border border-slate-700/50">
@@ -344,48 +336,46 @@ export function BusinessCard({
         {(() => {
           const systemCategory = resolveSystemCategory(business)
 
+          const hasHero =
+            !!business.heroMedia?.source_url ||
+            (business.images &&
+              business.images.length > 0 &&
+              business.images[0] !== '/placeholder-business.jpg')
+
           if (business.status === 'unclaimed') {
-            // Case 1: Unclaimed → Placeholder WITH "UNCLAIMED" badge
             return (
               <BusinessCardImage
                 businessName={business.name}
                 businessId={business.id}
                 systemCategory={systemCategory}
+                heroMedia={business.heroMedia || null}
+                heroImage={hasHero ? business.images?.[0] : null}
                 placeholderVariant={business.placeholder_variant}
                 customPlaceholderUrl={business.placeholder_custom_url}
                 showUnclaimedBadge={true}
+                preset="card_desktop"
                 className="h-full w-full"
                 onBadgeHover={(isHovering) => setShowTooltip(isHovering)}
                 onBadgeClick={() => setShowTooltip(!showTooltip)}
               />
             )
-          } else if (business.images && business.images.length > 0) {
-            // Case 2: Claimed + has images → ImageCarousel
-            return (
-              <>
-                <ImageCarousel
-                  images={business.images}
-                  alt={business.name}
-                  className="w-full h-full"
-                  showArrows={true}
-                  showDots={false}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-              </>
-            )
-          } else {
-            // Case 3: Claimed + NO images → Placeholder WITHOUT "UNCLAIMED" badge
-            return (
-              <BusinessCardImage
-                businessName={business.name}
-                businessId={business.id}
-                systemCategory={systemCategory}
-                placeholderVariant={business.placeholder_variant}
-                showUnclaimedBadge={false}
-                className="h-full w-full"
-              />
-            )
           }
+
+          // Claimed: prefer media_assets presentation via QwikkerImage
+          return (
+            <BusinessCardImage
+              businessName={business.name}
+              businessId={business.id}
+              systemCategory={systemCategory}
+              heroMedia={business.heroMedia || null}
+              heroImage={hasHero ? business.images?.[0] : null}
+              placeholderVariant={business.placeholder_variant}
+              customPlaceholderUrl={business.placeholder_custom_url}
+              showUnclaimedBadge={false}
+              preset="card_desktop"
+              className="h-full w-full"
+            />
+          )
         })()}
         
         {/* Hero Badge - Show for ALL claimed businesses (regardless of images) */}

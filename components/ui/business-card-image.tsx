@@ -1,6 +1,6 @@
-import Image from 'next/image'
 import { getPlaceholderVariationWithOverride, getFallbackPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
-import { optimizeCloudinaryUrl, getBusinessImageSizes } from '@/lib/utils/optimize-image-url'
+import { QwikkerImage } from '@/components/ui/qwikker-image'
+import type { MediaPresentation } from '@/lib/media/types'
 import type { SystemCategory } from '@/lib/constants/system-categories'
 
 interface BusinessCardImageProps {
@@ -8,12 +8,15 @@ interface BusinessCardImageProps {
   businessId: string
   systemCategory: SystemCategory
   heroImage?: string | null
+  /** Preferred: presentation from media_assets (focal/fit/gravity) */
+  heroMedia?: MediaPresentation | null
   placeholderVariant?: number | null
   customPlaceholderUrl?: string | null
   showUnclaimedBadge?: boolean
   className?: string
   onBadgeHover?: (isHovering: boolean) => void
   onBadgeClick?: () => void
+  preset?: 'card_mobile' | 'card_desktop' | 'detail_hero'
 }
 
 export function BusinessCardImage({
@@ -21,46 +24,67 @@ export function BusinessCardImage({
   businessId,
   systemCategory,
   heroImage,
+  heroMedia,
   placeholderVariant,
   customPlaceholderUrl,
   showUnclaimedBadge = true,
   className = '',
   onBadgeHover,
-  onBadgeClick
+  onBadgeClick,
+  preset = 'card_desktop',
 }: BusinessCardImageProps) {
-  // Claimed businesses with uploaded photos: Use Cloudinary (Next.js Image for optimization)
-  if (heroImage) {
-    // Optimize Cloudinary URL with auto-format, auto-quality, and size limits
-    const optimizedUrl = optimizeCloudinaryUrl(heroImage, 1200) || heroImage
-    
+  const media: MediaPresentation | null =
+    heroMedia ||
+    (heroImage ? { source_url: heroImage, fit: 'cover', gravity_mode: 'auto' } : null)
+
+  // Claimed / curated photo via media_assets or legacy URL
+  if (media?.source_url) {
+    const isContain = media.fit === 'contain'
     return (
       <div className={`relative ${className}`}>
-        <Image
-          src={optimizedUrl}
+        <QwikkerImage
+          key={`${media.id || media.source_url}-${media.fit}-${media.focal_x}-${media.focal_y}`}
+          media={media}
+          preset={preset}
           alt={businessName}
           fill
-          className="object-cover"
-          sizes={getBusinessImageSizes()}
-          priority={false}
-          loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        {/* Lighter gradient when showing whole image so baked-in text stays readable */}
+        <div
+          className={`absolute inset-0 pointer-events-none ${
+            isContain
+              ? 'bg-gradient-to-t from-black/35 via-transparent to-transparent'
+              : 'bg-gradient-to-t from-black/60 to-transparent'
+          }`}
+        />
       </div>
     )
   }
 
-  // Unclaimed businesses: deterministic placeholder with visual variation.
-  // When placeholderVariant is set by admin, it overrides the hash-based selection.
-  // An admin-uploaded custom placeholder wins outright (shown as-is, no crop/tint).
+  // Unclaimed: deterministic placeholder with visual variation.
   const variation = getPlaceholderVariationWithOverride(systemCategory, businessId, placeholderVariant)
-  const url = customPlaceholderUrl
-    ? (optimizeCloudinaryUrl(customPlaceholderUrl, 1200) || customPlaceholderUrl)
-    : variation.url
+  const url = customPlaceholderUrl || variation.url
   const imgClass = customPlaceholderUrl ? 'object-cover w-full h-full' : variation.imgClass
   const overlayClass = customPlaceholderUrl ? null : variation.overlayClass
-  
+
+  if (customPlaceholderUrl) {
+    return (
+      <div className={`relative ${className}`}>
+        <QwikkerImage
+          media={{ source_url: customPlaceholderUrl, fit: 'cover', gravity_mode: 'auto' }}
+          preset={preset}
+          alt={businessName}
+          fill
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+      </div>
+    )
+  }
+
   return (
     <div className={`relative ${className} overflow-hidden`}>
+      {/* Local placeholder pool — not Cloudinary */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}
         alt=""
@@ -71,32 +95,20 @@ export function BusinessCardImage({
           target.src = getFallbackPlaceholderUrl()
         }}
       />
-      
-      {/* Tint overlay for color variety */}
+
       {overlayClass && (
         <div className={`absolute inset-0 ${overlayClass} pointer-events-none`} />
       )}
 
-      {/* Dark gradient for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent" />
 
-      {/* Top-right: Unclaimed badge (simple, no tooltip here) */}
       {showUnclaimedBadge && (
         <div className="absolute top-3 right-3 z-10">
-          <div 
+          <div
             className="px-2 py-1 rounded-md bg-slate-900/90 backdrop-blur-md border border-slate-700/50 cursor-pointer hover:bg-slate-800/90 transition-colors"
-            onMouseEnter={() => {
-              console.log('🐛 Badge hover ENTER')
-              onBadgeHover?.(true)
-            }}
-            onMouseLeave={() => {
-              console.log('🐛 Badge hover LEAVE')
-              onBadgeHover?.(false)
-            }}
-            onClick={() => {
-              console.log('🐛 Badge CLICKED')
-              onBadgeClick?.()
-            }}
+            onMouseEnter={() => onBadgeHover?.(true)}
+            onMouseLeave={() => onBadgeHover?.(false)}
+            onClick={() => onBadgeClick?.()}
           >
             <p className="text-[11px] text-slate-300 font-medium flex items-center gap-1">
               <span>ⓘ</span>
@@ -108,4 +120,3 @@ export function BusinessCardImage({
     </div>
   )
 }
-

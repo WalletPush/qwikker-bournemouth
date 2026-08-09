@@ -17,6 +17,7 @@ import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
+import { CrmOffersContentTab } from '@/components/admin/crm-offers-content-tab'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 import { TierManagementCard } from './tier-management-card'
@@ -2710,79 +2711,11 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             {/* Offers & Content Tab */}
             {activeTab === 'offers' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Offers & Content</h3>
-                
-                {business.business_offers && business.business_offers.length > 0 ? (
-                  <div className="space-y-3">
-                    {business.business_offers.filter(offer => offer.status === 'approved').map((offer, index) => (
-                      <Card key={offer.id || index} className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-700/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="text-yellow-300 font-semibold">{offer.offer_name}</h4>
-                              <p className="text-slate-300 text-sm mt-1">{offer.offer_type?.replace('_', ' ').toUpperCase()}</p>
-                              <p className="text-orange-300 text-sm font-medium">{offer.offer_value}</p>
-                              {offer.offer_terms && (
-                                <p className="text-slate-400 text-sm mt-2">{offer.offer_terms}</p>
-                              )}
-                            </div>
-                            <div className="text-right space-y-3">
-                              <div className="bg-green-500/20 text-green-400 text-sm font-medium px-3 py-1 rounded-full border border-green-500/30">
-                                Active
-                              </div>
-                              {offer.offer_end_date && (
-                                <div className="text-slate-400 text-xs">
-                                  Ends: {new Date(offer.offer_end_date).toLocaleDateString('en-GB', { 
-                                    year: 'numeric', 
-                                    month: '2-digit', 
-                                    day: '2-digit' 
-                                  })}
-                                </div>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs"
-                                onClick={() => setDeletionModal({ isOpen: true, offer })}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="bg-slate-800/30 border-slate-700 border-dashed">
-                    <CardContent className="p-6 text-center">
-                      <div className="text-slate-400 mb-2">No active offers</div>
-                      <div className="text-slate-500 text-sm">Encourage business to create their first offer</div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card className="bg-slate-800/30 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white text-sm flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      Secret Menu Items ({businessMetrics.secretItems})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {businessMetrics.secretItems > 0 ? (
-                      <div className="text-slate-300 text-sm">
-                        Business has {businessMetrics.secretItems} secret menu items configured
-                      </div>
-                    ) : (
-                      <div className="text-slate-500 text-sm">
-                        No secret menu items yet - suggest adding exclusive content
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <CrmOffersContentTab
+                  business={business}
+                  onDeleteOffer={(offer) => setDeletionModal({ isOpen: true, offer })}
+                  onRefresh={() => router.refresh()}
+                />
 
                 <Card className="bg-slate-800/30 border-slate-700">
                   <CardHeader>

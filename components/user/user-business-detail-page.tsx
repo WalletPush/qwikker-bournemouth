@@ -414,41 +414,37 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           {(() => {
             const systemCategory = resolveSystemCategory(business)
 
-            return business.status === 'unclaimed' || (!business.images || business.images.length === 0) ? (
+            const hasHero =
+              !!business.heroMedia?.source_url ||
+              (business.images &&
+                business.images.length > 0 &&
+                business.images[0] !== '/placeholder-business.jpg')
+
+            // Detail hero uses media_assets presentation (QwikkerImage via BusinessCardImage)
+            return (
               <>
-                <BusinessCardImage
-                  businessName={business.name}
-                  businessId={business.id}
-                  systemCategory={systemCategory}
-                  placeholderVariant={business.placeholder_variant}
-                  customPlaceholderUrl={business.placeholder_custom_url}
-                  showUnclaimedBadge={false}
-                  className="h-full w-full"
-                />
-                {business.status === 'unclaimed' && !business.owner_user_id && (
-                  <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
-                    <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">
-                      Listing not yet claimed
-                    </span>
-                    <a
-                      href={`/claim?business_id=${business.id}`}
-                      className="inline-block px-1.5 py-0.5 rounded text-[9px] leading-tight whitespace-nowrap bg-[#00d083]/20 hover:bg-[#00d083]/30 backdrop-blur-sm border border-[#00d083]/40 hover:border-[#00d083]/60 text-[#00d083] transition-colors"
-                      style={{ minHeight: 'unset', minWidth: 'unset' }}
-                    >
-                      Your business? Claim here
-                    </a>
-                  </div>
+                {hasHero || business.status === 'unclaimed' ? (
+                  <BusinessCardImage
+                    businessName={business.name}
+                    businessId={business.id}
+                    systemCategory={systemCategory}
+                    heroMedia={business.heroMedia || null}
+                    heroImage={hasHero ? business.images?.[0] : null}
+                    placeholderVariant={business.placeholder_variant}
+                    customPlaceholderUrl={business.placeholder_custom_url}
+                    showUnclaimedBadge={false}
+                    preset="detail_hero"
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <ImageCarousel
+                    images={business.images || []}
+                    alt={business.name}
+                    className="w-full h-full"
+                    showArrows={true}
+                    showDots={true}
+                  />
                 )}
-              </>
-            ) : (
-              <>
-                <ImageCarousel
-                  images={business.images || []}
-                  alt={business.name}
-                  className="w-full h-full"
-                  showArrows={true}
-                  showDots={true}
-                />
                 {business.status === 'unclaimed' && !business.owner_user_id && (
                   <div className="absolute top-3 right-3 z-20 flex flex-col gap-1 items-end">
                     <span className="px-1.5 py-0.5 rounded text-[9px] leading-tight bg-slate-800/60 backdrop-blur-sm border border-slate-700/30 text-slate-400">

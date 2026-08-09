@@ -454,10 +454,75 @@ export async function POST(request: NextRequest) {
     // Let hybrid AI + KB do extraction (cocktails, dishes, prices, etc)
     const hasSpecificMenuQuery = /\b(cocktail|cocktails|drink|drinks|beer|wine|spirits|menu|food|dishes?|what do they (sell|serve|have|offer)|what('?s| is) on (the )?menu|recommend|best (dish|dishes)|signature|specialt(y|ies))\b/i.test(message)
     
-    // STRICT: Only trigger on explicit detail requests, NOT general discovery or menu queries
-    const isDetailQuery = 
-      (!hasSpecificMenuQuery && /^(tell me more|tell me about|more about|details about|what about|more on)\b/i.test(message)) || // Starts with explicit detail phrase (but NOT menu query)
-      (/\b(hours?|opening|open now|what time|closing|close time|phone|call|contact|address|where is|directions|how do i get|website|book|booking)\b/i.test(message) && message.split(/\s+/).length <= 15) // Practical query
+    // Bare venue name / "is X listed?" — detail mode so T1–T3 DB lookup can lock by name.
+    // Keep this conservative: require a distinctive token (not pure category phrases).
+    const bareNameTrimmed = message.trim().replace(/[\?\!\.]+$/g, '').trim()
+    const bareNameWordCount = bareNameTrimmed.split(/\s+/).filter(Boolean).length
+    const looksLikeDiscovery =
+      /^(show|find|list|where|what|who|how|when|recommend|suggest|any|best|near|all|looking for|i want|i need|are there|is there)\b/i.test(
+        bareNameTrimmed
+      )
+    const bareNameGeneric = new Set([
+      'restaurant',
+      'restaurants',
+      'bar',
+      'bars',
+      'cafe',
+      'cafes',
+      'grill',
+      'bistro',
+      'pub',
+      'lounge',
+      'house',
+      'the',
+      'and',
+      'club',
+      'night',
+      'hotel',
+      'resort',
+      'beach',
+      'spa',
+      'shop',
+      'store',
+      'place',
+      'spot',
+      'food',
+      'kitchen',
+      'coffee',
+      'shops',
+      'pizza',
+      'sushi',
+    ])
+    const bareDistinctiveTokens = bareNameTrimmed
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter((t) => t.length >= 2 && !bareNameGeneric.has(t))
+    const isBareNameCandidate =
+      !hasSpecificMenuQuery &&
+      !looksLikeDiscovery &&
+      bareNameWordCount >= 1 &&
+      bareNameWordCount <= 8 &&
+      bareDistinctiveTokens.length >= 1 &&
+      (/^is\s+.+\s+(listed|on qwikker|available|active)\b/i.test(bareNameTrimmed) ||
+        /^(details|info|information)\s+(on|about|for)\s+/i.test(bareNameTrimmed) ||
+        (!/^(tell me more|tell me about|more about|details about|what about|more on)\b/i.test(
+          bareNameTrimmed
+        ) &&
+          bareNameWordCount <= 6))
+
+    // Explicit detail phrases, practical queries, OR conservative bare-name candidate
+    const isDetailQuery =
+      (!hasSpecificMenuQuery &&
+        /^(tell me more|tell me about|more about|details about|what about|more on)\b/i.test(
+          message
+        )) ||
+      (/\b(hours?|opening|open now|what time|closing|close time|phone|call|contact|address|where is|directions|how do i get|website|book|booking)\b/i.test(
+        message
+      ) &&
+        message.split(/\s+/).length <= 15) ||
+      isBareNameCandidate
 
     // 🎯 CRITICAL FIX: Resolve business from CURRENT message FIRST, scoped to recent candidates
     function resolveBusinessFromCurrentMessage(
@@ -578,6 +643,7 @@ export async function POST(request: NextRequest) {
     // ✅ PRIORITY 1: Try to resolve from CURRENT message (scoped to recent candidates)
     // ✅ PRIORITY 2: Fall back to history only if current message has no business mention
     let resolvedSlug: string | null = null
+    let resolvedBusinessId: string | null = null
     let matchedBy = 'none'
     
     if (isDetailQuery) {
@@ -716,6 +782,7 @@ export async function POST(request: NextRequest) {
           )
 
           if (dbMatches.length === 1) {
+            resolvedBusinessId = dbMatches[0].id
             resolvedSlug = generateSlugFromName(dbMatches[0].business_name)
             matchedBy = 'db_name_lookup'
             console.log(
@@ -734,13 +801,14 @@ export async function POST(request: NextRequest) {
         currentMessage: message,
         messageLength: message.split(/\s+/).length,
         resolvedSlug,
+        resolvedBusinessId,
         matchedBy,
         candidateCount: recentCandidates.length
       })
     }
 
-    const currentBusinessId = metaBusinessId
-    const currentBusinessSlug = resolvedSlug
+    const currentBusinessId = metaBusinessId || resolvedBusinessId
+    const currentBusinessSlug = resolvedSlug || result?.metadata?.currentBusinessSlug || null
 
     const isDetailMode = !!(isDetailQuery && (currentBusinessId || currentBusinessSlug))
 

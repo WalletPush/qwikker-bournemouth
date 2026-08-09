@@ -101,6 +101,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       business_hours,
       business_hours_structured,
       business_images,
+      hero_media_id,
       logo,
       phone,
       offer_name,
@@ -171,6 +172,16 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
     isBusinessTrialActive((business as any).business_subscriptions)
   )
   
+  // Batch-load hero presentation from media_assets (focal/fit) for cards
+  const { getHeroPresentationsByBusinessIds } = await import('@/lib/media/media-service')
+  const heroByBusiness = await getHeroPresentationsByBusinessIds(
+    currentCity,
+    activeBusinesses.map((b) => b.id)
+  ).catch((err) => {
+    console.warn('[discover] media_assets hero batch failed (pre-migration?):', err)
+    return {} as Record<string, import('@/lib/media/types').MediaPresentation>
+  })
+
   // Transform real approved businesses to match the expected format
   const realBusinesses = activeBusinesses.map(business => {
     // Check if business has secret menu items
@@ -210,6 +221,7 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       images: business.business_images && business.business_images.length > 0 
         ? business.business_images 
         : [business.logo || '/placeholder-business.jpg'],
+      heroMedia: heroByBusiness[business.id] || null,
       logo: business.logo || '/placeholder-logo.jpg',
       slug: business.business_name?.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || business.id,
       offers: filterActiveOffers(business.business_offers || []).map(offer => ({

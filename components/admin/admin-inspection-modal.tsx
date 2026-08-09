@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { OfferMediaManager } from '@/components/admin/offer-media-manager'
 
 interface Business {
   id: string
@@ -51,6 +52,11 @@ export default function AdminInspectionModal({
   isInspected,
   onMarkInspected,
 }: AdminInspectionModalProps) {
+  const [offerMediaTarget, setOfferMediaTarget] = useState<{
+    offerId: string
+    offerName: string
+  } | null>(null)
+
   // Debug: Check early return conditions
   console.log('🔍 Modal Early Return Check:', {
     isOpen,
@@ -371,6 +377,20 @@ Qwikker Admin Team`
                               <div className="text-white leading-relaxed">{offer.offer_terms}</div>
                             </div>
                           )}
+                          {offer.id && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOfferMediaTarget({
+                                  offerId: offer.id,
+                                  offerName: offer.offer_name || 'Offer',
+                                })
+                              }
+                              className="text-xs px-3 py-1.5 rounded-md border border-purple-400/40 text-purple-200 hover:bg-purple-500/20"
+                            >
+                              Change offer image
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -576,6 +596,15 @@ Qwikker Admin Team`
           </div>
         </div>
       </div>
+
+      {offerMediaTarget && (
+        <OfferMediaManager
+          offerId={offerMediaTarget.offerId}
+          businessId={business.id}
+          offerName={offerMediaTarget.offerName}
+          onClose={() => setOfferMediaTarget(null)}
+        />
+      )}
     </div>
   )
 }

@@ -34,14 +34,30 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       case 'offer':
         updateData = { offer_image: fileUrl }
         break
-      case 'business_images':
-        // For business images, replace or add to existing images
+      case 'business_images': {
+        // Onboarding: write media_assets as approved + sync legacy array; set hero if empty
         const existingImages = profile.business_images || []
-        const newImages = Array.isArray(existingImages) 
-          ? [...existingImages, fileUrl] 
+        const newImages = Array.isArray(existingImages)
+          ? [...existingImages, fileUrl]
           : [fileUrl]
         updateData = { business_images: newImages }
+
+        try {
+          const { createMediaAsset } = await import('@/lib/media/media-service')
+          await createMediaAsset({
+            city: profile.city,
+            businessId: profile.id,
+            sourceUrl: fileUrl,
+            assetType: 'business_photo',
+            reviewStatus: 'approved',
+            uploadedBy: userId,
+            setAsHero: !profile.hero_media_id,
+          })
+        } catch (mediaErr) {
+          console.warn('[media_assets] onboarding photo index failed:', mediaErr)
+        }
         break
+      }
     }
 
     // Update the business profile directly
@@ -63,7 +79,7 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
     return { 
       success: true, 
       data: updateData,
-      message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`
+      message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`,
     }
 
   } else if (profile.status === 'approved') {
@@ -107,6 +123,24 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       return { success: false, error: 'Failed to submit file for admin approval' }
     }
 
+    // Owner upload → media_assets pending; does NOT replace live hero
+    if (fileType === 'business_images') {
+      try {
+        const { createMediaAsset } = await import('@/lib/media/media-service')
+        await createMediaAsset({
+          city: profile.city,
+          businessId: profile.id,
+          sourceUrl: fileUrl,
+          assetType: 'business_photo',
+          reviewStatus: 'pending',
+          uploadedBy: userId,
+          setAsHero: false,
+        })
+      } catch (mediaErr) {
+        console.warn('[media_assets] pending owner photo index failed:', mediaErr)
+      }
+    }
+
     // 📢 SEND SLACK NOTIFICATION: File submitted for approval
     try {
       const { sendCitySlackNotification } = await import('@/lib/utils/dynamic-notifications')
@@ -142,7 +176,10 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
     return { 
       success: true, 
       data: changeRecord,
-      message: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`
+      message:
+        fileType === 'business_images'
+          ? 'Uploaded successfully. This image is awaiting city-guide approval.'
+          : `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`,
     }
 
   } else {
@@ -324,7 +361,8 @@ export async function reorderBusinessImages(userId: string, fromIndex: number, t
 // Upload multiple business images
 export async function uploadMultipleBusinessImages(userId: string, files: File[]) {
   const results = []
-  
+  let lastSuccessMessage: string | undefined
+
   for (const file of files) {
     try {
       // Upload to Cloudinary
@@ -335,6 +373,7 @@ export async function uploadMultipleBusinessImages(userId: string, files: File[]
         const updateResult = await updateProfileFile(userId, 'business_images', uploadResult.data.secure_url)
         
         if (updateResult.success) {
+          lastSuccessMessage = updateResult.message
           results.push({
             success: true,
             fileName: file.name,
@@ -369,7 +408,11 @@ export async function uploadMultipleBusinessImages(userId: string, files: File[]
   return {
     success: successCount > 0,
     results,
-    message: `${successCount} images uploaded successfully${failCount > 0 ? `, ${failCount} failed` : ''}`
+    message:
+      lastSuccessMessage ||
+      (successCount > 0
+        ? 'Uploaded successfully. This image is awaiting city-guide approval.'
+        : `${failCount} upload(s) failed`),
   }
 }
 

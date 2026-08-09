@@ -89,7 +89,11 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       
       setUploadMessage({
         type: 'success',
-        text: result.message || `${type.charAt(0).toUpperCase() + type.slice(1)} submitted for admin approval!`
+        text:
+          result.message ||
+          (type === 'business_images'
+            ? 'Uploaded successfully. This image is awaiting city-guide approval.'
+            : `${type.charAt(0).toUpperCase() + type.slice(1)} submitted for admin approval!`),
       })
 
       // Refresh the page to show updated profile
@@ -123,7 +127,9 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       if (result.success) {
         setUploadMessage({
           type: 'success',
-          text: result.message
+          text:
+            result.message ||
+            'Uploaded successfully. This image is awaiting city-guide approval.',
         })
         // Refresh the page to show updated images
         router.refresh()

@@ -29,9 +29,10 @@ import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 import { SendCompletionReminderModal } from '@/components/admin/send-completion-reminder-modal'
 import { BusinessCard } from '@/components/user/business-card'
 import { AdminBusinessPreview } from './admin-business-preview'
-import { PlaceholderSelector } from './placeholder-selector'
+import { MediaManager } from './media-manager'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { EmailSuiteTab } from '@/components/admin/email-suite-tab'
+import type { MediaPresentation } from '@/lib/media/types'
 
 interface Business {
   id: string
@@ -153,6 +154,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
   const [placeholderOverrides, setPlaceholderOverrides] = useState<Record<string, number>>({})
   // Local overrides for custom placeholder image URLs (null = cleared back to the pool)
   const [placeholderCustomOverrides, setPlaceholderCustomOverrides] = useState<Record<string, string | null>>({})
+  // Hero presentation from media_assets (fit/focal) — required for Show whole image on cards
+  const [heroMediaByBusiness, setHeroMediaByBusiness] = useState<Record<string, MediaPresentation>>({})
 
   // Real claims data from database (will be loaded via API)
   const [mockClaims, setMockClaims] = useState([])
@@ -623,6 +626,31 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     if (b.status === 'approved' && isSubscriptionExpired(b.id)) return false
     return true
   })
+
+  // Load hero media presentation (fit/focal) for live user-view cards
+  useEffect(() => {
+    if (activeTab !== 'live' || liveViewMode !== 'user') return
+    const ids = allLiveBusinesses.map((b) => b.id).filter(Boolean)
+    if (ids.length === 0) return
+
+    let cancelled = false
+    const loadHeroes = async () => {
+      try {
+        const res = await fetch(`/api/admin/media?businessIds=${ids.join(',')}`)
+        const body = await res.json()
+        if (!cancelled && res.ok && body.heroes) {
+          setHeroMediaByBusiness((prev) => ({ ...prev, ...body.heroes }))
+        }
+      } catch (err) {
+        console.warn('[admin] failed to load hero media presentations', err)
+      }
+    }
+    void loadHeroes()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, liveViewMode, allLiveBusinesses.length])
   
   // ✅ NEW: Unclaimed businesses (separate tab)
   const allUnclaimedBusinesses = businessList.filter(b => b.status === 'unclaimed')
@@ -701,6 +729,7 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       images: src.business_images && src.business_images.length > 0
         ? src.business_images
         : [src.logo || '/placeholder-business.jpg'],
+      heroMedia: heroMediaByBusiness[src.id] || null,
       logo: src.logo || '/placeholder-logo.jpg',
       slug,
       offers,
@@ -2109,13 +2138,16 @@ Qwikker Admin Team`
                       {liveBusinesses.map((business) => {
                         const cardProps = toUserCardProps(business)
                         const isUnclaimed = business.status === 'unclaimed' || (crmData.find(c => c.id === business.id)?.status === 'unclaimed')
+                        const heroKey = cardProps.heroMedia
+                          ? `${cardProps.heroMedia.fit}-${cardProps.heroMedia.focal_x}-${cardProps.heroMedia.focal_y}-${cardProps.heroMedia.zoom}`
+                          : 'none'
                         return (
                           <BusinessCard
-                            key={business.id}
+                            key={`${business.id}-${heroKey}`}
                             business={cardProps}
                             showDistance={false}
                             onClick={() => setPreviewBusiness(cardProps)}
-                            adminOverlay={isUnclaimed ? (
+                            adminOverlay={(
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -2124,7 +2156,7 @@ Qwikker Admin Team`
                                   setPlaceholderBusiness({
                                     id: business.id,
                                     name: business.business_name || cardProps.name,
-                                    status: business.status || 'unclaimed',
+                                    status: business.status || (isUnclaimed ? 'unclaimed' : 'approved'),
                                     systemCategory: resolveSystemCategory(cardProps),
                                     placeholderVariant: placeholderOverrides[business.id] ?? cardProps.placeholder_variant ?? null,
                                     customUrl: cardProps.placeholder_custom_url ?? null,
@@ -2134,7 +2166,7 @@ Qwikker Admin Team`
                               >
                                 Change image
                               </button>
-                            ) : undefined}
+                            )}
                           />
                         )
                       })}
@@ -3942,49 +3974,71 @@ Qwikker Admin Team`
         />
       )}
 
-      {/* Placeholder Selector Modal (change image for unclaimed businesses) */}
+      {/* Media manager: select display / frame / upload (claimed + unclaimed) */}
       {placeholderBusiness && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto rounded-xl bg-slate-900 border border-slate-700 shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <h3 className="text-sm font-semibold text-white">Change placeholder image</h3>
-              <button
-                onClick={() => setPlaceholderBusiness(null)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <PlaceholderSelector
-                businessId={placeholderBusiness.id}
-                businessName={placeholderBusiness.name}
-                status={placeholderBusiness.status}
-                systemCategory={placeholderBusiness.systemCategory}
-                placeholderVariant={placeholderBusiness.placeholderVariant}
-                customUrl={placeholderBusiness.customUrl}
-                onCustomChange={(url) => {
-                  setPlaceholderCustomOverrides(prev => ({ ...prev, [placeholderBusiness.id]: url }))
-                }}
-                onSave={async (variant: number) => {
-                  try {
-                    const res = await fetch('/api/admin/businesses/placeholder-variant', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ businessId: placeholderBusiness.id, placeholderVariant: variant }),
-                    })
-                    if (res.ok) {
-                      setPlaceholderOverrides(prev => ({ ...prev, [placeholderBusiness.id]: variant }))
-                      setPlaceholderBusiness(null)
-                    }
-                  } catch (err) {
-                    console.error('Failed to update placeholder variant:', err)
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </div>
+        <MediaManager
+          businessId={placeholderBusiness.id}
+          businessName={placeholderBusiness.name}
+          status={placeholderBusiness.status}
+          systemCategory={placeholderBusiness.systemCategory}
+          placeholderVariant={placeholderBusiness.placeholderVariant}
+          customUrl={placeholderBusiness.customUrl}
+          onClose={() => setPlaceholderBusiness(null)}
+          onChanged={(heroMedia) => {
+            if (!placeholderBusiness?.id) {
+              router.refresh()
+              return
+            }
+            const id = placeholderBusiness.id
+            if (heroMedia) {
+              setHeroMediaByBusiness((prev) => ({ ...prev, [id]: heroMedia }))
+            } else {
+              // null/undefined after restore-to-pool → drop hero so placeholder wins
+              setHeroMediaByBusiness((prev) => {
+                const next = { ...prev }
+                delete next[id]
+                return next
+              })
+            }
+            router.refresh()
+          }}
+          onCustomChange={(url) => {
+            const id = placeholderBusiness.id
+            setPlaceholderCustomOverrides((prev) => ({ ...prev, [id]: url }))
+            if (url === null) {
+              // Removed custom → clear hero override so pool/variant shows
+              setHeroMediaByBusiness((prev) => {
+                const next = { ...prev }
+                delete next[id]
+                return next
+              })
+            }
+          }}
+          onPlaceholderSave={async (variant: number) => {
+            try {
+              const id = placeholderBusiness.id
+              const res = await fetch('/api/admin/businesses/placeholder-variant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  businessId: id,
+                  placeholderVariant: variant,
+                }),
+              })
+              if (res.ok) {
+                setPlaceholderOverrides((prev) => ({ ...prev, [id]: variant }))
+                setPlaceholderCustomOverrides((prev) => ({ ...prev, [id]: null }))
+                setHeroMediaByBusiness((prev) => {
+                  const next = { ...prev }
+                  delete next[id]
+                  return next
+                })
+              }
+            } catch (err) {
+              console.error('Failed to update placeholder variant:', err)
+            }
+          }}
+        />
       )}
     </div>
   )

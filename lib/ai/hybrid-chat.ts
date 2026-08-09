@@ -368,22 +368,51 @@ function normalizeSpokenBusinessName(name: string): string {
     .trim()
 }
 
+const SPOKEN_NAME_GENERIC = new Set([
+  'restaurant', 'restaurants', 'bar', 'bars', 'cafe', 'cafes', 'grill', 'bistro',
+  'pub', 'lounge', 'house', 'the', 'and', 'club', 'night', 'hotel', 'resort',
+  'beach', 'spa', 'shop', 'store', 'place', 'spot', 'food', 'kitchen',
+])
+
+/** Cheap edit-distance for unique typo matching (short strings only). */
+function spokenNameEditDistance(a: string, b: string): number {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  const rows = a.length + 1
+  const cols = b.length + 1
+  const dist: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0))
+  for (let i = 0; i < rows; i++) dist[i][0] = i
+  for (let j = 0; j < cols; j++) dist[0][j] = j
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dist[i][j] = Math.min(
+        dist[i - 1][j] + 1,
+        dist[i][j - 1] + 1,
+        dist[i - 1][j - 1] + cost
+      )
+    }
+  }
+  return dist[a.length][b.length]
+}
+
 /**
  * Resolve a spoken business name against inventory (all tiers).
- * Used for "tell me about X" so unclaimed T3 listings are not missed.
+ * Conservative: exact → unique substring/token → unique high-confidence typo.
+ * Ambiguous / weak matches return null so discovery is not hijacked.
  */
 function findBusinessBySpokenName(queryName: string, businesses: any[]): any | null {
-  const generic = new Set([
-    'restaurant', 'restaurants', 'bar', 'bars', 'cafe', 'cafes', 'grill', 'bistro',
-    'pub', 'lounge', 'house', 'the', 'and', 'club', 'night', 'hotel', 'resort',
-  ])
   const targetNorm = normalizeSpokenBusinessName(queryName)
   if (!targetNorm) return null
   const targetSlug = slugifyBusinessName(queryName)
-  const targetTokens = targetNorm.split(' ').filter((t) => t.length >= 2 && !generic.has(t))
+  const targetTokens = targetNorm.split(' ').filter((t) => t.length >= 2 && !SPOKEN_NAME_GENERIC.has(t))
 
-  let best: any | null = null
-  let bestScore = 0
+  // Too generic alone ("beach club", "best beach") — never lock
+  if (targetTokens.length === 0) return null
+
+  type Scored = { biz: any; score: number }
+  const scored: Scored[] = []
 
   for (const biz of businesses) {
     const name = typeof biz?.business_name === 'string' ? biz.business_name : ''
@@ -395,24 +424,90 @@ function findBusinessBySpokenName(queryName: string, businesses: any[]): any | n
     let score = 0
     if (nameNorm === targetNorm || nameSlug === targetSlug) {
       score = 100
-    } else if (nameNorm.includes(targetNorm) || targetNorm.includes(nameNorm)) {
-      score = 80
-    } else if (targetTokens.length > 0) {
+    } else if (
+      targetNorm.length >= 5 &&
+      (nameNorm.startsWith(targetNorm + ' ') ||
+        nameNorm.includes(' ' + targetNorm + ' ') ||
+        nameNorm.endsWith(' ' + targetNorm) ||
+        nameNorm === targetNorm)
+    ) {
+      // Query is a distinctive prefix/substring of the full name (e.g. "kibanda beach")
+      score = 90
+    } else if (
+      targetNorm.length >= 8 &&
+      nameNorm.includes(targetNorm) &&
+      targetTokens.length >= 2
+    ) {
+      score = 85
+    } else if (targetTokens.length >= 2) {
       const matched = targetTokens.filter((t) =>
-        bizTokens.some((bt) => bt === t || (t.length >= 4 && (bt.includes(t) || t.includes(bt))))
+        bizTokens.some((bt) => bt === t || (t.length >= 4 && bt.startsWith(t)))
       )
-      if (matched.length >= 2) score = 50 + matched.length * 10
-      else if (matched.length === 1 && matched[0].length >= 6) score = 45
+      if (matched.length === targetTokens.length && matched.length >= 2) score = 80
+      else if (matched.length >= 2) score = 55 + matched.length * 5
+    } else if (targetTokens.length === 1 && targetTokens[0].length >= 6) {
+      const tok = targetTokens[0]
+      // Single distinctive token: only exact token hit on a unique business (scored later)
+      if (bizTokens.some((bt) => bt === tok)) score = 70
+      else if (bizTokens.some((bt) => bt.startsWith(tok) || tok.startsWith(bt))) score = 60
     }
 
-    if (score > bestScore) {
-      bestScore = score
-      best = biz
+    // Unique high-confidence typo (edit distance 1–2 on full normalized name)
+    if (score === 0 && targetNorm.length >= 8 && nameNorm.length >= 8) {
+      const d = spokenNameEditDistance(targetNorm, nameNorm)
+      const maxD = targetNorm.length >= 12 ? 2 : 1
+      if (d > 0 && d <= maxD) score = 75
     }
+
+    if (score > 0) scored.push({ biz, score })
   }
 
-  // Require a confident match — avoids "rock" alone resolving to The Rock Restaurant
-  return bestScore >= 50 ? best : null
+  if (scored.length === 0) return null
+  scored.sort((a, b) => b.score - a.score)
+  const top = scored[0]
+  const tied = scored.filter((s) => s.score === top.score)
+  if (tied.length > 1) return null // ambiguous — do not lock
+
+  // Single-token / weaker matches need higher bar
+  if (top.score < 70 && targetTokens.length < 2) return null
+  if (top.score < 55) return null
+
+  return top.biz
+}
+
+/**
+ * Extract a bare / named-ask target from the user message when they are asking
+ * about a specific venue without saying "tell me about".
+ * Returns null for discovery / category queries.
+ */
+function extractBareNameAskTarget(userMessage: string): string | null {
+  const trimmed = userMessage.trim().replace(/[\?\!\.]+$/g, '').trim()
+  if (!trimmed) return null
+
+  const discoveryStart =
+    /^(show|find|list|where|what|who|how|when|recommend|suggest|any|best|near|all|looking for|i want|i need|are there|is there)\b/i
+  if (discoveryStart.test(trimmed)) return null
+
+  // "Is Kibanda Beach Club listed?" / "is Kibanda on qwikker?"
+  const isListed = trimmed.match(
+    /^is\s+(.+?)\s+(listed|on qwikker|available|in (the )?(app|guide)|active)\b/i
+  )
+  if (isListed?.[1]) return isListed[1].trim()
+
+  // "details on Kibanda" / "info about Kibanda Beach Club"
+  const detailsOn = trimmed.match(/^(details|info|information)\s+(on|about|for)\s+(.+)$/i)
+  if (detailsOn?.[3]) return detailsOn[3].trim()
+
+  const words = trimmed.split(/\s+/).filter(Boolean)
+  if (words.length === 0 || words.length > 8) return null
+
+  // Reject pure category phrases
+  const norm = normalizeSpokenBusinessName(trimmed)
+  const tokens = norm.split(' ').filter((t) => t.length >= 2 && !SPOKEN_NAME_GENERIC.has(t))
+  if (tokens.length === 0) return null
+
+  // Looks like a proper name / venue title (has a distinctive token)
+  return trimmed
 }
 
 /**
@@ -1126,8 +1221,12 @@ export async function generateHybridAIResponse(
     let tier2FilteredForDetail = tier2Businesses
     let tier3FilteredForDetail = tier3Businesses
 
+    const bareNameTarget = extractBareNameAskTarget(userMessage)
     const namedAskTarget =
-      tellMeAboutMatch && aboutTarget && !isTellMeAboutFollowUp ? aboutTarget : null
+      (tellMeAboutMatch && aboutTarget && !isTellMeAboutFollowUp ? aboutTarget : null) ||
+      bareNameTarget
+
+    let namedLockBusiness: { id: string; name: string; slug?: string } | null = null
 
     if (namedAskTarget) {
       const allForNameMatch = [...tier1Businesses, ...tier2Businesses, ...tier3Businesses]
@@ -1136,8 +1235,20 @@ export async function generateHybridAIResponse(
         tier1FilteredForDetail = tier1Businesses.filter((b) => b.id === namedHit.id)
         tier2FilteredForDetail = tier2Businesses.filter((b) => b.id === namedHit.id)
         tier3FilteredForDetail = tier3Businesses.filter((b) => b.id === namedHit.id)
+        namedLockBusiness = {
+          id: String(namedHit.id),
+          name: namedHit.business_name,
+          slug: getBusinessSlug(namedHit) || undefined,
+        }
+        // Persist focus so detail mode / follow-ups lock by business_id + city
+        state.currentBusiness = {
+          id: String(namedHit.id),
+          name: namedHit.business_name,
+          slug: getBusinessSlug(namedHit) || undefined,
+          contextType: 'detailed_view',
+        }
         console.log(
-          `🎯 [NAMED ASK] Locked to inventory match: ${namedHit.business_name} (id: ${namedHit.id})`
+          `🎯 [NAMED ASK] Locked to inventory match: ${namedHit.business_name} (id: ${namedHit.id}) from "${namedAskTarget}"`
         )
       } else {
         console.log(`⚠️ [NAMED ASK] No inventory match for "${namedAskTarget}" across T1/T2/T3`)
@@ -3208,8 +3319,8 @@ Present this information clearly and offer further help.`
       metadata: {
         atlasAvailable, // Server-computed flag: true if 2+ candidates have valid coords
         coordsCandidateCount: (candidatesForAtlas || []).filter(hasValidCoords).length,
-        currentBusinessId: state.currentBusiness?.id ?? null, // For state-aware footer logic
-        currentBusinessSlug: null // DB has no slug column - always null
+        currentBusinessId: namedLockBusiness?.id ?? state.currentBusiness?.id ?? null,
+        currentBusinessSlug: namedLockBusiness?.slug ?? state.currentBusiness?.slug ?? null,
       }
     }
 

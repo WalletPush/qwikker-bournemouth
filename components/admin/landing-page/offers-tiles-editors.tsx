@@ -1,10 +1,18 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { LandingPageConfig } from '@/lib/constants/landing-templates'
+import { Button } from '@/components/ui/button'
+import {
+  CategoryTileImageConfig,
+  LandingPageConfig,
+} from '@/lib/constants/landing-templates'
 import { SYSTEM_CATEGORIES, SYSTEM_CATEGORY_LABEL, SystemCategory } from '@/lib/constants/system-categories'
+import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
+import { uploadToCloudinary } from '@/lib/integrations'
+import { buildQwikkerImageUrl } from '@/lib/media/build-qwikker-image-url'
 
 interface EditorProps {
   config: LandingPageConfig
@@ -62,6 +70,9 @@ export function OffersSectionEditor({ config, onChange }: EditorProps) {
 export function CategoryTilesEditor({ config, onChange }: EditorProps) {
   const tiles = config.category_tiles || {}
   const selected = tiles.categories || []
+  const images = tiles.images || {}
+  const [uploadingCat, setUploadingCat] = useState<string | null>(null)
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   function toggle(cat: string) {
     onChange((prev) => {
@@ -72,7 +83,60 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
   }
 
   function applyRecommended() {
-    onChange((prev) => ({ ...prev, category_tiles: { ...(prev.category_tiles || {}), categories: [...RECOMMENDED_TILES] } }))
+    onChange((prev) => ({
+      ...prev,
+      category_tiles: { ...(prev.category_tiles || {}), categories: [...RECOMMENDED_TILES] },
+    }))
+  }
+
+  function setTileImage(cat: string, image: CategoryTileImageConfig | null) {
+    onChange((prev) => {
+      const prevImages = { ...(prev.category_tiles?.images || {}) }
+      if (!image) delete prevImages[cat]
+      else prevImages[cat] = image
+      return {
+        ...prev,
+        category_tiles: {
+          ...(prev.category_tiles || {}),
+          images: Object.keys(prevImages).length ? prevImages : null,
+        },
+      }
+    })
+  }
+
+  async function handleUpload(cat: string, file: File) {
+    setUploadingCat(cat)
+    try {
+      const url = await uploadToCloudinary(file, `qwikker/category_tiles/${cat}`)
+      // Persist as category_image in media_assets (city from admin session on API)
+      let mediaId: string | null = null
+      try {
+        const res = await fetch('/api/admin/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upload',
+            sourceUrl: url,
+            assetType: 'category_image',
+            categoryKey: cat,
+            reviewStatus: 'approved',
+          }),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (res.ok && body.asset?.id) mediaId = body.asset.id
+      } catch {
+        // Config still stores URL even if media_assets row fails (pre-migration)
+      }
+      setTileImage(cat, {
+        source_url: url,
+        media_id: mediaId,
+        fit: 'cover',
+        gravity_mode: 'auto',
+        zoom: 1,
+      })
+    } finally {
+      setUploadingCat(null)
+    }
   }
 
   return (
@@ -86,7 +150,9 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
           </div>
           <div>
             <CardTitle className="text-white">Category Tiles</CardTitle>
-            <p className="text-sm text-slate-400 mt-1">Bold tiles that send visitors into discovery. Toggle the section in &quot;Sections&quot; above.</p>
+            <p className="text-sm text-slate-400 mt-1">
+              Bold tiles that send visitors into discovery. Upload per-category art or restore the Qwikker default.
+            </p>
           </div>
         </div>
       </CardHeader>
@@ -96,7 +162,12 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
           <p className="text-xs text-slate-500">Leave blank for the default: &quot;Explore [city]&quot;</p>
           <Input
             value={tiles.heading || ''}
-            onChange={(e) => onChange((prev) => ({ ...prev, category_tiles: { ...(prev.category_tiles || {}), heading: e.target.value || null } }))}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                category_tiles: { ...(prev.category_tiles || {}), heading: e.target.value || null },
+              }))
+            }
             placeholder="Explore your city"
             maxLength={100}
             className="bg-slate-900 border-slate-600 text-white focus:border-[#00d083]"
@@ -106,7 +177,11 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-slate-300">Categories ({selected.length})</Label>
-            <button type="button" onClick={applyRecommended} className="text-xs text-[#00d083] hover:text-[#00d083]/80 font-medium">
+            <button
+              type="button"
+              onClick={applyRecommended}
+              className="text-xs text-[#00d083] hover:text-[#00d083]/80 font-medium"
+            >
               Use recommended
             </button>
           </div>
@@ -120,7 +195,9 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
                   type="button"
                   onClick={() => toggle(cat)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    isOn ? 'border-[#00d083] bg-[#00d083]/15 text-[#00d083]' : 'border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500'
+                    isOn
+                      ? 'border-[#00d083] bg-[#00d083]/15 text-[#00d083]'
+                      : 'border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500'
                   }`}
                 >
                   {SYSTEM_CATEGORY_LABEL[cat].split('/')[0].trim()}
@@ -129,6 +206,87 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
             })}
           </div>
         </div>
+
+        {selected.length > 0 && (
+          <div className="space-y-3">
+            <Label className="text-slate-300">Tile images</Label>
+            <p className="text-xs text-slate-500">
+              Custom image → city override. Restore default falls back to the Qwikker placeholder pool. Preview shows the label overlay.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {selected.map((cat) => {
+                const custom = images[cat]
+                const preview =
+                  (custom?.source_url &&
+                    (buildQwikkerImageUrl(
+                      {
+                        source_url: custom.source_url,
+                        focal_x: custom.focal_x,
+                        focal_y: custom.focal_y,
+                        zoom: custom.zoom,
+                        fit: custom.fit || 'cover',
+                        gravity_mode: custom.gravity_mode || 'auto',
+                      },
+                      'category'
+                    ) ||
+                      custom.source_url)) ||
+                  getPlaceholderUrl(cat, `tile-${cat}`)
+                const label = SYSTEM_CATEGORY_LABEL[cat as SystemCategory]?.split('/')[0].trim() || cat
+
+                return (
+                  <div
+                    key={cat}
+                    className="rounded-lg border border-slate-700 bg-slate-950/50 overflow-hidden"
+                  >
+                    <div className="relative h-28">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={preview} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-2">
+                        <span className="text-white text-sm font-bold">{label}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 p-2">
+                      <input
+                        ref={(el) => {
+                          fileRefs.current[cat] = el
+                        }}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) void handleUpload(cat, file)
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={uploadingCat === cat}
+                        className="text-[11px] h-7"
+                        onClick={() => fileRefs.current[cat]?.click()}
+                      >
+                        {uploadingCat === cat ? 'Uploading…' : custom ? 'Replace' : 'Upload'}
+                      </Button>
+                      {custom && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-[11px] h-7 text-slate-400"
+                          onClick={() => setTileImage(cat, null)}
+                        >
+                          Restore default
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

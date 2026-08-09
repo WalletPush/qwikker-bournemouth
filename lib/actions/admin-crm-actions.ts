@@ -291,7 +291,11 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         itemName: string
         description?: string
         price?: string
+        image_url?: string
+        ordering_instructions?: string
         created_at: string
+        status?: string
+        approved_at?: string
       }> | null = null
 
       if (business.additional_notes) {
@@ -302,7 +306,11 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
               itemName: item.itemName || item.name || 'Unnamed Item',
               description: item.description || '',
               price: item.price || '',
-              created_at: item.created_at || new Date().toISOString()
+              image_url: item.image_url || undefined,
+              ordering_instructions: item.ordering_instructions || undefined,
+              created_at: item.created_at || new Date().toISOString(),
+              status: item.status || undefined,
+              approved_at: item.approved_at || undefined,
             }))
           }
         } catch (e) {
@@ -441,6 +449,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_menus: menusByBusiness.get(business.id) || null,
         business_events: eventsByBusiness.get(business.id) || null,
         business_offers: offersByBusiness.get(business.id) || [],
+        menu_preview: Array.isArray(business.menu_preview) ? business.menu_preview : null,
         offer_name: business.offer_name,
         offer_type: business.offer_type,
         offer_image: business.offer_image,
