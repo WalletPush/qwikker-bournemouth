@@ -133,34 +133,11 @@ export async function updateMainPassOffer(
 
   const authHeaders = getWalletPushAuthHeader(appKey)
 
-  if (!input.lastMessageOnly) {
-    const offerUrl = getWalletPushFieldUrl(
-      passTypeId,
-      serialNumber,
-      WALLET_PASS_FIELDS.CURRENT_OFFER,
-      walletpushDashboardUrl
-    )
-    const offerResponse = await fetch(offerUrl, {
-      method: 'PUT',
-      headers: authHeaders,
-      body: JSON.stringify({ value: passDisplayText }),
-    })
-    if (!offerResponse.ok) {
-      const errorText = await offerResponse.text()
-      return {
-        success: false,
-        error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
-        status: 500,
-        currentOffer: passDisplayText,
-      }
-    }
-  }
-
   let pushMessage: string
   if (input.lastMessageOverride) {
     pushMessage = input.lastMessageOverride
   } else if (input.clearOffer) {
-    // Silent clear — empty Last_Message with no scare copy; still may push depending on WP
+    // Silent clear — empty Last_Message with no scare copy
     pushMessage = ''
   } else {
     const mins =
@@ -174,13 +151,25 @@ export async function updateMainPassOffer(
     WALLET_PASS_FIELDS.LAST_MESSAGE,
     walletpushDashboardUrl
   )
+  const offerUrl = getWalletPushFieldUrl(
+    passTypeId,
+    serialNumber,
+    WALLET_PASS_FIELDS.CURRENT_OFFER,
+    walletpushDashboardUrl
+  )
+
+  // Apple Wallet: if MORE THAN ONE field with changeMessage changes in the same
+  // pass fetch, iOS collapses the lock-screen alert to generic "Store Card Changed".
+  // So for activate/warning we push Last_Message alone first, then silently morph
+  // Current_Offer after a short delay (same sequential pattern as loyalty).
+  const shouldPush = !input.clearOffer
+
   const messageResponse = await fetch(messageUrl, {
     method: 'PUT',
     headers: authHeaders,
     body: JSON.stringify({
       value: pushMessage,
-      // Silent clear: no push. Activate / warning: push.
-      push: !input.clearOffer,
+      push: shouldPush,
     }),
   })
 
@@ -194,7 +183,33 @@ export async function updateMainPassOffer(
         status: 500,
       }
     }
-    // Activate path: Current_Offer may have succeeded — treat as soft success
+    // Activate path: still try Current_Offer below
+  }
+
+  if (!input.lastMessageOnly) {
+    // Let WalletPush settle — concurrent PUTs to the same pass get dropped
+    await new Promise((r) => setTimeout(r, 500))
+
+    const offerResponse = await fetch(offerUrl, {
+      method: 'PUT',
+      headers: authHeaders,
+      // Never push here — front-of-pass morph only. A second pushed field
+      // change would trigger Apple's generic "Store Card Changed".
+      body: JSON.stringify({ value: passDisplayText, push: false }),
+    })
+    if (!offerResponse.ok) {
+      const errorText = await offerResponse.text()
+      console.error('Current_Offer API error:', offerResponse.status, errorText)
+      // Last_Message (and its push) may already have succeeded
+      if (input.clearOffer) {
+        return {
+          success: false,
+          error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
+          status: 500,
+          currentOffer: passDisplayText,
+        }
+      }
+    }
   }
 
   return {

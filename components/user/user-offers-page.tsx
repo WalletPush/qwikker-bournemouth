@@ -4,18 +4,51 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShareButton } from '@/components/ui/share-button'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { useSearchParams } from 'next/navigation'
 import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
+import { ActivationCountdownPanel } from '@/components/user/activation-countdown-panel'
+
+interface ActiveOfferEntry {
+  activeUntil: string
+}
+
+interface ActivateSuccessState {
+  offerId: string
+  offerTitle: string
+  businessName: string
+  activeUntil: string
+  walletSynced: boolean
+  message?: string
+}
 
 interface UserOffersPageProps {
   realOffers?: any[]
   walletPassId?: string
   currentCity?: string
   cityDisplayName?: string
+}
+
+function pruneExpiredActive(
+  map: Record<string, ActiveOfferEntry>
+): Record<string, ActiveOfferEntry> {
+  const now = Date.now()
+  const next: Record<string, ActiveOfferEntry> = {}
+  for (const [id, entry] of Object.entries(map)) {
+    if (new Date(entry.activeUntil).getTime() > now) {
+      next[id] = entry
+    }
+  }
+  return next
+}
+
+function persistActiveMap(userId: string, map: Record<string, ActiveOfferEntry>) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(`qwikker-active-${userId}`, JSON.stringify(map))
+  localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify(Object.keys(map)))
 }
 
 export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId, currentCity: currentCityProp, cityDisplayName: cityDisplayNameProp }: UserOffersPageProps) {
@@ -33,10 +66,64 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Initialize with empty sets to avoid hydration mismatch
   const [favoriteOffers, setFavoriteOffers] = useState<Set<string>>(new Set())
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
-  const [walletOffers, setWalletOffers] = useState<Set<string>>(new Set())
+  /** Currently ticking activations (activeUntil > now) */
+  const [activeByOfferId, setActiveByOfferId] = useState<Record<string, ActiveOfferEntry>>({})
+  /** Offers that have been activated at least once (blocks Redeem on single-use) */
+  const [usedOfferIds, setUsedOfferIds] = useState<Set<string>>(new Set())
+  const [activateSuccess, setActivateSuccess] = useState<ActivateSuccessState | null>(null)
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const autoClaimProcessed = useRef(false)
+
+  const isOfferActive = useCallback(
+    (offerId: string) => {
+      const entry = activeByOfferId[offerId]
+      if (!entry) return false
+      return new Date(entry.activeUntil).getTime() > Date.now()
+    },
+    [activeByOfferId]
+  )
+
+  const isOfferUsed = useCallback(
+    (offerId: string) => usedOfferIds.has(offerId),
+    [usedOfferIds]
+  )
+
+  const clearActiveOffer = useCallback(
+    (offerId: string) => {
+      const userId = walletPassId || 'anonymous-user'
+      setActiveByOfferId((prev) => {
+        if (!prev[offerId]) return prev
+        const next = { ...prev }
+        delete next[offerId]
+        persistActiveMap(userId, next)
+        return next
+      })
+    },
+    [walletPassId]
+  )
+
+  const setActiveOffer = useCallback(
+    (offerId: string, activeUntil: string) => {
+      const userId = walletPassId || 'anonymous-user'
+      setActiveByOfferId(() => {
+        // Single active activation per pass — replace any previous
+        const next: Record<string, ActiveOfferEntry> = { [offerId]: { activeUntil } }
+        persistActiveMap(userId, next)
+        return next
+      })
+      setUsedOfferIds((prev) => {
+        const next = new Set([...prev, offerId])
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`qwikker-used-${userId}`, JSON.stringify([...next]))
+          // Keep legacy wallet key for any old readers
+          localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...next]))
+        }
+        return next
+      })
+    },
+    [walletPassId]
+  )
   
   // Helper function to scroll to results after filter change
   const scrollToResults = () => {
@@ -54,50 +141,133 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   // Load from localStorage after component mounts
   useEffect(() => {
     const userId = walletPassId || 'anonymous-user'
-    
+
     const savedFavorites = localStorage.getItem(`qwikker-favorites-${userId}`)
     const savedClaimed = localStorage.getItem(`qwikker-claimed-${userId}`)
-    const savedWallet = localStorage.getItem(`qwikker-wallet-${userId}`)
-    
+    const savedActive = localStorage.getItem(`qwikker-active-${userId}`)
+
     if (savedFavorites) {
       setFavoriteOffers(new Set(JSON.parse(savedFavorites)))
     }
     if (savedClaimed) {
       setClaimedOffers(new Set(JSON.parse(savedClaimed)))
     }
-    if (savedWallet) {
-      setWalletOffers(new Set(JSON.parse(savedWallet)))
+
+    let localActive: Record<string, ActiveOfferEntry> = {}
+    if (savedActive) {
+      try {
+        localActive = pruneExpiredActive(JSON.parse(savedActive) as Record<string, ActiveOfferEntry>)
+      } catch {
+        localActive = {}
+      }
+    }
+    setActiveByOfferId(localActive)
+    persistActiveMap(userId, localActive)
+
+    const savedUsed = localStorage.getItem(`qwikker-used-${userId}`)
+    const legacyWallet = localStorage.getItem(`qwikker-wallet-${userId}`)
+    if (savedUsed) {
+      try {
+        setUsedOfferIds(new Set(JSON.parse(savedUsed)))
+      } catch {
+        /* ignore */
+      }
+    } else if (legacyWallet) {
+      try {
+        const ids = JSON.parse(legacyWallet) as string[]
+        setUsedOfferIds(new Set(ids))
+        localStorage.setItem(`qwikker-used-${userId}`, JSON.stringify(ids))
+      } catch {
+        /* ignore */
+      }
     }
   }, [walletPassId])
 
-  // Clean up expired offer IDs from localStorage
+  // Hydrate active activation from server (source of truth)
+  useEffect(() => {
+    if (!walletPassId || walletPassId.length < 10) return
+    let cancelled = false
+
+    const hydrate = async () => {
+      try {
+        const res = await fetch(
+          `/api/offers/activate?walletPassId=${encodeURIComponent(walletPassId)}`
+        )
+        const body = await res.json().catch(() => ({}))
+        if (cancelled || !res.ok) return
+
+        const activation = body.activation as
+          | { offer_id?: string; active_until?: string }
+          | null
+          | undefined
+
+        if (activation?.offer_id && activation?.active_until) {
+          const until = new Date(activation.active_until).getTime()
+          if (until > Date.now()) {
+            const offerId = activation.offer_id
+            const next = { [offerId]: { activeUntil: activation.active_until } }
+            setActiveByOfferId(next)
+            persistActiveMap(walletPassId, next)
+            setUsedOfferIds((prev) => {
+              const s = new Set([...prev, offerId])
+              localStorage.setItem(`qwikker-used-${walletPassId}`, JSON.stringify([...s]))
+              return s
+            })
+            setClaimedOffers((prev) => {
+              if (prev.has(offerId)) return prev
+              const s = new Set([...prev, offerId])
+              localStorage.setItem(`qwikker-claimed-${walletPassId}`, JSON.stringify([...s]))
+              return s
+            })
+            return
+          }
+        }
+
+        // No server active — clear local active (keep used history)
+        setActiveByOfferId({})
+        persistActiveMap(walletPassId, {})
+      } catch (err) {
+        console.error('Failed to hydrate active offer:', err)
+      }
+    }
+
+    hydrate()
+    return () => {
+      cancelled = true
+    }
+  }, [walletPassId])
+
+  // Clean up expired / removed offer IDs from localStorage
   useEffect(() => {
     if (allOffers.length === 0) return
-    
+
     const userId = walletPassId || 'anonymous-user'
-    const activeOfferIds = new Set(allOffers.map(o => o.id))
-    
-    // Clean up favorites
-    const updatedFavorites = Array.from(favoriteOffers).filter(id => activeOfferIds.has(id))
+    const catalogIds = new Set(allOffers.map((o) => o.id))
+
+    const updatedFavorites = Array.from(favoriteOffers).filter((id) => catalogIds.has(id))
     if (updatedFavorites.length !== favoriteOffers.size) {
       setFavoriteOffers(new Set(updatedFavorites))
       localStorage.setItem(`qwikker-favorites-${userId}`, JSON.stringify(updatedFavorites))
     }
-    
-    // Clean up claimed
-    const updatedClaimed = Array.from(claimedOffers).filter(id => activeOfferIds.has(id))
+
+    const updatedClaimed = Array.from(claimedOffers).filter((id) => catalogIds.has(id))
     if (updatedClaimed.length !== claimedOffers.size) {
       setClaimedOffers(new Set(updatedClaimed))
       localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify(updatedClaimed))
     }
-    
-    // Clean up wallet
-    const updatedWallet = Array.from(walletOffers).filter(id => activeOfferIds.has(id))
-    if (updatedWallet.length !== walletOffers.size) {
-      setWalletOffers(new Set(updatedWallet))
-      localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify(updatedWallet))
+
+    const pruned = pruneExpiredActive(activeByOfferId)
+    const removedGone = Object.fromEntries(
+      Object.entries(pruned).filter(([id]) => catalogIds.has(id))
+    )
+    if (
+      Object.keys(removedGone).length !== Object.keys(activeByOfferId).length ||
+      Object.keys(activeByOfferId).some((id) => !removedGone[id])
+    ) {
+      setActiveByOfferId(removedGone)
+      persistActiveMap(userId, removedGone)
     }
-  }, [allOffers, favoriteOffers, claimedOffers, walletOffers, walletPassId])
+  }, [allOffers, favoriteOffers, claimedOffers, activeByOfferId, walletPassId])
 
   // Auto-claim + add to wallet when a non-pass-holder followed a landing-page
   // "Claim this offer" deep link: /join?returnTo=/user/offers?autoClaim={offerId}.
@@ -115,36 +285,15 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       const userId = walletPassId || 'anonymous-user'
 
       try {
-        if (!claimedOffers.has(autoClaimId) && !walletOffers.has(autoClaimId)) {
+        if (!claimedOffers.has(autoClaimId) && !isOfferUsed(autoClaimId)) {
           const { claimOffer: claimAction } = await import('@/lib/actions/offer-claim-actions')
           await claimAction({ offerId: autoClaimId, offerTitle, businessName, visitorWalletPassId: walletPassId })
         }
 
-        if (!walletOffers.has(autoClaimId)) {
-          await fetch('/api/walletpass/update-main-pass', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userWalletPassId: walletPassId,
-              currentOffer: offerTitle,
-              offerDetails: { businessName, offerId: autoClaimId },
-            }),
-          })
-
-          const actions = await import('@/lib/actions/offer-claim-actions')
-          actions.updateOfferClaimStatus(autoClaimId, walletPassId, 'wallet_added').catch(() => {})
-          actions.notifyOfferAddedToWallet({ offerId: autoClaimId, walletPassId }).catch(() => {})
-
-          setClaimedOffers(prev => {
-            const s = new Set([...prev, autoClaimId])
-            if (typeof window !== 'undefined') localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...s]))
-            return s
-          })
-          setWalletOffers(prev => {
-            const s = new Set([...prev, autoClaimId])
-            if (typeof window !== 'undefined') localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...s]))
-            return s
-          })
+        if (!isOfferActive(autoClaimId)) {
+          // Prefer activate API so countdown + single-use rules apply
+          await handleAddToWallet(autoClaimId, offerTitle, businessName)
+          return
         }
 
         showSuccessMessage(
@@ -213,19 +362,19 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     return allOffers.filter(o => o.businessCategory === category && !claimedOffers.has(o.id)).length
   }
   
+  const activeOfferIds = Object.keys(activeByOfferId).filter((id) => isOfferActive(id))
+
   // Dynamic filter counts that update with state changes
   const getFilters = () => [
     { id: 'all', label: 'All Offers', count: allOffers.length },
     { id: 'claimed', label: 'Saved', count: Array.from(claimedOffers).filter(id => {
       const offer = allOffers.find(o => o.id === id)
-      // Saved but not currently active
-      return offer && !walletOffers.has(id)
+      return offer && !isOfferActive(id)
     }).length },
-    { id: 'redeemed', label: 'Active', count: Array.from(walletOffers).filter(id => {
+    { id: 'redeemed', label: 'Active', count: activeOfferIds.filter(id => {
       return allOffers.find(o => o.id === id) !== undefined
     }).length },
     { id: 'favorites', label: 'My Favorites', count: Array.from(favoriteOffers).filter(id => {
-      // Only count favorites that are still active (not expired)
       return allOffers.find(o => o.id === id) !== undefined
     }).length },
     { id: 'popular', label: 'Popular', count: allOffers.filter(o => o.isPopular).length },
@@ -387,13 +536,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       alert('Add your Qwikker pass first to redeem offers.')
       return
     }
-    if (walletOffers.has(offerId) && !confirmReplace) {
+    if (isOfferActive(offerId) && !confirmReplace) {
       alert('This offer is already active on your pass.')
       return
     }
-
-    const offer = allOffers.find(o => o.id === offerId)
-    const windowMins = offer?.activationWindowMinutes || 60
 
     try {
       const response = await fetch('/api/offers/activate', {
@@ -422,15 +568,21 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         throw new Error(body.error || 'Failed to activate offer')
       }
 
+      const activeUntil =
+        body.activation?.active_until ||
+        new Date(
+          Date.now() +
+            (body.activation?.activation_window_minutes ||
+              allOffers.find((o) => o.id === offerId)?.activationWindowMinutes ||
+              60) *
+              60 *
+              1000
+        ).toISOString()
+
+      setActiveOffer(offerId, activeUntil)
+
       const userId = walletPassId || 'anonymous-user'
-      setWalletOffers(prev => {
-        const next = new Set([...prev, offerId])
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`qwikker-wallet-${userId}`, JSON.stringify([...next]))
-        }
-        return next
-      })
-      setClaimedOffers(prev => {
+      setClaimedOffers((prev) => {
         const next = new Set([...prev, offerId])
         if (typeof window !== 'undefined') {
           localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...next]))
@@ -438,12 +590,14 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         return next
       })
 
-      showSuccessMessage(
-        body.walletSynced === false ? 'Activated (in-app)' : 'Activated',
-        body.message ||
-          `Show your Qwikker pass to staff. It stays active for about ${windowMins} minutes.`,
-        () => setSelectedFilter('redeemed')
-      )
+      setActivateSuccess({
+        offerId,
+        offerTitle,
+        businessName,
+        activeUntil,
+        walletSynced: body.walletSynced !== false,
+        message: body.message,
+      })
     } catch (error) {
       console.error('Error activating offer:', error)
       alert(
@@ -493,32 +647,20 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
     // Filter by type
     if (selectedFilter === 'claimed') {
-      // Show claimed offers that are either: not in wallet OR multiple-use
-      filtered = filtered.filter(o => {
+      // Saved but not currently in an activation window
+      filtered = filtered.filter((o) => {
         const isClaimed = claimedOffers.has(o.id)
-        const isInWallet = walletOffers.has(o.id)
-        const isMultipleUse = o.claimType !== 'single'
-        
-        return isClaimed && (!isInWallet || isMultipleUse)
+        return isClaimed && !isOfferActive(o.id)
       })
     } else if (selectedFilter === 'redeemed') {
-      // Show offers that are in wallet AND single-use (redeemed)
-      filtered = filtered.filter(o => {
-        const isInWallet = walletOffers.has(o.id)
-        const isSingleUse = o.claimType === 'single'
-        
-        return isInWallet && isSingleUse
-      })
+      // Currently active activation (any claim type)
+      filtered = filtered.filter((o) => isOfferActive(o.id))
     } else {
       // For ALL other filters, show available offers
-      // Hide claimed offers AND single-use wallet offers
-      filtered = filtered.filter(o => {
-        // Hide claimed offers (they're in "My Claimed")
+      // Hide claimed offers AND single-use offers that have been activated (even if window ended)
+      filtered = filtered.filter((o) => {
         if (claimedOffers.has(o.id)) return false
-        
-        // Hide single-use offers that are in wallet (they disappear forever)
-        if (walletOffers.has(o.id) && o.claimType === 'single') return false
-        
+        if (isOfferActive(o.id) && o.claimType === 'single') return false
         return true
       })
       
@@ -574,7 +716,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     
     const isFavorite = favoriteOffers.has(offer.id)
     const isClaimed = claimedOffers.has(offer.id)
-    const isInWallet = walletOffers.has(offer.id)
+    const isActive = isOfferActive(offer.id)
+    const isUsed = isOfferUsed(offer.id)
+    const activeUntil = activeByOfferId[offer.id]?.activeUntil
+    const canRedeem = isClaimed && !isActive && !(offer.claimType === 'single' && isUsed)
     
     return (
       <>
@@ -582,9 +727,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         ref={(el) => { cardRefs.current[businessSlug] = el }}
         data-offer-card
         className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
-          isInWallet 
-            ? 'opacity-50 blur-[1px] pointer-events-none relative' 
-            : ''
+          isActive ? 'ring-1 ring-emerald-500/40' : ''
         } ${
           highlightedCard === businessSlug
             ? 'ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-[1.02] border-[#00d083]/50'
@@ -656,15 +799,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               <p className="text-white/80 text-xs drop-shadow-md truncate">{offer.businessCategory}</p>
             </div>
 
-            {/* In Wallet Overlay */}
-            {isInWallet && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Added to Wallet
-                </div>
+            {/* Active chip — keep image readable */}
+            {isActive && (
+              <div className="absolute top-2 right-12">
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-emerald-950 text-xs px-2.5 py-1 rounded-full font-bold shadow-lg">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-pulse" />
+                  Active
+                </span>
               </div>
             )}
           </div>
@@ -699,28 +840,33 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             </button>
 
             {/* Actions */}
-            <div className="flex gap-2">
-              {!isClaimed ? (
-                <Button 
-                  onClick={() => claimOffer(offer.id, offer.title, businessName)}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                  size="sm"
-                >
-                  Save
-                </Button>
-              ) : (
-                isInWallet ? (
-                  <Button
-                    disabled
-                    className="flex-1 bg-emerald-900/60 text-emerald-300 font-medium cursor-default"
+            <div className="space-y-2">
+              {isActive && activeUntil ? (
+                <ActivationCountdownPanel
+                  activeUntil={activeUntil}
+                  compact
+                  onExpired={() => clearActiveOffer(offer.id)}
+                />
+              ) : !isClaimed ? (
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => claimOffer(offer.id, offer.title, businessName)}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                     size="sm"
                   >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Added to Wallet
+                    Save
                   </Button>
-                ) : (
+                  <ShareButton
+                    title={`Amazing Deal: ${offer.title}`}
+                    text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
+                    url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
+                    onShare={() => handleShare(offer.id, offer.title, businessName)}
+                    size="sm"
+                    className="border-slate-700"
+                  />
+                </div>
+              ) : canRedeem ? (
+                <div className="flex gap-2">
                   <Button
                     onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold"
@@ -728,17 +874,34 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   >
                     Redeem now
                   </Button>
-                )
+                  <ShareButton
+                    title={`Amazing Deal: ${offer.title}`}
+                    text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
+                    url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
+                    onShare={() => handleShare(offer.id, offer.title, businessName)}
+                    size="sm"
+                    className="border-slate-700"
+                  />
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    disabled
+                    className="flex-1 bg-slate-800 text-slate-400 font-medium cursor-default"
+                    size="sm"
+                  >
+                    Used
+                  </Button>
+                  <ShareButton
+                    title={`Amazing Deal: ${offer.title}`}
+                    text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
+                    url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
+                    onShare={() => handleShare(offer.id, offer.title, businessName)}
+                    size="sm"
+                    className="border-slate-700"
+                  />
+                </div>
               )}
-              <ShareButton
-                title={`Amazing Deal: ${offer.title}`}
-                text={`Check out this exclusive offer at ${businessName}: ${offer.title}! Save ${offer.discount} - but you need Qwikker to claim it.`}
-                url={`https://${currentCity}.qwikker.com/join?ref=offer-${offer.id}`}
-                onShare={() => handleShare(offer.id, offer.title, businessName)}
-                size="sm"
-                variant="outline"
-                className="border-slate-700"
-              />
             </div>
           </div>
         </div>
@@ -809,15 +972,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               <p className="text-white/90 text-xs drop-shadow-md truncate">{offer.businessCategory}</p>
             </div>
 
-            {/* In Wallet Badge */}
-            {isInWallet && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Added to Wallet
-                </div>
+            {isActive && (
+              <div className="absolute top-3 right-3">
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-emerald-950 text-xs px-2.5 py-1 rounded-full font-bold shadow-lg">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-pulse" />
+                  Active
+                </span>
               </div>
             )}
           </div>
@@ -884,35 +1044,35 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
             {/* Action buttons - Always at bottom */}
             <div className="mt-auto space-y-2">
-              {!isClaimed ? (
+              {isActive && activeUntil ? (
+                <ActivationCountdownPanel
+                  activeUntil={activeUntil}
+                  onExpired={() => clearActiveOffer(offer.id)}
+                />
+              ) : !isClaimed ? (
                 <Button 
                   onClick={() => claimOffer(offer.id, offer.title, businessName)}
                   className="w-full h-[44px] text-base bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200"
                 >
                   Save
                 </Button>
+              ) : canRedeem ? (
+                <Button
+                  onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
+                  className="w-full h-[44px] text-base bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Redeem now
+                </Button>
               ) : (
-                isInWallet ? (
-                  <Button
-                    disabled
-                    className="w-full h-[44px] text-base bg-emerald-900/60 text-emerald-300 font-medium cursor-default"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Added to Wallet
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
-                    className="w-full h-[44px] text-base bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Redeem now
-                  </Button>
-                )
+                <Button
+                  disabled
+                  className="w-full h-[44px] text-base bg-slate-800 text-slate-400 font-medium cursor-default"
+                >
+                  Used
+                </Button>
               )}
               
               {/* Share Button */}
@@ -1019,7 +1179,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
               {/* Action Buttons */}
               <div className="space-y-3 pt-4">
-                {!isClaimed ? (
+                {isActive && activeUntil ? (
+                  <ActivationCountdownPanel
+                    activeUntil={activeUntil}
+                    onExpired={() => clearActiveOffer(offer.id)}
+                  />
+                ) : !isClaimed ? (
                   <Button 
                     onClick={() => {
                       claimOffer(offer.id, offer.title, businessName)
@@ -1029,19 +1194,17 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   >
                     Save
                   </Button>
-                ) : (
-                  !isInWallet && (
-                    <Button
-                      onClick={() => {
-                        handleAddToWallet(offer.id, offer.title, businessName)
-                        setShowModal(false)
-                      }}
-                      className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200"
-                    >
-                      Redeem now
-                    </Button>
-                  )
-                )}
+                ) : canRedeem ? (
+                  <Button
+                    onClick={() => {
+                      handleAddToWallet(offer.id, offer.title, businessName)
+                      setShowModal(false)
+                    }}
+                    className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200"
+                  >
+                    Redeem now
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1064,7 +1227,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       </div>
 
       {/* Clickable Filter Cards - Mobile First */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
         <Card 
           className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
             selectedFilter === 'all' 
@@ -1136,8 +1299,23 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             scrollToResults()
           }}
         >
-          <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Claimed</p>
-          <p className="text-lg font-bold text-amber-400">{Array.from(claimedOffers).filter(id => !walletOffers.has(id)).length}</p>
+          <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">Saved</p>
+          <p className="text-lg font-bold text-amber-400">{Array.from(claimedOffers).filter(id => !isOfferActive(id)).length}</p>
+        </Card>
+
+        <Card 
+          className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
+            selectedFilter === 'redeemed' 
+              ? 'bg-gradient-to-br from-emerald-600/30 to-emerald-500/30 border-emerald-400/50 ring-2 ring-emerald-400/30' 
+              : 'bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 hover:border-emerald-600/50'
+          }`}
+          onClick={() => {
+            setSelectedFilter('redeemed')
+            scrollToResults()
+          }}
+        >
+          <p className="text-base sm:text-lg font-semibold text-emerald-300 mb-1">Active</p>
+          <p className="text-lg font-bold text-emerald-400">{activeOfferIds.length}</p>
         </Card>
         
         <Card 
@@ -1213,7 +1391,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             "What pizza offers are available?", 
             "Show me deals ending this week"
           ]}
-          walletPassId={walletPassId}
+          walletPassId={walletPassId || undefined}
         />
       </div>
 
@@ -1221,17 +1399,22 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-100">
           {selectedFilter === 'all' ? 'All Available Offers' :
-           selectedFilter === 'claimed' ? 'My Claimed Offers' :
+           selectedFilter === 'claimed' ? 'Saved Offers' :
+           selectedFilter === 'redeemed' ? 'Active on your pass' :
            selectedFilter === 'favorites' ? 'My Favourite Offers' :
            selectedFilter === 'ending_soon' ? 'Ending Soon' :
            selectedFilter === 'two_for_one' ? '2-for-1 Deals' :
            'Percentage Off Deals'}
         </h2>
         {selectedFilter === 'claimed' && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-4 max-w-md mx-auto">
-            <p className="text-amber-200 text-base font-semibold text-center mb-2">Important: 12-Hour Expiry</p>
-            <p className="text-amber-100 text-sm text-center">Offers automatically expire 12 hours after being added to your wallet</p>
-        </div>
+          <p className="text-slate-400 text-sm text-center mt-3 max-w-md mx-auto">
+            Redeem when you&apos;re at the venue — that starts the timer on your Wallet pass.
+          </p>
+        )}
+        {selectedFilter === 'redeemed' && (
+          <p className="text-slate-400 text-sm text-center mt-3 max-w-md mx-auto">
+            Show your Wallet pass to staff before the timer ends.
+          </p>
         )}
       </div>
 
@@ -1248,10 +1431,18 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <div className="text-6xl mb-4"></div>
           {selectedFilter === 'claimed' ? (
             <>
-              <h3 className="text-xl font-bold text-slate-100 mb-2">You haven't claimed any offers yet</h3>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">You haven&apos;t saved any offers yet</h3>
               <p className="text-slate-400 mb-4">Explore amazing deals from local businesses and start saving!</p>
               <Button onClick={() => {setSelectedFilter('all'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
                 Explore Offers
+              </Button>
+            </>
+          ) : selectedFilter === 'redeemed' ? (
+            <>
+              <h3 className="text-xl font-bold text-slate-100 mb-2">Nothing active right now</h3>
+              <p className="text-slate-400 mb-4">Redeem a saved offer when you&apos;re at the venue to start the timer.</p>
+              <Button onClick={() => {setSelectedFilter('claimed'); setSelectedCategory('all')}} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-slate-100">
+                View saved
               </Button>
             </>
           ) : selectedFilter === 'favorites' ? (
@@ -1285,6 +1476,60 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700 px-8">
             Load More Offers
           </Button>
+        </div>
+      )}
+
+      {/* Post-Redeem confirm — live countdown, then Active filter */}
+      {activateSuccess && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => {
+            setActivateSuccess(null)
+            setSelectedFilter('redeemed')
+            scrollToResults()
+          }}
+        >
+          <div
+            className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-slate-100 mb-1">
+              {activateSuccess.walletSynced ? 'Activated' : 'Activated (in-app)'}
+            </h3>
+            <p className="text-slate-300 text-sm mb-1">&ldquo;{activateSuccess.offerTitle}&rdquo;</p>
+            <p className="text-slate-400 text-xs mb-4">at {activateSuccess.businessName}</p>
+
+            <ActivationCountdownPanel
+              activeUntil={activateSuccess.activeUntil}
+              onExpired={() => clearActiveOffer(activateSuccess.offerId)}
+            />
+
+            {!activateSuccess.walletSynced && (
+              <p className="text-amber-200 text-xs mt-3">
+                Wallet sync is delayed — show this screen or try opening your pass shortly.
+              </p>
+            )}
+
+            <p className="text-slate-400 text-xs mt-3 mb-5">
+              {activateSuccess.message || 'Show your Qwikker pass to staff before the timer ends.'}
+            </p>
+
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl"
+              onClick={() => {
+                setActivateSuccess(null)
+                setSelectedFilter('redeemed')
+                scrollToResults()
+              }}
+            >
+              Got it
+            </Button>
+          </div>
         </div>
       )}
     </div>
