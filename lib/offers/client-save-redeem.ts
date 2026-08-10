@@ -150,19 +150,25 @@ export async function activateOffer(params: ActivateOfferParams): Promise<Activa
 }
 
 export function redeemWarningCopy(offerName: string, windowMins: number): string {
-  return `Only about **${windowMins} minutes** on your Wallet for **${offerName}**. Ready to show staff?`
+  return (
+    `Before redeeming **${offerName}**, just a heads-up: once it’s on your Wallet, ` +
+    `you’ll have about **${windowMins} minutes** to show staff — then it clears from your pass.\n\n` +
+    `Are you ready to redeem now?`
+  )
 }
 
-export function redeemWorkingCopy(offerName: string, windowMins: number): string {
-  return `OK — adding **${offerName}** to your Wallet now. You’ll have about **${windowMins} minutes** to show staff.`
+export function redeemWorkingCopy(offerName: string): string {
+  // Minutes already said in the warning — don't repeat
+  return `Perfect — putting **${offerName}** on your Wallet now…`
 }
 
 export function redeemSuccessCopy(offerName: string): string {
-  return `**${offerName}** is on your Wallet now. Open your pass and show staff before it clears.`
+  // Minutes already said in the warning — don't repeat
+  return `**${offerName}** is on your Wallet. Open your pass and show staff — you’ve got this.`
 }
 
 export function saveSuccessCopy(offerName: string): string {
-  return `Saved **${offerName}**. Redeem when you’re at the venue.`
+  return `Saved **${offerName}**. When you’re at the venue, tap Redeem and I’ll put it on your Wallet.`
 }
 
 export function markOfferSavedLocally(walletPassId: string, offerId: string): void {

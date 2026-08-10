@@ -905,6 +905,7 @@ HARD RULES (DO NOT BREAK):
   ❌ ABSOLUTE BAN: NEVER say "I don't have menu details", "I don't have the full menu", or "I can't provide more menu info" when ANY menu/food/drink data exists in that business's context. This is a CRITICAL UX failure.
 - SHOW ALL UPFRONT: If you have 2+ relevant matches AND this is NOT a CLARIFY-FIRST turn, mention ALL matches in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses and the user asked for recommendations/top picks/a type, you MUST recommend from them — never claim you have no recommendations when businesses are listed. CLARIFY-FIRST turns are the exception: ask first, don't dump businesses.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
+- SAVE / REDEEM: Users CAN save and redeem offers in chat via Save/Redeem buttons on offer cards. NEVER say you cannot save, cannot redeem, cannot process redemption, cannot add to wallet, or that they should just mention the deal at the venue. If they ask to save/redeem, tell them to tap Save/Redeem on the offer card (the UI handles the Wallet update).
 - 🚨 PER-BUSINESS DATA BOUNDARY: Each business's features are independent. When a user asks for specific amenities (outdoor seating, WiFi, parking, dog friendly, wheelchair accessible, etc.), ONLY claim a business has that feature if it appears in THAT business's Tags, KB content, or description. Never transfer or blend features from one business onto another. If Business A has "outdoor seating" and Business B does not, do NOT say Business B has outdoor seating — even if Business B matches other parts of the query. It is better to recommend fewer businesses accurately than to fabricate features to make more businesses fit.
 - 🚨 ABSOLUTE RULE — QWIKKER BUSINESSES ONLY: You MUST ONLY mention businesses, venues, attractions, or commercial establishments that appear in AVAILABLE BUSINESSES above. If a place charges admission, sells products, or is a registered business, it MUST be in AVAILABLE BUSINESSES or you MUST NOT mention it. This includes but is not limited to: cinemas, bowling alleys, aquariums, theme parks, soft play centres, swimming pools, museums with paid admission, escape rooms, trampoline parks, and any chain brand (e.g. ODEON, Oceanarium, Adventure Wonderland). NEVER bold a name that is not a linked Qwikker business.
   The ONLY non-business places you may reference are free public outdoor spaces: parks, beaches, piers, promenades, and town squares.
@@ -1139,8 +1140,13 @@ export async function generateHybridAIResponse(
     // MIXED queries (discovery + offers) → KB for discovery, DB for filtering
     
     // Chip "List a few" / save follow-ups must force offers hard-path (not Splash follow-up)
+    const wantsSaveFollowUp =
+      /\b(save (it|this|that)|can i save|how (do i|to) save|save (the )?offer)\b/i.test(
+        userMessage
+      )
     const wantsOfferSample =
-      /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|list a few deals|save (it|this|that)|can i save|how (do i|to) save)\b/i.test(
+      wantsSaveFollowUp ||
+      /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|list a few deals)\b/i.test(
         userMessage
       )
 
@@ -1360,7 +1366,7 @@ export async function generateHybridAIResponse(
         const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
 
         // 🔒 Prefer chat-eligible view; fall back to business_offers if embed fails
-        let offers: Array<{
+        interface ChatOfferRow {
           id: string
           business_id: string
           offer_name: string
@@ -1371,12 +1377,16 @@ export async function generateHybridAIResponse(
           offer_start_date: string | null
           offer_end_date: string | null
           offer_image: string | null
-          business_profiles?: { business_name?: string; city?: string } | null
-        }> | null = null
+          business_profiles?: {
+            business_name?: string
+            city?: string
+            logo?: string | null
+            business_images?: string[] | null
+          } | null
+        }
+        let offers: ChatOfferRow[] = []
 
-        const primary = await supabase
-          .from('business_offers_chat_eligible')
-          .select(`
+        const offerSelect = `
             id,
             business_id,
             offer_name,
@@ -1389,51 +1399,60 @@ export async function generateHybridAIResponse(
             offer_image,
             business_profiles!inner(
               business_name,
-              city
+              city,
+              logo,
+              business_images
             )
-          `)
+          `
+
+        const primary = await supabase
+          .from('business_offers_chat_eligible')
+          .select(offerSelect)
           .eq('business_profiles.city', city)
           .order('offer_end_date', { ascending: false })
           .limit(3)
 
         if (primary.error) {
           console.error('❌ chat_eligible offers query failed, trying business_offers fallback:', primary.error)
-          const fallback = await supabase
-            .from('business_offers')
+          // Retry without logo/images if embed columns fail on the view
+          const primarySimple = await supabase
+            .from('business_offers_chat_eligible')
             .select(`
-              id,
-              business_id,
-              offer_name,
-              offer_description,
-              offer_type,
-              offer_value,
-              offer_terms,
-              offer_start_date,
-              offer_end_date,
-              offer_image,
-              business_profiles!inner(
-                business_name,
-                city
-              )
+              id, business_id, offer_name, offer_description, offer_type, offer_value,
+              offer_terms, offer_start_date, offer_end_date, offer_image,
+              business_profiles!inner(business_name, city)
             `)
-            .eq('status', 'approved')
             .eq('business_profiles.city', city)
             .order('offer_end_date', { ascending: false })
             .limit(3)
-          if (fallback.error) {
-            console.error('❌ business_offers fallback also failed:', fallback.error)
+
+          if (!primarySimple.error && primarySimple.data) {
+            offers = primarySimple.data as unknown as ChatOfferRow[]
           } else {
-            offers = fallback.data as typeof offers
+            const fallback = await supabase
+              .from('business_offers')
+              .select(offerSelect)
+              .eq('status', 'approved')
+              .eq('business_profiles.city', city)
+              .order('offer_end_date', { ascending: false })
+              .limit(3)
+            if (fallback.error) {
+              console.error('❌ business_offers fallback also failed:', fallback.error)
+            } else {
+              offers = (fallback.data || []) as unknown as ChatOfferRow[]
+            }
           }
         } else {
-          offers = primary.data as typeof offers
+          offers = (primary.data || []) as unknown as ChatOfferRow[]
         }
 
         if (!offers || offers.length === 0) {
           console.log(`🚫 ZERO OFFERS in DB → authoritative "no offers" response`)
           return {
             success: true,
-            response: `There are no active offers in ${cityLabel} right now. Check back soon, or explore businesses on Discover!`,
+            response: wantsSaveFollowUp
+              ? `I can Save offers right here in chat — but I don’t see any live deals in ${cityLabel} right now.`
+              : `There are no active offers in ${cityLabel} right now. Check back soon, or explore businesses on Discover!`,
             sources: [],
             businessCarousel: [],
             walletActions: [],
@@ -1446,7 +1465,33 @@ export async function generateHybridAIResponse(
           }
         }
 
-        const sampleOffers = offers.slice(0, 3)
+        // Prefer the business the user was just talking about (e.g. "Can I save it?" after CHE)
+        let focusedOffers = offers
+        const focusName =
+          state.currentBusiness?.name ||
+          namedLockBusiness?.name ||
+          ''
+        if (focusName && (wantsSaveFollowUp || /\boffer\b/i.test(userMessage))) {
+          const focusLower = focusName.toLowerCase()
+          const matched = offers.filter((o) =>
+            (o.business_profiles?.business_name || '').toLowerCase().includes(
+              focusLower.slice(0, Math.min(12, focusLower.length))
+            )
+          )
+          if (matched.length > 0) focusedOffers = matched
+        } else if (wantsSaveFollowUp) {
+          // Scan recent assistant text for a business name that has a live offer
+          const recentAssistant = [...conversationHistory]
+            .reverse()
+            .find((m) => m.role === 'assistant')?.content || ''
+          const hit = offers.find((o) => {
+            const name = o.business_profiles?.business_name || ''
+            return name.length >= 4 && recentAssistant.toLowerCase().includes(name.toLowerCase())
+          })
+          if (hit) focusedOffers = [hit]
+        }
+
+        const sampleOffers = focusedOffers.slice(0, 3)
         const windowById = new Map<string, number>()
         const { data: windowRows } = await supabase
           .from('business_offers')
@@ -1462,6 +1507,35 @@ export async function generateHybridAIResponse(
           }
         }
 
+        // Same image fallback as Offers page: offer → business photo → logo
+        const resolveOfferImage = (offer: ChatOfferRow): string | null => {
+          const profile = offer.business_profiles
+          const fromBiz =
+            (Array.isArray(profile?.business_images) && profile.business_images[0]) ||
+            profile?.logo ||
+            null
+          return offer.offer_image || fromBiz || null
+        }
+
+        // Enrich missing images from business_profiles if view omitted logo/images
+        const needsImageBizIds = sampleOffers
+          .filter((o) => !resolveOfferImage(o))
+          .map((o) => o.business_id)
+        const imageByBizId = new Map<string, string>()
+        if (needsImageBizIds.length > 0) {
+          const { data: bizRows } = await supabase
+            .from('business_profiles')
+            .select('id, logo, business_images')
+            .in('id', needsImageBizIds)
+          for (const row of bizRows || []) {
+            const img =
+              (Array.isArray(row.business_images) && row.business_images[0]) ||
+              row.logo ||
+              null
+            if (img) imageByBizId.set(row.id, img)
+          }
+        }
+
         const walletActions = sampleOffers.map((offer) => {
           const profile = offer.business_profiles
           return {
@@ -1474,7 +1548,8 @@ export async function generateHybridAIResponse(
             offerTerms: offer.offer_terms || null,
             offerStartDate: offer.offer_start_date || null,
             offerEndDate: offer.offer_end_date || null,
-            offerImage: offer.offer_image || null,
+            offerImage:
+              resolveOfferImage(offer) || imageByBizId.get(offer.business_id) || null,
             businessName: profile?.business_name || 'Unknown',
             businessId: offer.business_id,
             businessSlug: null,
@@ -1484,11 +1559,16 @@ export async function generateHybridAIResponse(
 
         console.log(`✅ Hard-stop cards: ${walletActions.length} offers with Save/Redeem`)
 
+        const saveCopy =
+          wantsSaveFollowUp && walletActions.length === 1
+            ? `Yes — tap **Save** on **${walletActions[0].offerName}** at ${walletActions[0].businessName} below. Redeem when you’re at the venue.`
+            : wantsSaveFollowUp
+              ? `Yes — you can Save right here. Tap **Save** on the deal you want below, then Redeem when you’re ready to show staff.`
+              : `Here are a few live deals in ${cityLabel} — Save one, then Redeem when you’re at the venue. Or open the full Offers page for everything.`
+
         return {
           success: true,
-          response:
-            `Here are a few live deals in ${cityLabel} — Save one, then Redeem when you’re at the venue. ` +
-            `Or open the full Offers page for everything.`,
+          response: saveCopy,
           sources: [],
           businessCarousel: [],
           walletActions,

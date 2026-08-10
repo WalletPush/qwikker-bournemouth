@@ -21,6 +21,7 @@ import {
   markOfferSavedLocally,
   redeemWarningCopy,
   redeemWorkingCopy,
+  redeemSuccessCopy,
   saveOffer,
   saveSuccessCopy,
   type PendingRedeemAction,
@@ -379,7 +380,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
 
     setBusyOfferId(pending.offerId)
-    appendAiMessage(redeemWorkingCopy(pending.offerName, pending.windowMins))
+    appendAiMessage(redeemWorkingCopy(pending.offerName))
 
     try {
       const result = await activateOffer({
@@ -414,14 +415,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       setPendingRedeem(null)
       markOfferSavedLocally(walletPassId, pending.offerId)
       setSavedOfferIds((prev) => new Set([...prev, pending.offerId]))
-      // Prefer server window (authoritative) in the success line
-      const liveMins = result.windowMinutes || pending.windowMins
-      appendAiMessage(
-        `**${pending.offerName}** is on your Wallet now — about **${liveMins} minutes** to show staff before it clears.`,
-        {
-          quickReplies: ['Open Offers page', 'Show more deals'],
-        }
-      )
+      appendAiMessage(redeemSuccessCopy(pending.offerName), {
+        quickReplies: ['Open Offers page'],
+      })
     } catch (error) {
       console.error('❌ Redeem error:', error)
       setPendingRedeem(null)
@@ -431,6 +427,24 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     } finally {
       setBusyOfferId(null)
     }
+  }
+
+  const lastOfferAction = (): ChatWalletAction | null => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const actions = messages[i].walletActions
+      if (actions && actions.length > 0) return actions[0]
+    }
+    if (pendingRedeem) {
+      return {
+        type: 'save_offer',
+        offerId: pendingRedeem.offerId,
+        offerName: pendingRedeem.offerName,
+        businessName: pendingRedeem.businessName,
+        businessId: '',
+        activationWindowMinutes: pendingRedeem.windowMins,
+      }
+    }
+    return null
   }
 
   const handleSaveOffer = async (action: ChatWalletAction) => {
@@ -455,7 +469,8 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       }
       setPendingRedeem(null)
       appendAiMessage(saveSuccessCopy(action.offerName), {
-        quickReplies: ['Redeem now', 'View this offer', 'Open business page'],
+        // Card already has Redeem — keep nav chips only (avoids AI “can’t redeem” prose)
+        quickReplies: ['View this offer', 'Open business page', 'Open Offers page'],
         walletActions: [{ ...action, type: 'save_offer' }],
       })
     } finally {
@@ -480,6 +495,36 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
 
+    // Never let Redeem / "redeem now" hit the AI prose path
+    if (
+      /^(redeem(\s+now)?|yes[,]?\s*redeem|confirm redeem)[\s!.]*$/i.test(message.trim()) ||
+      /\bredeem(\s+now)?\b/i.test(message.trim()) && message.trim().split(/\s+/).length <= 4
+    ) {
+      const action = lastOfferAction()
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInputValue('')
+
+      if (isPendingRedeemValid(pendingRedeem) && isRedeemConfirmPhrase(message)) {
+        await handleConfirmRedeem(pendingRedeem)
+        return
+      }
+      if (action) {
+        handleStartRedeem(action)
+        return
+      }
+      appendAiMessage(
+        'I can redeem offers right here — tap **Redeem** on a saved deal card first, or I can list a few.',
+        { quickReplies: ['List a few', 'Open Offers page'] }
+      )
+      return
+    }
+
     // "Can I save it?" with a bound card from chat → Save immediately
     if (/\b(save (it|this|that)|can i save|how (do i|to) save)\b/i.test(message)) {
       const action = lastOfferAction()
@@ -495,8 +540,59 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         await handleSaveOffer(action)
         return
       }
-      // No card yet — continue as deal list so Save/Redeem UI appears
-      message = 'List a few deals'
+      // No card yet — keep user's words in the bubble, but ask API for deal cards
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInputValue('')
+      setPendingRedeem(null)
+      setIsTyping(true)
+      try {
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: 'List a few deals',
+            walletPassId: currentUser?.wallet_pass_id,
+            city: currentCity,
+            conversationHistory: [...messagesRef.current, userMessage]
+              .filter((m) => !m.content?.startsWith('__qwikker_'))
+              .slice(-8)
+              .map((msg) => ({
+                role: msg.type === 'user' ? 'user' : 'assistant',
+                content: msg.content,
+              })),
+            userLocation:
+              locationStatus === 'granted' && userLocation ? userLocation : null,
+            sessionId,
+          }),
+        })
+        const data = await response.json()
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content:
+            data.response ||
+            'Here are a few deals you can Save — tap Save on the card you want:',
+          timestamp: new Date().toISOString(),
+          quickReplies: data.quickReplies || ['Open Offers page'],
+          walletActions: data.walletActions,
+        }
+        setMessages((prev) => [...prev, aiMessage])
+      } catch (error) {
+        console.error('❌ Save-intent deal fetch error:', error)
+        appendAiMessage(
+          'I can save offers here — tap Save on a deal card. Want me to list a few?',
+          { quickReplies: ['List a few', 'Open Offers page'] }
+        )
+      } finally {
+        setIsTyping(false)
+      }
+      return
     }
 
     // Bound confirm: typed "yes" only redeems when pending redeem is valid
@@ -813,24 +909,6 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }
 
-  const lastOfferAction = (): ChatWalletAction | null => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const actions = messages[i].walletActions
-      if (actions && actions.length > 0) return actions[0]
-    }
-    if (pendingRedeem) {
-      return {
-        type: 'save_offer',
-        offerId: pendingRedeem.offerId,
-        offerName: pendingRedeem.offerName,
-        businessName: pendingRedeem.businessName,
-        businessId: '',
-        activationWindowMinutes: pendingRedeem.windowMins,
-      }
-    }
-    return null
-  }
-
   const handleQuickReply = (reply: string) => {
     const normalized = reply.trim().toLowerCase()
 
@@ -868,13 +946,13 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       appendAiMessage('No problem — nothing was added to your Wallet.')
       return
     }
-    if (normalized === 'redeem now') {
+    if (normalized === 'redeem now' || normalized === 'redeem') {
       const action = lastOfferAction()
       if (action) {
         handleStartRedeem(action)
         return
       }
-      handleSendMessage('List a few')
+      handleSendMessage('List a few deals')
       return
     }
     if (normalized === 'view this offer') {
