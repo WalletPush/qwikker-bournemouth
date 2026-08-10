@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 
 const menuItemSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -22,8 +22,11 @@ const updateSchema = z.object({
 
 /** POST: immediate admin replace of featured items (menu_preview). */
 export async function POST(request: NextRequest) {
+  const guard = await requireCityAdmin(request)
+  if ('error' in guard) return guard.error
+  const { city } = guard.ctx
+
   try {
-    const city = await getFranchiseCityFromRequest()
     const body = await request.json()
     const parsed = updateSchema.safeParse(body)
 

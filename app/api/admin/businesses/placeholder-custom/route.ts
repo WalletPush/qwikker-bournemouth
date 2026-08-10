@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import { restoreUnclaimedToPlaceholderPool } from '@/lib/media/restore-placeholder-pool'
 
 /**
  * Admin-only: set or clear a custom placeholder for an UNCLAIMED business.
  * Pass `url: null` to remove the custom image and fall back to the pool.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const guard = await requireCityAdmin(req)
+  if ('error' in guard) return guard.error
+  const { city, adminId } = guard.ctx
+
   try {
     const { businessId, url } = await req.json()
 
@@ -24,7 +28,6 @@ export async function POST(req: Request) {
     }
 
     const supabase = createServiceRoleClient()
-    const city = await getFranchiseCityFromRequest()
 
     const { data: business, error: bErr } = await supabase
       .from('business_profiles')
@@ -72,6 +75,8 @@ export async function POST(req: Request) {
         assetType: 'business_photo',
         reviewStatus: 'approved',
         setAsHero: true,
+        uploadedBy: adminId,
+        curatedBy: adminId,
       })
     } catch (mediaErr) {
       console.warn('[media_assets] custom placeholder index failed:', mediaErr)

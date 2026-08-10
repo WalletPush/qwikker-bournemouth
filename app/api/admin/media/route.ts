@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import {
   archiveMediaAsset,
   createMediaAsset,
@@ -45,9 +45,12 @@ async function assertOfferInCity(offerId: string, city: string) {
 }
 
 /** GET: list media for a business (or pending queue) */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const guard = await requireCityAdmin(req)
+  if ('error' in guard) return guard.error
+  const { city } = guard.ctx
+
   try {
-    const city = await getFranchiseCityFromRequest()
     const url = new URL(req.url)
     const parsed = listSchema.safeParse({
       businessId: url.searchParams.get('businessId') || undefined,
@@ -150,9 +153,12 @@ const postSchema = z.object({
 })
 
 /** POST: upload / select / frame / archive / promote / reject */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const guard = await requireCityAdmin(req)
+  if ('error' in guard) return guard.error
+  const { city, adminId } = guard.ctx
+
   try {
-    const city = await getFranchiseCityFromRequest()
     const body = await req.json()
     const parsed = postSchema.safeParse(body)
     if (!parsed.success) {
@@ -179,6 +185,8 @@ export async function POST(req: Request) {
           setAsHero: input.setAsHero,
           setAsOfferMedia: input.setAsOfferMedia,
           categoryKey: input.categoryKey,
+          uploadedBy: adminId,
+          curatedBy: adminId,
         })
         return NextResponse.json({ success: true, asset })
       }
@@ -187,7 +195,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: 'businessId and mediaId required' }, { status: 400 })
         }
         await assertBusinessInCity(input.businessId, city)
-        await selectHeroMedia(city, input.businessId, input.mediaId)
+        await selectHeroMedia(city, input.businessId, input.mediaId, adminId)
         return NextResponse.json({ success: true })
       }
       case 'select_offer': {
@@ -195,35 +203,35 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: 'offerId and mediaId required' }, { status: 400 })
         }
         await assertOfferInCity(input.offerId, city)
-        await selectOfferMedia(city, input.offerId, input.mediaId)
+        await selectOfferMedia(city, input.offerId, input.mediaId, adminId)
         return NextResponse.json({ success: true })
       }
       case 'frame': {
         if (!input.mediaId || !input.framing) {
           return NextResponse.json({ error: 'mediaId and framing required' }, { status: 400 })
         }
-        const asset = await updateMediaFraming(city, input.mediaId, input.framing)
+        const asset = await updateMediaFraming(city, input.mediaId, input.framing, adminId)
         return NextResponse.json({ success: true, asset })
       }
       case 'archive': {
         if (!input.mediaId) {
           return NextResponse.json({ error: 'mediaId required' }, { status: 400 })
         }
-        await archiveMediaAsset(city, input.mediaId)
+        await archiveMediaAsset(city, input.mediaId, adminId)
         return NextResponse.json({ success: true })
       }
       case 'promote': {
         if (!input.mediaId) {
           return NextResponse.json({ error: 'mediaId required' }, { status: 400 })
         }
-        const asset = await promotePendingMedia(city, input.mediaId, null, true)
+        const asset = await promotePendingMedia(city, input.mediaId, adminId, true)
         return NextResponse.json({ success: true, asset })
       }
       case 'reject': {
         if (!input.mediaId) {
           return NextResponse.json({ error: 'mediaId required' }, { status: 400 })
         }
-        await rejectPendingMedia(city, input.mediaId)
+        await rejectPendingMedia(city, input.mediaId, adminId)
         return NextResponse.json({ success: true })
       }
       default:

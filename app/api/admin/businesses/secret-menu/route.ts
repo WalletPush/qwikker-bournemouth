@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import { getMaxSecretMenuItems } from '@/lib/utils/tier-limits'
 
 const secretItemSchema = z.object({
@@ -37,8 +37,11 @@ function parseNotes(raw: string | null | undefined): NotesShape {
 
 /** POST: immediate admin replace of secret_menu_items inside additional_notes. */
 export async function POST(request: NextRequest) {
+  const guard = await requireCityAdmin(request)
+  if ('error' in guard) return guard.error
+  const { city } = guard.ctx
+
   try {
-    const city = await getFranchiseCityFromRequest()
     const body = await request.json()
     const parsed = updateSchema.safeParse(body)
 

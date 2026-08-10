@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
+import { requireCityAdmin } from '@/lib/offer-engine/admin-guard'
 import { restoreUnclaimedToPlaceholderPool } from '@/lib/media/restore-placeholder-pool'
 
 /**
  * Admin-only: set placeholder_variant for an unclaimed business and restore
  * the generated pool as the live display (clears custom upload / hero pointer).
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const guard = await requireCityAdmin(req)
+  if ('error' in guard) return guard.error
+  const { city } = guard.ctx
+
   try {
     const { businessId, placeholderVariant } = await req.json()
 
@@ -31,7 +35,6 @@ export async function POST(req: Request) {
     }
 
     const supabase = createServiceRoleClient()
-    const city = await getFranchiseCityFromRequest()
 
     const { data: business, error: bErr } = await supabase
       .from('business_profiles')
