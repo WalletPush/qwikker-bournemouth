@@ -458,7 +458,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
 
     setBusyOfferId(pending.offerId)
-    appendAiMessage(redeemWorkingCopy(pending.offerName))
+    // Only once — recursive confirmReplace retry must not send "Perfect…" again
+    if (!confirmReplace) {
+      appendAiMessage(redeemWorkingCopy(pending.offerName))
+    }
 
     try {
       const result = await activateOffer({
