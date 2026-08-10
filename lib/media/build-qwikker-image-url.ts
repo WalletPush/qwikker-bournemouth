@@ -15,9 +15,21 @@ const PRESETS: Record<QwikkerImagePreset, PresetSpec> = {
   wallet: { width: 640, height: 246 },
 }
 
+export interface CssFramingStyle {
+  objectFit: 'cover' | 'contain'
+  objectPosition: string
+  transform?: string
+  transformOrigin?: string
+}
+
 /**
  * Build a Cloudinary delivery URL from source URL + presentation metadata.
  * Non-Cloudinary URLs are returned unchanged.
+ *
+ * Framing model (must match MediaFramingEditor):
+ * - contain → non-cropping limit + CSS object-contain
+ * - cover + auto → Cloudinary smart fill (CSS cannot do subject detect)
+ * - cover + manual/centre → sized uncropped derivative; CSS object-position + zoom
  */
 export function buildQwikkerImageUrl(
   presentation: MediaPresentation | string | null | undefined,
@@ -31,35 +43,35 @@ export function buildQwikkerImageUrl(
   if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url
 
   const spec = PRESETS[preset]
-  const zoom = media.zoom && media.zoom > 0 ? media.zoom : 1
+  const zoom = clampZoom(media.zoom)
   const transforms: string[] = ['f_auto', 'q_auto:good']
 
   if (media.fit === 'contain') {
-    // Pad (never crop edges) — critical for finished graphics with text
-    transforms.push(`c_pad`, `w_${spec.width}`, `h_${spec.height}`, `b_rgb:0B1220`)
+    // Fit inside box — never crop edges (text / finished artwork)
+    transforms.push(`c_limit`, `w_${spec.width}`, `h_${spec.height}`)
+  } else if (usesCssFraming(media)) {
+    // Manual / centre: CSS owns crop; deliver enough pixels for zoom
+    const deliveryW = Math.round(spec.width * zoom)
+    const deliveryH = Math.round(spec.height * zoom)
+    transforms.push(`c_limit`, `w_${deliveryW}`, `h_${deliveryH}`)
   } else {
-    transforms.push(`c_fill`, `w_${spec.width}`, `h_${spec.height}`)
-
-    if (media.gravity_mode === 'manual' && media.focal_x != null && media.focal_y != null) {
-      const fx = clamp01(Number(media.focal_x))
-      const fy = clamp01(Number(media.focal_y))
-      // Relative 0–1 coords with g_xy_center
-      transforms.push('g_xy_center', `x_${fx.toFixed(4)}`, `y_${fy.toFixed(4)}`)
-    } else if (media.gravity_mode === 'centre') {
-      transforms.push('g_center')
-    } else {
-      transforms.push('g_auto')
-    }
-
-    if (zoom > 1) {
-      transforms.push(`z_${Math.min(5, zoom).toFixed(2)}`)
-    }
+    // Auto (default): Cloudinary subject-aware fill
+    transforms.push(`c_fill`, `w_${spec.width}`, `h_${spec.height}`, `g_auto`)
   }
 
   return injectCloudinaryTransform(url, transforms.join(','))
 }
 
-/** CSS object-position from focal (for editor / non-Cloudinary fallback). */
+/** True when public presentation must mirror the editor CSS path. */
+export function usesCssFraming(
+  media: MediaPresentation | string | null | undefined
+): boolean {
+  if (!media || typeof media === 'string') return false
+  if (media.fit === 'contain') return true
+  return media.gravity_mode === 'manual' || media.gravity_mode === 'centre'
+}
+
+/** CSS object-position from focal (editor + public cards). */
 export function cssObjectPosition(media: MediaPresentation | null | undefined): string {
   if (!media || media.fit === 'contain') return 'center'
   if (media.gravity_mode === 'manual' && media.focal_x != null && media.focal_y != null) {
@@ -68,9 +80,38 @@ export function cssObjectPosition(media: MediaPresentation | null | undefined): 
   return 'center'
 }
 
+export function cssCoverZoom(media: MediaPresentation | null | undefined): number {
+  if (!media || media.fit === 'contain') return 1
+  return clampZoom(media.zoom)
+}
+
+/** Shared img style — same math as MediaFramingEditor previews. */
+export function cssFramingStyle(
+  media: MediaPresentation | null | undefined
+): CssFramingStyle {
+  const objectFit = media?.fit === 'contain' ? 'contain' : 'cover'
+  const objectPosition = cssObjectPosition(media)
+  const zoom = cssCoverZoom(media)
+  if (zoom > 1) {
+    return {
+      objectFit,
+      objectPosition,
+      transform: `scale(${zoom})`,
+      transformOrigin: objectPosition,
+    }
+  }
+  return { objectFit, objectPosition }
+}
+
 function clamp01(n: number): number {
   if (Number.isNaN(n)) return 0.5
   return Math.min(1, Math.max(0, n))
+}
+
+function clampZoom(zoom: number | null | undefined): number {
+  const z = Number(zoom)
+  if (!Number.isFinite(z) || z <= 0) return 1
+  return Math.min(5, Math.max(1, z))
 }
 
 /** Strip prior transform segment and inject a fresh one after /upload/. */

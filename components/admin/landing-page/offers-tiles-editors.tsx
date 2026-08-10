@@ -12,7 +12,7 @@ import {
 import { SYSTEM_CATEGORIES, SYSTEM_CATEGORY_LABEL, SystemCategory } from '@/lib/constants/system-categories'
 import { getPlaceholderUrl } from '@/lib/placeholders/getPlaceholderImage'
 import { uploadToCloudinary } from '@/lib/integrations'
-import { buildQwikkerImageUrl } from '@/lib/media/build-qwikker-image-url'
+import { buildQwikkerImageUrl, cssFramingStyle } from '@/lib/media/build-qwikker-image-url'
 
 interface EditorProps {
   config: LandingPageConfig
@@ -216,21 +216,26 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {selected.map((cat) => {
                 const custom = images[cat]
+                const presentation = custom?.source_url
+                  ? {
+                      source_url: custom.source_url,
+                      focal_x: custom.focal_x,
+                      focal_y: custom.focal_y,
+                      zoom: custom.zoom,
+                      fit: (custom.fit || 'cover') as 'cover' | 'contain',
+                      gravity_mode: (custom.gravity_mode || 'auto') as
+                        | 'auto'
+                        | 'centre'
+                        | 'manual',
+                    }
+                  : null
                 const preview =
-                  (custom?.source_url &&
-                    (buildQwikkerImageUrl(
-                      {
-                        source_url: custom.source_url,
-                        focal_x: custom.focal_x,
-                        focal_y: custom.focal_y,
-                        zoom: custom.zoom,
-                        fit: custom.fit || 'cover',
-                        gravity_mode: custom.gravity_mode || 'auto',
-                      },
-                      'category'
-                    ) ||
-                      custom.source_url)) ||
+                  (presentation &&
+                    (buildQwikkerImageUrl(presentation, 'category') || custom?.source_url)) ||
                   getPlaceholderUrl(cat, `tile-${cat}`)
+                const previewStyle = presentation
+                  ? cssFramingStyle(presentation)
+                  : { objectFit: 'cover' as const, objectPosition: 'center' }
                 const label = SYSTEM_CATEGORY_LABEL[cat as SystemCategory]?.split('/')[0].trim() || cat
 
                 return (
@@ -238,9 +243,14 @@ export function CategoryTilesEditor({ config, onChange }: EditorProps) {
                     key={cat}
                     className="rounded-lg border border-slate-700 bg-slate-950/50 overflow-hidden"
                   >
-                    <div className="relative h-28">
+                    <div className="relative h-28 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preview} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      <img
+                        src={preview}
+                        alt=""
+                        className="absolute inset-0 h-full w-full"
+                        style={previewStyle}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-2">
                         <span className="text-white text-sm font-bold">{label}</span>

@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { buildQwikkerImageUrl, cssObjectPosition } from '@/lib/media/build-qwikker-image-url'
+import {
+  buildQwikkerImageUrl,
+  cssCoverZoom,
+  cssFramingStyle,
+  usesCssFraming,
+} from '@/lib/media/build-qwikker-image-url'
 import type { MediaPresentation, QwikkerImagePreset } from '@/lib/media/types'
 import { getBusinessImageSizes } from '@/lib/utils/optimize-image-url'
 
@@ -21,8 +26,9 @@ interface QwikkerImageProps {
 
 /**
  * Canonical image primitive. DB owns focal/fit intent.
- * For contain (Show whole image): prefer original URL + CSS object-contain so
- * finished graphics with text are never edge-cropped by a stale CDN transform.
+ * Manual / centre / contain framing matches MediaFramingEditor (CSS on an
+ * optimised, non-cropped Cloudinary derivative). Auto cover still uses
+ * Cloudinary g_auto fill.
  */
 export function QwikkerImage({
   media,
@@ -41,8 +47,8 @@ export function QwikkerImage({
 
   const original = presentation?.source_url || null
   const isContain = presentation?.fit === 'contain'
-  const transformed = isContain ? null : buildQwikkerImageUrl(presentation, preset)
-  const desiredSrc = (isContain ? original : transformed) || original
+  const transformed = buildQwikkerImageUrl(presentation, preset)
+  const desiredSrc = transformed || original
 
   const [src, setSrc] = useState<string | null>(desiredSrc)
 
@@ -53,13 +59,19 @@ export function QwikkerImage({
 
   if (!src || !original) return null
 
-  const objectFit = isContain ? 'contain' : 'cover'
-  const objectPosition = cssObjectPosition(presentation)
+  const framing = cssFramingStyle(presentation)
+  const zoom = cssCoverZoom(presentation)
+  const needsCssFraming =
+    usesCssFraming(presentation) || zoom > 1 || isContain
   const imgClass = `${fill ? 'absolute inset-0 h-full w-full' : ''} ${className}`
 
-  // Contain + local / fallback: always plain img with CSS (reliable for text graphics)
+  // CSS framing path uses plain img (same as the admin editor) for reliable
+  // object-position + scale. Auto-fill Cloudinary URLs can use next/image.
   const usePlainImg =
-    isContain || src.startsWith('/') || !src.includes('res.cloudinary.com') || src === original
+    needsCssFraming ||
+    src.startsWith('/') ||
+    !src.includes('res.cloudinary.com') ||
+    src === original
 
   return (
     <div
@@ -71,7 +83,7 @@ export function QwikkerImage({
           src={src}
           alt={alt}
           className={imgClass}
-          style={{ objectFit, objectPosition }}
+          style={framing}
           loading={priority ? 'eager' : 'lazy'}
           onError={() => {
             if (src !== original) setSrc(original)
@@ -83,7 +95,7 @@ export function QwikkerImage({
           alt={alt}
           fill
           className={className}
-          style={{ objectFit, objectPosition }}
+          style={framing}
           sizes={sizes || getBusinessImageSizes(priority)}
           priority={priority}
           loading={priority ? 'eager' : 'lazy'}
@@ -96,7 +108,7 @@ export function QwikkerImage({
           width={width || 800}
           height={height || 600}
           className={className}
-          style={{ objectFit, objectPosition }}
+          style={framing}
           sizes={sizes}
           priority={priority}
           onError={() => setSrc(original)}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { uploadToCloudinary } from '@/lib/integrations'
-import { buildQwikkerImageUrl } from '@/lib/media/build-qwikker-image-url'
+import { buildQwikkerImageUrl, cssFramingStyle, presentationFromAsset } from '@/lib/media/build-qwikker-image-url'
 import type { MediaAsset } from '@/lib/media/types'
 import { MediaFramingEditor } from '@/components/admin/media-framing-editor'
 
@@ -139,27 +139,19 @@ export function OfferMediaManager({
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {assets.map((asset) => {
+                const presentation = presentationFromAsset(asset)
                 const thumb =
-                  buildQwikkerImageUrl(
-                    {
-                      source_url: asset.source_url,
-                      focal_x: asset.focal_x,
-                      focal_y: asset.focal_y,
-                      zoom: asset.zoom,
-                      fit: asset.fit,
-                      gravity_mode: asset.gravity_mode,
-                    },
-                    'offer'
-                  ) || asset.source_url
+                  buildQwikkerImageUrl(presentation, 'offer') || asset.source_url
                 const isSelected = asset.id === offerMediaId
                 return (
                   <div key={asset.id} className="rounded-lg border border-slate-700 overflow-hidden">
-                    <div className="relative aspect-video bg-slate-950">
+                    <div className="relative aspect-video bg-slate-950 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={thumb}
                         alt=""
-                        className={`absolute inset-0 h-full w-full ${asset.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                        className="absolute inset-0 h-full w-full"
+                        style={cssFramingStyle(presentation)}
                       />
                       {isSelected && (
                         <Badge className="absolute top-2 left-2 bg-[#00d083] text-black text-[10px]">
