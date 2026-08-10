@@ -6,7 +6,6 @@ import { ShareButton } from '@/components/ui/share-button'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { useSearchParams } from 'next/navigation'
 import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
@@ -272,10 +271,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     }
   }, [allOffers, favoriteOffers, claimedOffers, activeByOfferId, walletPassId])
 
-  // Auto-claim + add to wallet when a non-pass-holder followed a landing-page
-  // "Claim this offer" deep link: /join?returnTo=/user/offers?autoClaim={offerId}.
-  // After the pass is installed they land here; we claim, push to wallet, drop an
-  // in-app notification, confirm on-screen, then strip the param. Runs once.
+  // Auto-save + redeem when a non-pass-holder followed a landing-page
+  // "Save this offer" deep link: /join?returnTo=/user/offers?autoClaim={offerId}.
+  // After the pass is installed they land here; we save, activate, then strip the param.
   useEffect(() => {
     const autoClaimId = searchParams.get('autoClaim')
     if (!autoClaimId || !walletPassId || autoClaimProcessed.current) return
@@ -300,8 +298,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         }
 
         showSuccessMessage(
-          'Added to your wallet!',
-          `"${offerTitle}" from ${businessName} is now in your wallet. Explore more local offers below.`,
+          'On your Wallet!',
+          `"${offerTitle}" from ${businessName} is active on your pass. Show staff before it clears.`,
           () => setListMode('all')
         )
       } catch (error) {
@@ -319,12 +317,16 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, walletPassId, allOffers])
 
-  // Handle auto-scroll to specific highlighted business
+  // Handle auto-scroll to highlighted offer id or business slug
   useEffect(() => {
     if (highlightBusiness) {
       const scrollTimer = setTimeout(() => {
-        const businessSlug = highlightBusiness.toLowerCase().replace(/[^a-z0-9]/g, '-')
-        const targetCard = cardRefs.current[businessSlug]
+        const key = highlightBusiness.trim()
+        const businessSlug = key.toLowerCase().replace(/[^a-z0-9]/g, '-')
+        const targetCard =
+          cardRefs.current[key] ||
+          cardRefs.current[businessSlug] ||
+          (document.querySelector(`[data-offer-id="${key}"]`) as HTMLDivElement | null)
         
         if (targetCard) {
           targetCard.scrollIntoView({ 
@@ -332,7 +334,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             block: 'center',
             inline: 'nearest'
           })
-          setHighlightedCard(businessSlug)
+          setHighlightedCard(key)
           setTimeout(() => setHighlightedCard(null), 3000)
         } else {
           const firstCard = document.querySelector('[data-offer-card]')
@@ -712,12 +714,16 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     return (
       <>
       <Card 
-        ref={(el) => { cardRefs.current[businessSlug] = el }}
+        ref={(el) => {
+          cardRefs.current[businessSlug] = el
+          cardRefs.current[offer.id] = el
+        }}
         data-offer-card
+        data-offer-id={offer.id}
         className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
           isActive ? 'ring-1 ring-emerald-500/40' : ''
         } ${
-          highlightedCard === businessSlug
+          highlightedCard === businessSlug || highlightedCard === offer.id
             ? 'ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-[1.02] border-[#00d083]/50'
             : ''
         }`}

@@ -281,7 +281,7 @@ export function UserSettingsPage({ currentUser, currentCity: currentCityProp, ci
 
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mt-4">
                 <p className="text-xs text-blue-300 leading-relaxed">
-                  <strong>Note:</strong> Service notifications (offer claimed, reward updates) will still be sent regardless of these settings. 
+                  <strong>Note:</strong> Service notifications (offer saved, reward updates) will still be sent regardless of these settings. 
                   These toggles only control promotional messages.
                 </p>
               </div>

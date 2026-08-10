@@ -113,8 +113,8 @@ export async function claimOffer(data: {
         createBusinessNotification({
           businessId: realBusinessId,
           type: 'offer_claim',
-          title: 'Offer claimed',
-          message: `${claimerName} claimed "${data.offerTitle}"`,
+          title: 'Offer saved',
+          message: `${claimerName} saved "${data.offerTitle}"`,
         }).catch(() => {})
       })
     }
@@ -194,11 +194,11 @@ export async function claimOffer(data: {
 }
 
 /**
- * Best-effort in-app notification when an offer is auto-added to the user's wallet
- * (via a landing-page "Claim this offer" deep link). Surfaces in the user's
+ * Best-effort in-app notification when an offer is auto-activated on the user's wallet
+ * (via a landing-page "Save this offer" deep link). Surfaces in the user's
  * notifications feed/bell. Mirrors the proven push_notifications +
  * push_notification_recipients insert shape. Never throws — a failure here must
- * not break the claim/wallet flow.
+ * not break the save/redeem flow.
  */
 export async function notifyOfferAddedToWallet(data: { offerId: string; walletPassId: string }) {
   try {
@@ -220,7 +220,7 @@ export async function notifyOfferAddedToWallet(data: { offerId: string; walletPa
 
     const city = biz?.city || (await getRequestCityFallback())
     const businessName = biz?.business_name || 'A local business'
-    const message = `"${offer.offer_name}" from ${businessName} was added to your wallet. Tap to explore more local offers.`
+    const message = `"${offer.offer_name}" from ${businessName} is on your Wallet. Show staff before it clears.`
     const destinationUrl = `https://${city}.qwikker.com/user/offers`
 
     // Parent notification row (retry on short_code collision, like the push route)

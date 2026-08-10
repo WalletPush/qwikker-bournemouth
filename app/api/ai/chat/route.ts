@@ -1345,11 +1345,13 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // REMOVED: Quick replies are irrelevant and annoying - users can just type what they want
-    const quickReplies: string[] = []
+    // Prefer server-authored chips from hybrid (e.g. offer pitch). Never invent from the model.
+    const quickReplies: string[] = Array.isArray(result.quickReplies)
+      ? result.quickReplies.slice(0, 4)
+      : []
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('✨ Quick replies (server-generated, NOT from model):', quickReplies)
+      console.log('✨ Quick replies (server-authored):', quickReplies)
     }
 
     // Categorize the message for analytics

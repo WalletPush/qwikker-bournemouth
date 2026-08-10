@@ -158,33 +158,15 @@ export async function updateMainPassOffer(
     walletpushDashboardUrl
   )
 
-  // Order: silent Current_Offer first, then Last_Message with the only push.
-  // One APNs → device fetches both changes; only Last_Message should alert
-  // (Current_Offer Change Message must stay blank in WalletPush).
-  // 500ms gap — WalletPush drops concurrent PUTs to the same pass.
-  // Clear path: silent unless lastMessageOverride is set (expiry vibe CTA).
+  // CRITICAL ORDER (do not reverse — 87b462aa caused "Store Card Updated" again):
+  // If Current_Offer + Last_Message both change before the device fetches, iOS
+  // collapses the lock-screen alert to generic "Store Card Updated".
+  // Mid-window / final already feel fine because they are Last_Message-led.
+  // Activate must: (1) push Last_Message alone, (2) then silent Current_Offer.
+  // Current_Offer Change Message must stay blank in WalletPush dashboard.
   const shouldPush = input.clearOffer
     ? Boolean(input.lastMessageOverride?.trim())
     : true
-
-  if (!input.lastMessageOnly) {
-    const offerResponse = await fetch(offerUrl, {
-      method: 'PUT',
-      headers: authHeaders,
-      body: JSON.stringify({ value: passDisplayText, push: false }),
-    })
-    if (!offerResponse.ok) {
-      const errorText = await offerResponse.text()
-      console.error('Current_Offer API error:', offerResponse.status, errorText)
-      return {
-        success: false,
-        error: `WalletPush Current_Offer API error: ${offerResponse.status}`,
-        status: 500,
-        currentOffer: passDisplayText,
-      }
-    }
-    await new Promise((r) => setTimeout(r, 500))
-  }
 
   const messageResponse = await fetch(messageUrl, {
     method: 'PUT',
@@ -205,7 +187,29 @@ export async function updateMainPassOffer(
         status: 500,
       }
     }
-    // Activate: Current_Offer may have succeeded — soft success
+    // Activate: still try to morph Current_Offer so the pass face updates
+  }
+
+  if (!input.lastMessageOnly) {
+    // Settle so the device fetch for Last_Message lands before offer morph
+    await new Promise((r) => setTimeout(r, 1500))
+    const offerResponse = await fetch(offerUrl, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ value: passDisplayText, push: false }),
+    })
+    if (!offerResponse.ok) {
+      const errorText = await offerResponse.text()
+      console.error('Current_Offer API error:', offerResponse.status, errorText)
+      // Soft-fail: notification already went out with the right copy
+      return {
+        success: true,
+        currentOffer: passDisplayText,
+        pushMessage,
+        expiryTime: expiryFormatted,
+        error: `Current_Offer silent update failed: ${offerResponse.status}`,
+      }
+    }
   }
 
   return {

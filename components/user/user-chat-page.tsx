@@ -13,6 +13,18 @@ import React from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Map } from 'lucide-react'
+import {
+  activateOffer,
+  createPendingRedeem,
+  isPendingRedeemValid,
+  isRedeemConfirmPhrase,
+  markOfferSavedLocally,
+  redeemWarningCopy,
+  redeemWorkingCopy,
+  saveOffer,
+  saveSuccessCopy,
+  type PendingRedeemAction,
+} from '@/lib/offers/client-save-redeem'
 
 function slugifyBusinessName(name: string): string {
   return name
@@ -20,6 +32,19 @@ function slugifyBusinessName(name: string): string {
     .replace(/['']/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+interface ChatWalletAction {
+  type: 'save_offer'
+  offerId: string
+  offerName: string
+  offerDescription?: string | null
+  offerValue?: string | null
+  offerImage?: string | null
+  businessName: string
+  businessId: string
+  businessSlug?: string | null
+  activationWindowMinutes?: number
 }
 
 interface ChatMessage {
@@ -86,13 +111,7 @@ interface ChatMessage {
       ratingBadge: string | null
     }
   }>
-  walletActions?: Array<{
-    type: 'add_to_wallet'
-    offerId: string
-    offerName: string
-    businessName: string
-    businessId: string
-  }>
+  walletActions?: ChatWalletAction[]
   eventCards?: Array<{
     id: string
     title: string
@@ -119,6 +138,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   // Chat business links only — show "Opening…" while the listing loads
   const [openingBusiness, setOpeningBusiness] = useState<string | null>(null)
   const openingLockRef = useRef(false)
+  const [pendingRedeem, setPendingRedeem] = useState<PendingRedeemAction | null>(null)
+  const [savedOfferIds, setSavedOfferIds] = useState<Set<string>>(new Set())
+  const [busyOfferId, setBusyOfferId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatWrapperRef = useRef<HTMLDivElement>(null)
@@ -338,8 +360,160 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }, [searchParams, hasAutoSent, messages.length, currentUser])
 
+  const appendAiMessage = (content: string, extras?: Partial<ChatMessage>) => {
+    const aiMessage: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: 'ai',
+      content,
+      timestamp: new Date().toISOString(),
+      ...extras,
+    }
+    setMessages((prev) => [...prev, aiMessage])
+  }
+
+  const handleConfirmRedeem = async (pending: PendingRedeemAction, confirmReplace = false) => {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId || walletPassId.length < 10) {
+      appendAiMessage('Add your Qwikker pass first to redeem offers.')
+      return
+    }
+
+    setBusyOfferId(pending.offerId)
+    appendAiMessage(redeemWorkingCopy(pending.offerName, pending.windowMins))
+
+    try {
+      const result = await activateOffer({
+        walletPassId,
+        offerId: pending.offerId,
+        source: 'chat',
+        confirmReplace,
+      })
+
+      if (!result.success && result.needsReplace) {
+        const ok = window.confirm(
+          `You already have an active offer at ${result.active.business_name || 'another venue'} with about ${result.active.minutes_left ?? '?'} minutes left. Activating this will end it. Continue?`
+        )
+        if (ok) {
+          await handleConfirmRedeem(pending, true)
+        } else {
+          setPendingRedeem(null)
+          appendAiMessage('Okay — left your current Wallet offer as-is.')
+        }
+        return
+      }
+
+      if (!result.success) {
+        setPendingRedeem(null)
+        appendAiMessage(
+          `Sorry — I couldn’t put that on your Wallet. ${result.error || 'Please try again.'}`,
+          { quickReplies: ['Try again', 'Open Offers page'] }
+        )
+        return
+      }
+
+      setPendingRedeem(null)
+      markOfferSavedLocally(walletPassId, pending.offerId)
+      setSavedOfferIds((prev) => new Set([...prev, pending.offerId]))
+      // Prefer server window (authoritative) in the success line
+      const liveMins = result.windowMinutes || pending.windowMins
+      appendAiMessage(
+        `**${pending.offerName}** is on your Wallet now — about **${liveMins} minutes** to show staff before it clears.`,
+        {
+          quickReplies: ['Open Offers page', 'Show more deals'],
+        }
+      )
+    } catch (error) {
+      console.error('❌ Redeem error:', error)
+      setPendingRedeem(null)
+      appendAiMessage('Something went wrong redeeming that offer. Try again in a moment.', {
+        quickReplies: ['Try again', 'Open Offers page'],
+      })
+    } finally {
+      setBusyOfferId(null)
+    }
+  }
+
+  const handleSaveOffer = async (action: ChatWalletAction) => {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId || walletPassId.length < 10) {
+      appendAiMessage('Add your Qwikker pass first to save offers.')
+      return
+    }
+
+    setBusyOfferId(action.offerId)
+    setSavedOfferIds((prev) => new Set([...prev, action.offerId]))
+    markOfferSavedLocally(walletPassId, action.offerId)
+
+    try {
+      const result = await saveOffer({
+        walletPassId,
+        offerId: action.offerId,
+        source: 'chat',
+      })
+      if (!result.success) {
+        console.warn('Save offer API:', result.error)
+      }
+      setPendingRedeem(null)
+      appendAiMessage(saveSuccessCopy(action.offerName), {
+        quickReplies: ['Redeem now', 'View this offer', 'Open business page'],
+        walletActions: [{ ...action, type: 'save_offer' }],
+      })
+    } finally {
+      setBusyOfferId(null)
+    }
+  }
+
+  const handleStartRedeem = (action: ChatWalletAction) => {
+    const windowMins = action.activationWindowMinutes || 60
+    const pending = createPendingRedeem({
+      offerId: action.offerId,
+      offerName: action.offerName,
+      businessName: action.businessName,
+      windowMins,
+    })
+    setPendingRedeem(pending)
+    appendAiMessage(redeemWarningCopy(action.offerName, windowMins), {
+      quickReplies: ['Yes, redeem', 'Not now'],
+    })
+  }
+
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
+
+    // Bound confirm: typed "yes" only redeems when pending redeem is valid
+    if (isRedeemConfirmPhrase(message) && isPendingRedeemValid(pendingRedeem)) {
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInputValue('')
+      await handleConfirmRedeem(pendingRedeem)
+      return
+    }
+
+    // Explicit dismiss of pending redeem
+    if (
+      isPendingRedeemValid(pendingRedeem) &&
+      /^(no|nope|not now|cancel|never ?mind)[\s!.]*$/i.test(message.trim())
+    ) {
+      setPendingRedeem(null)
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInputValue('')
+      appendAiMessage('No problem — nothing was added to your Wallet.')
+      return
+    }
+
+    // New topic clears any pending redeem context
+    setPendingRedeem(null)
 
     // Track chat usage for badge
     if (typeof window !== 'undefined') {
@@ -598,7 +772,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         content: data.response || `Here are the current offers from ${businessName}!`,
         timestamp: new Date().toISOString(),
         sources: data.sources || [],
-        quickReplies: ['Add to wallet', 'Tell me more', 'Show other businesses']
+        quickReplies: ['List a few', 'Tell me more', 'Show other businesses']
       }
 
       setMessages(prev => [...prev, aiMessage])
@@ -620,62 +794,84 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }
 
-  const handleAddToWallet = async (offerId: string, offerName: string, businessName: string) => {
-    if (!currentUser?.wallet_pass_id) {
-      alert('You need to sign up first to get your Qwikker wallet pass')
-      return
+  const lastOfferAction = (): ChatWalletAction | null => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const actions = messages[i].walletActions
+      if (actions && actions.length > 0) return actions[0]
     }
-
-    try {
-      const response = await fetch('/api/ai/add-to-wallet', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userWalletPassId: currentUser.wallet_pass_id,
-          offerId: offerId,
-          businessName: businessName
-        })
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        // Add success message to chat
-        const successMessage: ChatMessage = {
-          id: Date.now().toString(),
-          type: 'ai',
-          content: `🎉 Perfect! "${offerName}" has been added to your wallet pass! It expires in 12 hours, so make sure to use it soon. Check your wallet to see the details!`,
-          timestamp: new Date().toISOString(),
-          quickReplies: ['Show me more offers', 'Find restaurants', 'What else is available?']
-        }
-        setMessages(prev => [...prev, successMessage])
-      } else {
-        // Add error message to chat
-        const errorMessage: ChatMessage = {
-          id: Date.now().toString(),
-          type: 'ai',
-          content: `Sorry, I couldn't add that offer to your wallet right now. ${result.error || 'Please try again in a moment.'}`,
-          timestamp: new Date().toISOString(),
-          quickReplies: ['Try again', 'Show me other offers', 'Contact support']
-        }
-        setMessages(prev => [...prev, errorMessage])
+    if (pendingRedeem) {
+      return {
+        type: 'save_offer',
+        offerId: pendingRedeem.offerId,
+        offerName: pendingRedeem.offerName,
+        businessName: pendingRedeem.businessName,
+        businessId: '',
+        activationWindowMinutes: pendingRedeem.windowMins,
       }
-    } catch (error) {
-      console.error('❌ Wallet action error:', error)
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'ai',
-        content: "I'm having trouble adding that to your wallet right now. Please try again in a moment!",
-        timestamp: new Date().toISOString(),
-        quickReplies: ['Try again', 'Show me other offers', 'Contact support']
-      }
-      setMessages(prev => [...prev, errorMessage])
     }
+    return null
   }
 
   const handleQuickReply = (reply: string) => {
+    const normalized = reply.trim().toLowerCase()
+
+    if (normalized === 'open offers page' || normalized === 'view all offers') {
+      router.push(withWalletPass('/user/offers'))
+      return
+    }
+    if (normalized === 'open discover') {
+      router.push(withWalletPass('/user/dashboard'))
+      return
+    }
+    if (normalized === 'yes, redeem' || normalized === 'yes redeem') {
+      if (isPendingRedeemValid(pendingRedeem)) {
+        const userMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: reply,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, userMessage])
+        void handleConfirmRedeem(pendingRedeem)
+        return
+      }
+      appendAiMessage('Tap Redeem on a specific offer first — I won’t activate a random deal.')
+      return
+    }
+    if (normalized === 'not now') {
+      setPendingRedeem(null)
+      appendAiMessage('No problem — nothing was added to your Wallet.')
+      return
+    }
+    if (normalized === 'redeem now') {
+      const action = lastOfferAction()
+      if (action) {
+        handleStartRedeem(action)
+        return
+      }
+      handleSendMessage('List a few')
+      return
+    }
+    if (normalized === 'view this offer') {
+      const action = lastOfferAction()
+      if (action) {
+        router.push(withWalletPass(`/user/offers?highlight=${action.offerId}`))
+        return
+      }
+      router.push(withWalletPass('/user/offers'))
+      return
+    }
+    if (normalized === 'open business page') {
+      const action = lastOfferAction()
+      if (action) {
+        const slug = action.businessSlug || slugifyBusinessName(action.businessName)
+        navigateToBusinessHref(`/user/business/${slug}`, action.businessName)
+        return
+      }
+      appendAiMessage('Which business should I open? Name one and I’ll take you there.')
+      return
+    }
+
     handleSendMessage(reply)
   }
 
@@ -1118,30 +1314,80 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
 
-                {/* Wallet Actions */}
+                {/* Offer cards — Save → Redeem (compact, with thumbnail when present) */}
                 {message.walletActions && message.walletActions.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs text-slate-400 mb-2 px-2">🎫 Add to wallet:</p>
-                    <div className="flex flex-col gap-2">
-                      {message.walletActions.map((action, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleAddToWallet(action.offerId, action.offerName, action.businessName)}
-                          className="bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-[#00d083]/20 flex items-center justify-between group"
+                  <div className="mt-3 space-y-2">
+                    {message.walletActions.slice(0, 3).map((action) => {
+                      const isSaved = savedOfferIds.has(action.offerId)
+                      const isBusy = busyOfferId === action.offerId
+                      const slug = action.businessSlug || slugifyBusinessName(action.businessName)
+                      return (
+                        <div
+                          key={action.offerId}
+                          className="rounded-xl border border-slate-600/50 bg-slate-800/70 overflow-hidden"
                         >
-                          <div className="flex flex-col items-start">
-                            <span className="font-semibold">{action.offerName}</span>
-                            <span className="text-xs opacity-80">at {action.businessName}</span>
+                          <div className="flex gap-3 p-3">
+                            {action.offerImage ? (
+                              <img
+                                src={action.offerImage}
+                                alt=""
+                                className="w-14 h-14 rounded-lg object-cover border border-slate-600/60 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-lg bg-slate-700/80 border border-slate-600/60 shrink-0 flex items-center justify-center text-slate-500 text-xs">
+                                Deal
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-slate-100 line-clamp-2">{action.offerName}</p>
+                              <p className="text-xs text-slate-400 truncate">{action.businessName}</p>
+                              {action.offerValue && (
+                                <p className="text-xs text-emerald-400 mt-0.5">{action.offerValue}</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center">
-                            <span className="text-xs mr-2 opacity-80">Add to Wallet</span>
-                            <svg className="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
+                          <div className="flex flex-wrap gap-2 px-3 pb-3">
+                            {!isSaved ? (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleSaveOffer(action)}
+                                className="flex-1 min-w-[5.5rem] bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold py-2 px-3 rounded-lg"
+                              >
+                                {isBusy ? 'Saving…' : 'Save'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => handleStartRedeem(action)}
+                                className="flex-1 min-w-[5.5rem] bg-slate-600 hover:bg-slate-500 disabled:opacity-50 text-white text-xs font-semibold py-2 px-3 rounded-lg"
+                              >
+                                Redeem
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                router.push(withWalletPass(`/user/offers?highlight=${action.offerId}`))
+                              }
+                              className="text-xs text-slate-300 hover:text-[#00d083] border border-slate-600/50 px-3 py-2 rounded-lg"
+                            >
+                              View offer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigateToBusinessHref(`/user/business/${slug}`, action.businessName)
+                              }
+                              className="text-xs text-slate-300 hover:text-[#00d083] border border-slate-600/50 px-3 py-2 rounded-lg"
+                            >
+                              Business
+                            </button>
                           </div>
-                        </button>
-                      ))}
-                    </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 

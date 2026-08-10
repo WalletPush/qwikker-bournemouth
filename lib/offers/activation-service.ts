@@ -132,7 +132,7 @@ function offerForVibeCopy(offerName: string): string {
   return truncateWords(base, 36)
 }
 
-/** Build expiry vibe CTA copy + deep link into business vibe sheet. */
+/** Build expiry vibe CTA copy + short deep link into business vibe sheet. */
 function buildExpiryVibeMessage(params: {
   offerName: string
   businessName: string
@@ -146,7 +146,10 @@ function buildExpiryVibeMessage(params: {
   const name = (params.firstName || '').trim() || 'there'
   const slug = params.businessSlug?.trim() || slugifyBusinessName(params.businessName)
   const city = (params.city || 'bournemouth').toLowerCase()
-  const vibeUrl = `https://${city}.qwikker.com/user/business/${slug}?vibe=1&wallet_pass_id=${encodeURIComponent(params.walletPassId)}`
+  // Same /s/{last8}/… pattern as pass back-of-card links — keeps push body short.
+  // Resolves to /user/business/{slug}?vibe=1&wallet_pass_id=… via app/s/[code]/[...path]
+  const passCode = params.walletPassId.slice(-8)
+  const vibeUrl = `https://${city}.qwikker.com/s/${passCode}/vibe/${slug}`
   return `How was your ${shortOffer}, ${name}? Tap to leave a quick vibe for ${shortBusiness}.\n${vibeUrl}`
 }
 

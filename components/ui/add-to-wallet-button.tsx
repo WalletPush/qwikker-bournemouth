@@ -1,7 +1,17 @@
 'use client';
 
+/**
+ * Legacy offer CTA button — now Save → Redeem via /api/offers/*.
+ * Prefer in-page Save / Redeem buttons; this remains for any leftover embeds.
+ */
+
 import { useState } from 'react';
 import { Wallet } from 'lucide-react';
+import {
+  activateOffer,
+  markOfferSavedLocally,
+  saveOffer,
+} from '@/lib/offers/client-save-redeem';
 
 interface Offer {
   id: string;
@@ -30,8 +40,8 @@ export default function AddToWalletButton({
   variant = 'default',
   size = 'md'
 }: AddToWalletButtonProps) {
-  const [isAdding, setIsAdding] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   const sizeClasses = {
     sm: 'px-3 py-2 text-sm',
@@ -45,194 +55,85 @@ export default function AddToWalletButton({
     ghost: 'bg-transparent text-[#00d083] hover:bg-[#00d083]/10'
   };
 
-  const addOfferToWallet = async () => {
-    if (isAdding || success) return;
-    
-    setIsAdding(true);
-    
+  const onClick = async () => {
+    if (isBusy) return;
+    if (!userWalletPassId || userWalletPassId === 'guest' || userWalletPassId.length < 10) {
+      alert('You need to sign up first to get your Qwikker wallet pass');
+      return;
+    }
+
+    setIsBusy(true);
     try {
-      // Check if user has a wallet pass first
-      if (!userWalletPassId || userWalletPassId === 'guest') {
-        throw new Error('You need to sign up first to get your Qwikker wallet pass');
+      if (!isSaved) {
+        const saved = await saveOffer({
+          walletPassId: userWalletPassId,
+          offerId: offer.id,
+          source: 'offers',
+        });
+        if (!saved.success) {
+          throw new Error(saved.error || 'Failed to save offer');
+        }
+        markOfferSavedLocally(userWalletPassId, offer.id);
+        setIsSaved(true);
+        return;
       }
 
-      // UPDATE MAIN WALLET PASS with the new offer
-      const response = await fetch('/api/walletpass/update-main-pass', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userWalletPassId: userWalletPassId,
-          currentOffer: `${offer.title} - ${offer.business_name}`,
-          offerDetails: {
-            description: offer.description,
-            validUntil: offer.valid_until,
-            terms: offer.terms,
-            businessName: offer.business_name,
-            discount: offer.offer_value || offer.title
-          }
-        })
+      const ok = window.confirm(
+        `Only about 60 minutes on your Wallet for "${offer.title}". Ready to show staff?`
+      );
+      if (!ok) return;
+
+      let result = await activateOffer({
+        walletPassId: userWalletPassId,
+        offerId: offer.id,
+        source: 'offers',
       });
-      
-      const responseText = await response.text();
-      const data = responseText ? JSON.parse(responseText) : {};
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('Wallet pass not found. Please try signing up again.');
-        }
-
-        if (response.status === 403) {
-          throw new Error('This wallet pass is invalid. Please contact support.');
-        }
-
-        throw new Error(data?.error || 'Failed to update wallet pass');
+      if (!result.success && result.needsReplace) {
+        const replace = window.confirm(
+          `Replace your active offer at ${result.active.business_name || 'another venue'}?`
+        );
+        if (!replace) return;
+        result = await activateOffer({
+          walletPassId: userWalletPassId,
+          offerId: offer.id,
+          source: 'offers',
+          confirmReplace: true,
+        });
       }
-      
-      if (data.success) {
-        // Show success state
-        setSuccess(true);
-        console.log('✅ Main wallet pass updated with new offer');
-        
-        // Show success message to user
-        const successMessage = `Your Qwikker pass has been updated with "${offer.title}"! Check your wallet app.`;
-        
-        // Create a nice success notification
-        const notification = document.createElement('div');
-        notification.innerHTML = `
-          <div style="
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #00d083, #00b86f);
-            color: black;
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 208, 131, 0.3);
-            z-index: 9999;
-            max-width: 350px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease-out;
-          ">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <div>
-              <div style="font-size: 14px; margin-bottom: 4px;">Wallet Updated!</div>
-              <div style="font-size: 12px; opacity: 0.8;">${offer.title} added to your pass</div>
-            </div>
-          </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Remove notification after 4 seconds
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove();
-          }
-        }, 4000);
-        
-        // Reset success state after delay
-        setTimeout(() => setSuccess(false), 3000);
-        
+
+      if (!result.success) {
+        throw new Error(('error' in result && result.error) || 'Failed to redeem');
       }
+
+      alert(`"${offer.title}" is on your Wallet now. Show staff before it clears.`);
     } catch (error) {
-      console.error('Error updating wallet pass:', error);
-      
-      // Show user-friendly error
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update your wallet pass';
-      
-      // Create error notification
-      const notification = document.createElement('div');
-      notification.innerHTML = `
-        <div style="
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: linear-gradient(135deg, #ef4444, #dc2626);
-          color: white;
-          padding: 16px 20px;
-          border-radius: 12px;
-          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-          z-index: 9999;
-          max-width: 350px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        ">
-          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-          <div>
-            <div style="font-size: 14px; margin-bottom: 4px;">Update Failed</div>
-            <div style="font-size: 12px; opacity: 0.9;">${errorMessage}</div>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      // Remove notification after 5 seconds
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 5000);
+      console.error('Save/Redeem error:', error);
+      alert(error instanceof Error ? error.message : 'Something went wrong');
     } finally {
-      setIsAdding(false);
+      setIsBusy(false);
     }
   };
 
-  if (success) {
-    return (
-      <button 
-        className={`${sizeClasses[size]} rounded-lg font-semibold transition-all duration-300 bg-green-600 text-white cursor-default ${className}`}
-        disabled
-      >
-        <span className="flex items-center justify-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Added to Wallet!
-        </span>
-      </button>
-    );
-  }
+  const label = isBusy ? 'Working…' : isSaved ? 'Redeem now' : 'Save';
 
   return (
-    <button 
-      onClick={addOfferToWallet}
-      disabled={isAdding}
+    <button
+      onClick={() => void onClick()}
+      disabled={isBusy}
       className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-lg font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     >
-      {isAdding ? (
-        <span className="flex items-center justify-center gap-2">
-          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Updating...
-        </span>
-      ) : (
-        <span className="flex items-center justify-center gap-2">
-          <Wallet className="w-4 h-4" />
-          Add to Wallet
-        </span>
-      )}
+      <span className="flex items-center justify-center gap-2">
+        <Wallet className="w-4 h-4" />
+        {label}
+      </span>
     </button>
   );
 }
 
-// Compact version for small spaces
 export function CompactUpdatePassButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
   return (
-    <AddToWalletButton 
+    <AddToWalletButton
       offer={offer}
       userWalletPassId={userWalletPassId}
       variant="outline"
@@ -242,10 +143,9 @@ export function CompactUpdatePassButton({ offer, userWalletPassId, className = '
   );
 }
 
-// Large promotional version
 export function PromoUpdatePassButton({ offer, userWalletPassId, className = '' }: AddToWalletButtonProps) {
   return (
-    <AddToWalletButton 
+    <AddToWalletButton
       offer={offer}
       userWalletPassId={userWalletPassId}
       variant="default"
@@ -255,6 +155,5 @@ export function PromoUpdatePassButton({ offer, userWalletPassId, className = '' 
   );
 }
 
-// Legacy aliases for backward compatibility
 export const CompactAddToWalletButton = CompactUpdatePassButton;
 export const PromoAddToWalletButton = PromoUpdatePassButton;

@@ -81,8 +81,10 @@ interface ChatResponse {
     website_url?: string // ✅ ATLAS: For website link
     google_place_id?: string // ✅ ATLAS: For Google reviews link
   }>
+  /** Server-suggested chips (client may navigate or send as follow-up) */
+  quickReplies?: string[]
   walletActions?: Array<{
-    type: 'add_to_wallet'
+    type: 'save_offer'
     offerId: string
     offerName: string
     offerDescription: string | null
@@ -94,6 +96,8 @@ interface ChatResponse {
     offerImage: string | null
     businessName: string
     businessId: string
+    businessSlug?: string | null
+    activationWindowMinutes?: number
   }>
   eventCards?: Array<{
     id: string
@@ -1330,14 +1334,18 @@ export async function generateHybridAIResponse(
     }
     
     // 🚨 STEP 3: HARD STOP FOR HARD OFFER QUERIES (DB-AUTHORITATIVE MODE)
-    // ONLY for PURE offer queries (e.g., "show me offers")
+    // Broad ask → conversational pitch (no card dump). "List a few" → max 3 cards.
     // MIXED queries (e.g., "restaurants with offers") go through normal KB flow
     if (isHardOfferQuery) {
       try {
-        console.log(`🎫 Fetching ALL active offers in ${city}`)
-        
+        const wantsSampleList =
+          /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals)\b/i.test(
+            userMessage
+          )
+
+        console.log(`🎫 Offer hard-stop in ${city} (sampleList=${wantsSampleList})`)
+
         // 🔒 THE ONLY SOURCE: business_offers_chat_eligible view
-        // ✅ Join business_profiles to filter by city (view doesn't have city column)
         const { data: offers, error } = await supabase
           .from('business_offers_chat_eligible')
           .select(`
@@ -1353,26 +1361,27 @@ export async function generateHybridAIResponse(
             offer_image,
             business_profiles!inner(
               business_name,
-              city
+              city,
+              slug
             )
           `)
           .eq('business_profiles.city', city)
           .order('offer_end_date', { ascending: false })
-          .limit(10)
-        
+          .limit(wantsSampleList ? 3 : 10)
+
         if (error) {
           console.error('❌ Error fetching offers:', error)
         }
-        
-        // 🚨 ZERO OFFERS: Return authoritative "no offers" message
+
         if (!offers || offers.length === 0) {
-          console.log(`🚫 ZERO OFFERS in DB → returning authoritative "no offers" response`)
+          console.log(`🚫 ZERO OFFERS in DB → authoritative "no offers" response`)
           return {
             success: true,
-            response: `There are no active offers in ${city} right now. Check back soon, or explore our great businesses and restaurants!`,
+            response: `There are no active offers in ${city} right now. Check back soon, or explore businesses on Discover!`,
             sources: [],
             businessCarousel: [],
             walletActions: [],
+            quickReplies: ['Find restaurants', 'Open Discover'],
             eventCards: [],
             uiMode: 'conversational',
             hasBusinessResults: false,
@@ -1380,42 +1389,77 @@ export async function generateHybridAIResponse(
             classification
           }
         }
-        
-        // 🎉 OFFERS EXIST: Return static message + offers (DO NOT CALL AI MODEL)
-        const walletActions = offers.map(offer => ({
-          type: 'add_to_wallet' as const,
-          offerId: offer.id,
-          offerName: offer.offer_name,
-          offerDescription: offer.offer_description || null,
-          offerType: offer.offer_type || null,
-          offerValue: offer.offer_value,
-          offerTerms: offer.offer_terms || null,
-          offerStartDate: offer.offer_start_date || null,
-          offerEndDate: offer.offer_end_date || null,
-          offerImage: offer.offer_image || null,
-          businessName: offer.business_profiles?.business_name || 'Unknown',
-          businessId: offer.business_id
-        }))
-        
-        console.log(`✅ Found ${walletActions.length} offers from business_offers_chat_eligible`)
-        console.log(`🎫 First offer: ID=${offers[0].id}, Business=${offers[0].business_profiles?.business_name}`)
-        
-        // ✅ DEV LOG: Show each deal with expiry date
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📋 Current Deals (business_offers_chat_eligible view = THE ONLY SOURCE):')
-          offers.forEach(o => {
-            const expiryDate = o.offer_end_date ? new Date(o.offer_end_date).toLocaleDateString() : 'No expiry'
-            console.log(`  - ${o.business_profiles?.business_name} | ${o.offer_name} | ends ${expiryDate}`)
-          })
+
+        // Broad ask: pitch only — zero redeemable pending state, no full dump
+        if (!wantsSampleList) {
+          const countHint = offers.length >= 10 ? 'plenty of' : `${offers.length}`
+          return {
+            success: true,
+            response:
+              `There are ${countHint} live deals in ${city} right now. ` +
+              `Want me to list a few you can Save, or open the full Offers page?`,
+            sources: [],
+            businessCarousel: [],
+            walletActions: [],
+            quickReplies: ['List a few', 'Open Offers page'],
+            eventCards: [],
+            uiMode: 'conversational',
+            hasBusinessResults: false,
+            modelUsed: 'gpt-4o-mini',
+            classification
+          }
         }
-        
-        // 🎯 DETERMINISTIC RESPONSE: Static message + offer cards (NO AI MODEL CALL)
+
+        // Sample list: up to 3 compact cards with thumbnails + Save
+        // Real wallet window from business_offers (30 / 60 / 120)
+        const sampleOffers = offers.slice(0, 3)
+        const windowById = new Map<string, number>()
+        const { data: windowRows } = await supabase
+          .from('business_offers')
+          .select('id, activation_window_minutes')
+          .in(
+            'id',
+            sampleOffers.map((o) => o.id)
+          )
+        for (const row of windowRows || []) {
+          const mins = Number(row.activation_window_minutes)
+          if (mins === 30 || mins === 60 || mins === 120) {
+            windowById.set(row.id, mins)
+          }
+        }
+
+        const walletActions = sampleOffers.map((offer) => {
+          const profile = offer.business_profiles as {
+            business_name?: string
+            slug?: string
+          } | null
+          return {
+            type: 'save_offer' as const,
+            offerId: offer.id,
+            offerName: offer.offer_name,
+            offerDescription: offer.offer_description || null,
+            offerType: offer.offer_type || null,
+            offerValue: offer.offer_value,
+            offerTerms: offer.offer_terms || null,
+            offerStartDate: offer.offer_start_date || null,
+            offerEndDate: offer.offer_end_date || null,
+            offerImage: offer.offer_image || null,
+            businessName: profile?.business_name || 'Unknown',
+            businessId: offer.business_id,
+            businessSlug: profile?.slug || null,
+            activationWindowMinutes: windowById.get(offer.id) ?? 60,
+          }
+        })
+
+        console.log(`✅ Sample list: ${walletActions.length} offers (capped)`)
+
         return {
           success: true,
-          response: `Here are the current deals in ${city}:`,
+          response: `Here are a few deals in ${city} — Save one, then Redeem when you’re at the venue:`,
           sources: [],
           businessCarousel: [],
           walletActions,
+          quickReplies: ['Open Offers page', 'Show more deals'],
           eventCards: [],
           uiMode: 'conversational',
           hasBusinessResults: false,

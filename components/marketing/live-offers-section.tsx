@@ -41,6 +41,7 @@ interface LiveOffersSectionProps {
 // Deep-link a non-pass-holder straight to this offer: install the city pass,
 // then auto-add the offer to their wallet (handled on /user/offers).
 function offerClaimHref(offerId: string): string {
+  // After join, Offers page saves then can activate (Save → Redeem deep link)
   const returnTo = `/user/offers?autoClaim=${offerId}`
   return `/join?returnTo=${encodeURIComponent(returnTo)}`
 }
@@ -91,7 +92,7 @@ export function LiveOffersSection({ displayName, heading, offers, cardClass, hea
                       className="inline-flex items-center gap-2 text-sm font-semibold border-b-2 pb-1 transition-opacity hover:opacity-70"
                       style={{ color: 'var(--text)', borderColor: 'var(--accent)' }}
                     >
-                      Claim this offer
+                      Save this offer
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
@@ -155,7 +156,7 @@ export function LiveOffersSection({ displayName, heading, offers, cardClass, hea
                     className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
                     style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
                   >
-                    Claim this offer
+                    Save this offer
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -211,7 +212,7 @@ export function LiveOffersSection({ displayName, heading, offers, cardClass, hea
                     className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                     style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-contrast)' }}
                   >
-                    Claim this offer
+                    Save this offer
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>

@@ -43,15 +43,37 @@ export async function GET(
     // Route to different destinations based on path
     let redirectUrl
     const userName = user.name || 'User'
-    
+    const passQs = `wallet_pass_id=${encodeURIComponent(user.wallet_pass_id)}`
+
     switch (destination) {
       case 'chat':
-        redirectUrl = `${baseUrl}/user/chat?wallet_pass_id=${user.wallet_pass_id}`
+        redirectUrl = `${baseUrl}/user/chat?${passQs}`
         console.log(`💬 CHAT SHORTLINK: AI Chat for ${userName} (${code})`)
         break
+      case 'offers':
+        redirectUrl = `${baseUrl}/user/offers?${passQs}`
+        console.log(`🎁 OFFERS SHORTLINK: Offers for ${userName} (${code})`)
+        break
+      case 'vibe': {
+        // /s/{last8}/vibe/{business-slug} → business page with vibe sheet open
+        const rawSlug = path?.[1] || ''
+        const slug = rawSlug
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+        if (!slug || slug.length > 120) {
+          redirectUrl = `${baseUrl}/user/dashboard?${passQs}`
+          console.log(`⚠️ VIBE SHORTLINK: bad slug, dashboard fallback (${code})`)
+        } else {
+          redirectUrl = `${baseUrl}/user/business/${slug}?vibe=1&${passQs}`
+          console.log(`💚 VIBE SHORTLINK: ${slug} for ${userName} (${code})`)
+        }
+        break
+      }
       case 'dashboard':
       default:
-        redirectUrl = `${baseUrl}/user/dashboard?wallet_pass_id=${user.wallet_pass_id}`
+        redirectUrl = `${baseUrl}/user/dashboard?${passQs}`
         console.log(`🏠 DASHBOARD SHORTLINK: Dashboard for ${userName} (${code})`)
         break
     }

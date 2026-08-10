@@ -128,12 +128,12 @@ export function OfferPreviewCard({ offer, businessName }: OfferPreviewCardProps)
           </div>
         )}
 
-        {/* Add to Wallet Button (Preview Only) */}
+        {/* Save CTA preview — matches user Offers page */}
         <Button 
           disabled
           className="w-full bg-[#00d083] hover:bg-[#00b86f] text-white font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Add to Wallet (Preview Only)
+          Save (Preview Only)
         </Button>
       </CardContent>
     </Card>

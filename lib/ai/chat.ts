@@ -350,7 +350,7 @@ export async function generateAIResponse(
     offers_count?: number
   }>
   walletActions?: Array<{
-    type: 'add_to_wallet'
+    type: 'save_offer'
     offerId: string
     offerName: string
     businessName: string
@@ -1133,6 +1133,7 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
               id,
               offer_name,
               offer_value,
+              offer_image,
               business_id,
               offer_end_date,
               updated_at,
@@ -1149,11 +1150,13 @@ ${cityContext ? `CITY INFO: ${cityContext}` : ''}`
           
           if (!error && offers && offers.length > 0) {
             walletActions = offers.map(offer => ({
-              type: 'add_to_wallet',
+              type: 'save_offer',
               offerId: offer.id,
-              offerName: `${offer.offer_name} - ${offer.offer_value}`,
+              offerName: offer.offer_name,
+              offerValue: offer.offer_value,
+              offerImage: offer.offer_image || null,
               businessName: offer.business_profiles?.business_name || 'Unknown',
-              businessId: offer.business_id
+              businessId: offer.business_id,
             }))
             
             console.log(`🎫 Found ${walletActions.length} wallet actions available (all from eligible businesses, all valid)`)

@@ -3,7 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import AddToWalletButton from '@/components/ui/add-to-wallet-button'
+import {
+  activateOffer,
+  markOfferSavedLocally,
+  saveOffer,
+} from '@/lib/offers/client-save-redeem'
 
 interface ChatMessage {
   id: string
@@ -52,6 +56,8 @@ export function UserChatPagePremium({ currentUser }: { currentUser?: any }) {
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [savedPremiumOffers, setSavedPremiumOffers] = useState<Set<string>>(new Set())
+  const [busyPremiumOffer, setBusyPremiumOffer] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -529,44 +535,111 @@ export function UserChatPagePremium({ currentUser }: { currentUser?: any }) {
     </Card>
   )
 
-  const OfferCard = ({ offer }: { offer: Offer }) => (
-    <Card className="w-56 bg-gradient-to-br from-orange-600/10 to-red-600/10 border-orange-500/20 hover:border-orange-400/30 transition-all duration-300">
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2">
-          <img 
-            src={offer.image} 
-            alt={offer.businessName}
-            className="w-12 h-12 object-cover rounded-lg"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 mb-1">
-              <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
-                {offer.discount}
-              </span>
+  const handlePremiumSave = async (offer: Offer) => {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to save offers.')
+      return
+    }
+    setBusyPremiumOffer(offer.id)
+    setSavedPremiumOffers((prev) => new Set([...prev, offer.id]))
+    markOfferSavedLocally(walletPassId, offer.id)
+    try {
+      await saveOffer({ walletPassId, offerId: offer.id, source: 'chat' })
+    } finally {
+      setBusyPremiumOffer(null)
+    }
+  }
+
+  const handlePremiumRedeem = async (offer: Offer) => {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to redeem offers.')
+      return
+    }
+    const windowMins = 60
+    const ok = window.confirm(
+      `Only about ${windowMins} minutes on your Wallet for "${offer.title}". Ready to show staff?`
+    )
+    if (!ok) return
+
+    setBusyPremiumOffer(offer.id)
+    try {
+      const result = await activateOffer({
+        walletPassId,
+        offerId: offer.id,
+        source: 'chat',
+      })
+      if (!result.success && result.needsReplace) {
+        const replace = window.confirm(
+          `Replace your active offer at ${result.active.business_name || 'another venue'}?`
+        )
+        if (replace) {
+          const again = await activateOffer({
+            walletPassId,
+            offerId: offer.id,
+            source: 'chat',
+            confirmReplace: true,
+          })
+          if (again.success) alert(`"${offer.title}" is on your Wallet now.`)
+          else if (!again.needsReplace) alert(again.error || 'Failed to redeem')
+        }
+        return
+      }
+      if (!result.success) {
+        alert(('error' in result && result.error) || 'Failed to redeem')
+        return
+      }
+      alert(`"${offer.title}" is on your Wallet now.`)
+    } finally {
+      setBusyPremiumOffer(null)
+    }
+  }
+
+  const OfferCard = ({ offer }: { offer: Offer }) => {
+    const isSaved = savedPremiumOffers.has(offer.id)
+    const isBusy = busyPremiumOffer === offer.id
+    return (
+      <Card className="w-56 bg-gradient-to-br from-orange-600/10 to-red-600/10 border-orange-500/20 hover:border-orange-400/30 transition-all duration-300">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2">
+            <img
+              src={offer.image}
+              alt={offer.businessName}
+              className="w-12 h-12 object-cover rounded-lg"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                  {offer.discount}
+                </span>
+              </div>
+              <h4 className="font-semibold text-white text-xs truncate">{offer.title}</h4>
+              <p className="text-slate-400 text-xs truncate">{offer.businessName}</p>
+              <p className="text-slate-500 text-xs">ends {offer.validUntil}</p>
             </div>
-            <h4 className="font-semibold text-white text-xs truncate">{offer.title}</h4>
-            <p className="text-slate-400 text-xs truncate">{offer.businessName}</p>
-            <p className="text-slate-500 text-xs">ends {offer.validUntil}</p>
           </div>
-        </div>
-        <AddToWalletButton 
-          offer={{
-            id: offer.id || 'premium-chat-offer',
-            title: offer.title,
-            description: offer.description || 'Exclusive AI recommended offer',
-            business_name: offer.businessName,
-            valid_until: offer.validUntil,
-            terms: offer.terms || 'Present at business to redeem',
-            offer_value: offer.discount
-          }}
-          userWalletPassId={currentUser?.wallet_pass_id}
-          variant="default"
-          size="sm"
-          className="w-full mt-2 bg-orange-500 hover:bg-orange-600 text-white text-xs h-6"
-        />
-      </CardContent>
-    </Card>
-  )
+          {!isSaved ? (
+            <Button
+              disabled={isBusy}
+              onClick={() => void handlePremiumSave(offer)}
+              className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7"
+            >
+              {isBusy ? 'Saving…' : 'Save'}
+            </Button>
+          ) : (
+            <Button
+              disabled={isBusy}
+              onClick={() => void handlePremiumRedeem(offer)}
+              className="w-full mt-2 bg-slate-600 hover:bg-slate-500 text-white text-xs h-7"
+            >
+              {isBusy ? 'Working…' : 'Redeem now'}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto">

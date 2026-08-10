@@ -11,8 +11,12 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { PendingLink, TAP_FEEDBACK_CLASS } from '@/components/ui/nav-pending'
 import { useSearchParams } from 'next/navigation'
-import AddToWalletButton from '@/components/ui/add-to-wallet-button'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
+import {
+  activateOffer,
+  markOfferSavedLocally,
+  saveOffer,
+} from '@/lib/offers/client-save-redeem'
 import { formatPrice, hasDisplayablePrice } from '@/lib/utils/price-formatter'
 import { getHeroLine } from '@/lib/utils/business-labels'
 import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
@@ -238,43 +242,91 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
     loadSavedStatus()
   }, [business?.id, walletPassId])
   
-  const claimOffer = async (offerId: string, offerTitle: string, businessName: string) => {
-    const userId = walletPassId || 'anonymous-user'
-    
-    // Update UI immediately
-    setClaimedOffers(prev => {
-      const newClaimed = new Set([...prev, offerId])
-      // Save to localStorage as backup
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`qwikker-claimed-${userId}`, JSON.stringify([...newClaimed]))
-      }
-      return newClaimed
-    })
-    
-    // Store in database AND update wallet pass
-    try {
-      const { claimOffer: claimOfferAction } = await import('@/lib/actions/offer-claim-actions')
-      const result = await claimOfferAction({
-        offerId,
-        offerTitle,
-        businessName,
-        businessId: business.id,
-        visitorWalletPassId: walletPassId
-      })
-      
-      // Show success message - wallet pass should be updated
-      console.log('✅ Offer claimed and wallet pass updated:', result)
-    } catch (error) {
-      console.error('Failed to claim offer:', error)
-      // UI already updated, so don't fail the user experience
+  const redeemOffer = async (
+    offerId: string,
+    offerTitle: string,
+    businessName: string,
+    confirmReplace = false
+  ) => {
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to redeem offers.')
+      return
     }
-    
-    // Create styled modal matching offers page
+
+    try {
+      const result = await activateOffer({
+        walletPassId,
+        offerId,
+        source: 'business',
+        confirmReplace,
+      })
+
+      if (!result.success && result.needsReplace) {
+        const ok = window.confirm(
+          `You already have an active offer at ${result.active.business_name || 'another venue'} with about ${result.active.minutes_left ?? '?'} minutes left. Activating this will end it. Continue?`
+        )
+        if (ok) {
+          await redeemOffer(offerId, offerTitle, businessName, true)
+        }
+        return
+      }
+
+      if (!result.success) {
+        alert(result.error || 'Failed to activate offer')
+        return
+      }
+
+      markOfferSavedLocally(walletPassId, offerId)
+      setClaimedOffers((prev) => new Set([...prev, offerId]))
+      alert(
+        result.walletSynced === false
+          ? `"${offerTitle}" is active — open your Wallet pass if it hasn’t updated yet.`
+          : `"${offerTitle}" is on your Wallet now. Show staff before it clears.`
+      )
+    } catch (error) {
+      console.error('Error activating offer:', error)
+      alert('Failed to redeem offer. Please try again.')
+    }
+  }
+
+  const saveBusinessOffer = async (offerId: string, offerTitle: string, businessName: string) => {
+    if (!walletPassId || walletPassId.length < 10) {
+      alert('Add your Qwikker pass first to save offers.')
+      return
+    }
+
+    const offer = (business.offers || []).find((o: { id: string }) => o.id === offerId)
+    const windowMins = offer?.activationWindowMinutes || offer?.activation_window_minutes || 60
+
+    setClaimedOffers((prev) => {
+      const next = new Set([...prev, offerId])
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`qwikker-claimed-${walletPassId}`, JSON.stringify([...next]))
+      }
+      return next
+    })
+    markOfferSavedLocally(walletPassId, offerId)
+
+    try {
+      const result = await saveOffer({
+        walletPassId,
+        offerId,
+        source: 'business',
+      })
+      if (!result.success) {
+        console.warn('Save offer:', result.error)
+      }
+    } catch (error) {
+      console.error('Failed to save offer:', error)
+    }
+
     const modalOverlay = document.createElement('div')
-    modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
-    
+    modalOverlay.className =
+      'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
+
     const modal = document.createElement('div')
-    modal.className = 'bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl'
+    modal.className =
+      'bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl'
     modal.innerHTML = `
       <div class="text-center">
         <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -282,47 +334,36 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Offer Claimed!</h3>
+        <h3 class="text-xl font-bold text-slate-100 mb-2">Saved</h3>
         <p class="text-slate-300 mb-1">"${offerTitle}"</p>
         <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-6">What would you like to do next?</p>
-        
+        <p class="text-slate-300 text-sm mb-6">Redeem when you're ready to show staff.</p>
         <div class="space-y-3">
-          <button id="view-claimed" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            View Claimed Offers
+          <button id="redeem-now" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
+            Redeem now
           </button>
-          
-          <button id="add-to-wallet" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add to Wallet
-          </button>
-          
           <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3 mb-2">
-            <p class="text-amber-200 text-sm font-semibold text-center mb-1">Important: 12-Hour Expiry</p>
-            <p class="text-amber-100 text-xs text-center">Once added to your wallet, this offer will automatically expire after 12 hours</p>
+            <p class="text-amber-200 text-sm font-semibold text-center mb-1">About ${windowMins} minutes on your Wallet</p>
+            <p class="text-amber-100 text-xs text-center">Only redeem when you're ready to show staff. After that it clears from your pass.</p>
           </div>
-          
+          <button id="view-saved" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
+            View saved
+          </button>
           <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
             Dismiss
           </button>
         </div>
       </div>
     `
-    
+
     modalOverlay.appendChild(modal)
     document.body.appendChild(modalOverlay)
-    
-    // Animate in
+
     setTimeout(() => {
       modalOverlay.style.opacity = '1'
       modal.style.transform = 'scale(1)'
     }, 50)
-    
+
     const closeModal = () => {
       modalOverlay.style.opacity = '0'
       modal.style.transform = 'scale(0.95)'
@@ -332,32 +373,18 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
         }
       }, 300)
     }
-    
-    modal.querySelector('#view-claimed')?.addEventListener('click', () => {
+
+    modal.querySelector('#view-saved')?.addEventListener('click', () => {
       closeModal()
-      window.location.href = getNavUrl('/user/offers') + (walletPassId ? '&' : '?') + 'filter=claimed'
+      window.location.href =
+        getNavUrl('/user/offers') + (walletPassId ? '&' : '?') + 'filter=claimed'
     })
-    
-    modal.querySelector('#add-to-wallet')?.addEventListener('click', async () => {
+
+    modal.querySelector('#redeem-now')?.addEventListener('click', async () => {
       closeModal()
-      try {
-        const response = await fetch('/api/walletpass/update-main-pass', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userWalletPassId: walletPassId,
-            currentOffer: offerTitle,
-            offerDetails: { businessName, offerId }
-          })
-        })
-        if (response.ok) {
-          console.log('✅ Offer added to wallet pass')
-        }
-      } catch (err) {
-        console.error('Failed to add to wallet:', err)
-      }
+      await redeemOffer(offerId, offerTitle, businessName)
     })
-    
+
     modal.querySelector('#modal-dismiss')?.addEventListener('click', closeModal)
     modalOverlay.addEventListener('click', (e) => {
       if (e.target === modalOverlay) closeModal()
@@ -921,7 +948,8 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                           isClaimed={isClaimed}
                           businessName={business.name}
                           walletPassId={walletPassId}
-                          onClaim={() => claimOffer(offer.id, offer.title, business.name)}
+                          onSave={() => saveBusinessOffer(offer.id, offer.title, business.name)}
+                          onRedeem={() => redeemOffer(offer.id, offer.title, business.name)}
                           chatHref={getNavUrl(`/user/chat?business=${business.name}&topic=offer&offer=${offer.title}`)}
                         />
                       )
@@ -1051,14 +1079,23 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
                         </div>
                       </div>
                       <div className="space-y-3 w-full sm:w-[160px] sm:flex-shrink-0">
-                        <button 
-                          onClick={() => claimOffer(offer.id, offer.title, business.name)}
-                          className="w-full h-11 px-4 py-2 bg-[#00d083] text-black font-semibold rounded-lg text-sm hover:opacity-80 cursor-pointer"
-                        >
-                          Claim Offer
-                        </button>
+                        {!claimedOffers.has(offer.id) ? (
+                          <button
+                            onClick={() => saveBusinessOffer(offer.id, offer.title, business.name)}
+                            className="w-full h-11 px-4 py-2 bg-[#00d083] text-black font-semibold rounded-lg text-sm hover:opacity-80 cursor-pointer"
+                          >
+                            Save
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => redeemOffer(offer.id, offer.title, business.name)}
+                            className="w-full h-11 px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg text-sm hover:opacity-80 cursor-pointer"
+                          >
+                            Redeem now
+                          </button>
+                        )}
                         <Link 
-                          href={`${getNavUrl('/user/offers')}${walletPassId ? '&' : '?'}highlight=${business.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                          href={`${getNavUrl('/user/offers')}${walletPassId ? '&' : '?'}highlight=${offer.id}`}
                           className="w-full h-11 px-4 py-2 border border-slate-600 text-slate-300 font-semibold rounded-lg text-sm flex items-center justify-center hover:opacity-80 cursor-pointer"
                         >
                           View Offer
@@ -1348,12 +1385,13 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
   )
 }
 
-function OfferCard({ offer, isClaimed, businessName, walletPassId, onClaim, chatHref }: {
+function OfferCard({ offer, isClaimed, onSave, onRedeem, chatHref }: {
   offer: any
   isClaimed: boolean
   businessName: string
   walletPassId?: string
-  onClaim: () => void
+  onSave: () => void
+  onRedeem: () => void
   chatHref: string
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -1406,34 +1444,25 @@ function OfferCard({ offer, isClaimed, businessName, walletPassId, onClaim, chat
           <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <span className="text-green-400 text-sm font-medium">Claimed</span>
+          <span className="text-green-400 text-sm font-medium">Saved</span>
         </div>
       )}
 
       <div className="flex gap-2">
         {!isClaimed ? (
           <Button
-            onClick={onClaim}
+            onClick={onSave}
             className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold text-sm"
           >
-            Claim Offer
+            Save
           </Button>
         ) : (
-          <AddToWalletButton
-            offer={{
-              id: offer.id,
-              title: offer.title,
-              description: offer.description,
-              business_name: businessName,
-              valid_until: offer.valid_until,
-              terms: offer.terms,
-              offer_value: offer.discount || offer.type
-            }}
-            userWalletPassId={walletPassId}
-            variant="default"
-            size="sm"
-            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm"
-          />
+          <Button
+            onClick={onRedeem}
+            className="flex-1 bg-slate-600 hover:bg-slate-500 text-white font-semibold text-sm"
+          >
+            Redeem now
+          </Button>
         )}
 
         <Button

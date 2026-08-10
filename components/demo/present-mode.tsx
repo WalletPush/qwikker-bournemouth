@@ -703,7 +703,7 @@ export function PresentMode({
                             className="w-full rounded-md py-2.5 text-center text-xs font-semibold text-black"
                             style={{ background: ACCENT }}
                           >
-                            Add to Wallet
+                            Save
                           </div>
                         </div>
                       </div>
