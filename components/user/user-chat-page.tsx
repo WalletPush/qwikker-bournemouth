@@ -480,6 +480,25 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isTyping) return
 
+    // "Can I save it?" with a bound card from chat → Save immediately
+    if (/\b(save (it|this|that)|can i save|how (do i|to) save)\b/i.test(message)) {
+      const action = lastOfferAction()
+      if (action) {
+        const userMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'user',
+          content: message,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, userMessage])
+        setInputValue('')
+        await handleSaveOffer(action)
+        return
+      }
+      // No card yet — continue as deal list so Save/Redeem UI appears
+      message = 'List a few deals'
+    }
+
     // Bound confirm: typed "yes" only redeems when pending redeem is valid
     if (isRedeemConfirmPhrase(message) && isPendingRedeemValid(pendingRedeem)) {
       const userMessage: ChatMessage = {
@@ -814,6 +833,12 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
   const handleQuickReply = (reply: string) => {
     const normalized = reply.trim().toLowerCase()
+
+    // Chip label is short; send an offer-hard-path phrase so we never continue Splash/detail chat
+    if (normalized === 'list a few' || normalized === 'show more deals') {
+      handleSendMessage('List a few deals')
+      return
+    }
 
     if (normalized === 'open offers page' || normalized === 'view all offers') {
       router.push(withWalletPass('/user/offers'))

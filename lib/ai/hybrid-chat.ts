@@ -1138,24 +1138,42 @@ export async function generateHybridAIResponse(
     // HARD queries (pure offers/events) → DB-only, no KB
     // MIXED queries (discovery + offers) → KB for discovery, DB for filtering
     
+    // Chip "List a few" / save follow-ups must force offers hard-path (not Splash follow-up)
+    const wantsOfferSample =
+      /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|list a few deals|save (it|this|that)|can i save|how (do i|to) save)\b/i.test(
+        userMessage
+      )
+
     // Detect if offers/events are mentioned
-    const isOfferQuery = /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
-                         /\b(show|list|all|any|get|find|see|tell me).*(deals?|offers?)\b/i.test(lowerMessage)
+    const isOfferQuery =
+      wantsOfferSample ||
+      /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
+      /\b(show|list|all|any|get|find|see|tell me).*(deals?|offers?)\b/i.test(lowerMessage)
     // Match "shows" (noun) but NOT "show" (verb) to avoid false positives like "show me restaurants"
     const isEventQuery = /\b(events?|shows|concerts?|gigs?|happening|what'?s on|things to do)\b/i.test(lowerMessage) && 
                          !/\b(show me|show all|showing)\b/i.test(lowerMessage)
     
-    // 🎯 CRITICAL FIX: Distinguish HARD queries (DB-only) from MIXED queries (KB + DB)
-    // HARD = pure offer/event query (e.g., "show me offers", "current deals")
-    // MIXED = discovery with constraints (e.g., "restaurants with offers", "family friendly with deals")
-    const isMixedQuery = /(with|that has|which has|anywhere|places|restaurants?|bars?|cafes?|family|kids?|cheap|good|best)/i.test(userMessage)
+    // 🎯 HARD vs MIXED
+    // HARD = pure offer/event ask (e.g. "any deals?", "any good deals?", "list a few")
+    // MIXED = discovery + offers (e.g. "restaurants with offers", "family places with deals")
+    // NOTE: cheap/good/best alone must NOT flip a deal ask into mixed.
+    const hasDiscoveryConstraint =
+      /\b(with|that has|which has|anywhere|places|restaurants?|bars?|cafes?|family|kids?)\b/i.test(
+        userMessage
+      )
+    const hasQualityModifier = /\b(cheap|good|best)\b/i.test(userMessage)
+    const isMixedQuery =
+      !wantsOfferSample &&
+      (hasDiscoveryConstraint ||
+        (hasQualityModifier && !isOfferQuery && !isEventQuery))
     
     const mentionsSecretMenu = /\b(secret\s*menus?)\b/i.test(lowerMessage)
-    const isHardOfferQuery = isOfferQuery && !isMixedQuery && !mentionsSecretMenu
+    const isHardOfferQuery =
+      wantsOfferSample || (isOfferQuery && !isMixedQuery && !mentionsSecretMenu)
     const isHardEventQuery = isEventQuery && !isMixedQuery
     
     const isKbDisabled = isHardOfferQuery || isHardEventQuery
-    const intent = isOfferQuery ? 'offers' : (isEventQuery ? 'events' : 'general')
+    const intent = isOfferQuery || wantsOfferSample ? 'offers' : (isEventQuery ? 'events' : 'general')
     
     console.log(`🔍 KB GATE CHECK: query="${userMessage}"`)
     console.log(`  isOfferQuery=${isOfferQuery}, isEventQuery=${isEventQuery}`)
@@ -1334,21 +1352,29 @@ export async function generateHybridAIResponse(
     }
     
     // 🚨 STEP 3: HARD STOP FOR HARD OFFER QUERIES (DB-AUTHORITATIVE MODE)
-    // Broad ask → conversational pitch (no card dump). "List a few" → max 3 cards.
+    // Always return ≤3 Save/Redeem cards (thumbnails + actions) — never AI prose links.
     // MIXED queries (e.g., "restaurants with offers") go through normal KB flow
     if (isHardOfferQuery) {
       try {
-        const wantsSampleList =
-          /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals)\b/i.test(
-            userMessage
-          )
+        console.log(`🎫 Offer hard-stop in ${city}`)
+        const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
 
-        console.log(`🎫 Offer hard-stop in ${city} (sampleList=${wantsSampleList})`)
+        // 🔒 Prefer chat-eligible view; fall back to business_offers if embed fails
+        let offers: Array<{
+          id: string
+          business_id: string
+          offer_name: string
+          offer_description: string | null
+          offer_type: string | null
+          offer_value: string
+          offer_terms: string | null
+          offer_start_date: string | null
+          offer_end_date: string | null
+          offer_image: string | null
+          business_profiles?: { business_name?: string; city?: string } | null
+        }> | null = null
 
-        // 🔒 THE ONLY SOURCE: business_offers_chat_eligible view
-        // Do NOT select slug here — view→profiles embeds can fail the whole query
-        // and falsely return "no offers". Slug is derived from business_name client-side.
-        const { data: offers, error } = await supabase
+        const primary = await supabase
           .from('business_offers_chat_eligible')
           .select(`
             id,
@@ -1368,14 +1394,43 @@ export async function generateHybridAIResponse(
           `)
           .eq('business_profiles.city', city)
           .order('offer_end_date', { ascending: false })
-          .limit(wantsSampleList ? 3 : 10)
+          .limit(3)
 
-        if (error) {
-          // Never treat a query failure as "zero offers" — fall through to normal chat
-          console.error('❌ Error fetching offers — falling through (do not fake empty):', error)
-        } else if (!offers || offers.length === 0) {
+        if (primary.error) {
+          console.error('❌ chat_eligible offers query failed, trying business_offers fallback:', primary.error)
+          const fallback = await supabase
+            .from('business_offers')
+            .select(`
+              id,
+              business_id,
+              offer_name,
+              offer_description,
+              offer_type,
+              offer_value,
+              offer_terms,
+              offer_start_date,
+              offer_end_date,
+              offer_image,
+              business_profiles!inner(
+                business_name,
+                city
+              )
+            `)
+            .eq('status', 'approved')
+            .eq('business_profiles.city', city)
+            .order('offer_end_date', { ascending: false })
+            .limit(3)
+          if (fallback.error) {
+            console.error('❌ business_offers fallback also failed:', fallback.error)
+          } else {
+            offers = fallback.data as typeof offers
+          }
+        } else {
+          offers = primary.data as typeof offers
+        }
+
+        if (!offers || offers.length === 0) {
           console.log(`🚫 ZERO OFFERS in DB → authoritative "no offers" response`)
-          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
           return {
             success: true,
             response: `There are no active offers in ${cityLabel} right now. Check back soon, or explore businesses on Discover!`,
@@ -1389,82 +1444,60 @@ export async function generateHybridAIResponse(
             modelUsed: 'gpt-4o-mini',
             classification
           }
-        } else if (!wantsSampleList) {
-          // Broad ask: pitch only — zero redeemable pending state, no full dump
-          const countHint = offers.length >= 10 ? 'plenty of' : `${offers.length}`
-          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
+        }
+
+        const sampleOffers = offers.slice(0, 3)
+        const windowById = new Map<string, number>()
+        const { data: windowRows } = await supabase
+          .from('business_offers')
+          .select('id, activation_window_minutes')
+          .in(
+            'id',
+            sampleOffers.map((o) => o.id)
+          )
+        for (const row of windowRows || []) {
+          const mins = Number(row.activation_window_minutes)
+          if (mins === 30 || mins === 60 || mins === 120) {
+            windowById.set(row.id, mins)
+          }
+        }
+
+        const walletActions = sampleOffers.map((offer) => {
+          const profile = offer.business_profiles
           return {
-            success: true,
-            response:
-              `There are ${countHint} live deals in ${cityLabel} right now. ` +
-              `Want me to list a few you can Save, or open the full Offers page?`,
-            sources: [],
-            businessCarousel: [],
-            walletActions: [],
-            quickReplies: ['List a few', 'Open Offers page'],
-            eventCards: [],
-            uiMode: 'conversational',
-            hasBusinessResults: false,
-            modelUsed: 'gpt-4o-mini',
-            classification
+            type: 'save_offer' as const,
+            offerId: offer.id,
+            offerName: offer.offer_name,
+            offerDescription: offer.offer_description || null,
+            offerType: offer.offer_type || null,
+            offerValue: offer.offer_value,
+            offerTerms: offer.offer_terms || null,
+            offerStartDate: offer.offer_start_date || null,
+            offerEndDate: offer.offer_end_date || null,
+            offerImage: offer.offer_image || null,
+            businessName: profile?.business_name || 'Unknown',
+            businessId: offer.business_id,
+            businessSlug: null,
+            activationWindowMinutes: windowById.get(offer.id) ?? 60,
           }
-        } else {
-          // Sample list: up to 3 compact cards with thumbnails + Save
-          // Real wallet window from business_offers (30 / 60 / 120)
-          const sampleOffers = offers.slice(0, 3)
-          const windowById = new Map<string, number>()
-          const { data: windowRows } = await supabase
-            .from('business_offers')
-            .select('id, activation_window_minutes')
-            .in(
-              'id',
-              sampleOffers.map((o) => o.id)
-            )
-          for (const row of windowRows || []) {
-            const mins = Number(row.activation_window_minutes)
-            if (mins === 30 || mins === 60 || mins === 120) {
-              windowById.set(row.id, mins)
-            }
-          }
+        })
 
-          const walletActions = sampleOffers.map((offer) => {
-            const profile = offer.business_profiles as {
-              business_name?: string
-            } | null
-            return {
-              type: 'save_offer' as const,
-              offerId: offer.id,
-              offerName: offer.offer_name,
-              offerDescription: offer.offer_description || null,
-              offerType: offer.offer_type || null,
-              offerValue: offer.offer_value,
-              offerTerms: offer.offer_terms || null,
-              offerStartDate: offer.offer_start_date || null,
-              offerEndDate: offer.offer_end_date || null,
-              offerImage: offer.offer_image || null,
-              businessName: profile?.business_name || 'Unknown',
-              businessId: offer.business_id,
-              businessSlug: null,
-              activationWindowMinutes: windowById.get(offer.id) ?? 60,
-            }
-          })
+        console.log(`✅ Hard-stop cards: ${walletActions.length} offers with Save/Redeem`)
 
-          console.log(`✅ Sample list: ${walletActions.length} offers (capped)`)
-          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
-
-          return {
-            success: true,
-            response: `Here are a few deals in ${cityLabel} — Save one, then Redeem when you’re at the venue:`,
-            sources: [],
-            businessCarousel: [],
-            walletActions,
-            quickReplies: ['Open Offers page', 'Show more deals'],
-            eventCards: [],
-            uiMode: 'conversational',
-            hasBusinessResults: false,
-            modelUsed: 'gpt-4o-mini',
-            classification
-          }
+        return {
+          success: true,
+          response:
+            `Here are a few live deals in ${cityLabel} — Save one, then Redeem when you’re at the venue. ` +
+            `Or open the full Offers page for everything.`,
+          sources: [],
+          businessCarousel: [],
+          walletActions,
+          quickReplies: ['Open Offers page'],
+          eventCards: [],
+          uiMode: 'conversational',
+          hasBusinessResults: false,
+          modelUsed: 'gpt-4o-mini',
+          classification
         }
       } catch (error) {
         console.error('❌ Error in offer hard stop:', error)
