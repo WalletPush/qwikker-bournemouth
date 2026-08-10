@@ -1346,6 +1346,8 @@ export async function generateHybridAIResponse(
         console.log(`🎫 Offer hard-stop in ${city} (sampleList=${wantsSampleList})`)
 
         // 🔒 THE ONLY SOURCE: business_offers_chat_eligible view
+        // Do NOT select slug here — view→profiles embeds can fail the whole query
+        // and falsely return "no offers". Slug is derived from business_name client-side.
         const { data: offers, error } = await supabase
           .from('business_offers_chat_eligible')
           .select(`
@@ -1361,8 +1363,7 @@ export async function generateHybridAIResponse(
             offer_image,
             business_profiles!inner(
               business_name,
-              city,
-              slug
+              city
             )
           `)
           .eq('business_profiles.city', city)
@@ -1370,14 +1371,14 @@ export async function generateHybridAIResponse(
           .limit(wantsSampleList ? 3 : 10)
 
         if (error) {
-          console.error('❌ Error fetching offers:', error)
-        }
-
-        if (!offers || offers.length === 0) {
+          // Never treat a query failure as "zero offers" — fall through to normal chat
+          console.error('❌ Error fetching offers — falling through (do not fake empty):', error)
+        } else if (!offers || offers.length === 0) {
           console.log(`🚫 ZERO OFFERS in DB → authoritative "no offers" response`)
+          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
           return {
             success: true,
-            response: `There are no active offers in ${city} right now. Check back soon, or explore businesses on Discover!`,
+            response: `There are no active offers in ${cityLabel} right now. Check back soon, or explore businesses on Discover!`,
             sources: [],
             businessCarousel: [],
             walletActions: [],
@@ -1388,15 +1389,14 @@ export async function generateHybridAIResponse(
             modelUsed: 'gpt-4o-mini',
             classification
           }
-        }
-
-        // Broad ask: pitch only — zero redeemable pending state, no full dump
-        if (!wantsSampleList) {
+        } else if (!wantsSampleList) {
+          // Broad ask: pitch only — zero redeemable pending state, no full dump
           const countHint = offers.length >= 10 ? 'plenty of' : `${offers.length}`
+          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
           return {
             success: true,
             response:
-              `There are ${countHint} live deals in ${city} right now. ` +
+              `There are ${countHint} live deals in ${cityLabel} right now. ` +
               `Want me to list a few you can Save, or open the full Offers page?`,
             sources: [],
             businessCarousel: [],
@@ -1408,63 +1408,63 @@ export async function generateHybridAIResponse(
             modelUsed: 'gpt-4o-mini',
             classification
           }
-        }
-
-        // Sample list: up to 3 compact cards with thumbnails + Save
-        // Real wallet window from business_offers (30 / 60 / 120)
-        const sampleOffers = offers.slice(0, 3)
-        const windowById = new Map<string, number>()
-        const { data: windowRows } = await supabase
-          .from('business_offers')
-          .select('id, activation_window_minutes')
-          .in(
-            'id',
-            sampleOffers.map((o) => o.id)
-          )
-        for (const row of windowRows || []) {
-          const mins = Number(row.activation_window_minutes)
-          if (mins === 30 || mins === 60 || mins === 120) {
-            windowById.set(row.id, mins)
+        } else {
+          // Sample list: up to 3 compact cards with thumbnails + Save
+          // Real wallet window from business_offers (30 / 60 / 120)
+          const sampleOffers = offers.slice(0, 3)
+          const windowById = new Map<string, number>()
+          const { data: windowRows } = await supabase
+            .from('business_offers')
+            .select('id, activation_window_minutes')
+            .in(
+              'id',
+              sampleOffers.map((o) => o.id)
+            )
+          for (const row of windowRows || []) {
+            const mins = Number(row.activation_window_minutes)
+            if (mins === 30 || mins === 60 || mins === 120) {
+              windowById.set(row.id, mins)
+            }
           }
-        }
 
-        const walletActions = sampleOffers.map((offer) => {
-          const profile = offer.business_profiles as {
-            business_name?: string
-            slug?: string
-          } | null
+          const walletActions = sampleOffers.map((offer) => {
+            const profile = offer.business_profiles as {
+              business_name?: string
+            } | null
+            return {
+              type: 'save_offer' as const,
+              offerId: offer.id,
+              offerName: offer.offer_name,
+              offerDescription: offer.offer_description || null,
+              offerType: offer.offer_type || null,
+              offerValue: offer.offer_value,
+              offerTerms: offer.offer_terms || null,
+              offerStartDate: offer.offer_start_date || null,
+              offerEndDate: offer.offer_end_date || null,
+              offerImage: offer.offer_image || null,
+              businessName: profile?.business_name || 'Unknown',
+              businessId: offer.business_id,
+              businessSlug: null,
+              activationWindowMinutes: windowById.get(offer.id) ?? 60,
+            }
+          })
+
+          console.log(`✅ Sample list: ${walletActions.length} offers (capped)`)
+          const cityLabel = city.charAt(0).toUpperCase() + city.slice(1)
+
           return {
-            type: 'save_offer' as const,
-            offerId: offer.id,
-            offerName: offer.offer_name,
-            offerDescription: offer.offer_description || null,
-            offerType: offer.offer_type || null,
-            offerValue: offer.offer_value,
-            offerTerms: offer.offer_terms || null,
-            offerStartDate: offer.offer_start_date || null,
-            offerEndDate: offer.offer_end_date || null,
-            offerImage: offer.offer_image || null,
-            businessName: profile?.business_name || 'Unknown',
-            businessId: offer.business_id,
-            businessSlug: profile?.slug || null,
-            activationWindowMinutes: windowById.get(offer.id) ?? 60,
+            success: true,
+            response: `Here are a few deals in ${cityLabel} — Save one, then Redeem when you’re at the venue:`,
+            sources: [],
+            businessCarousel: [],
+            walletActions,
+            quickReplies: ['Open Offers page', 'Show more deals'],
+            eventCards: [],
+            uiMode: 'conversational',
+            hasBusinessResults: false,
+            modelUsed: 'gpt-4o-mini',
+            classification
           }
-        })
-
-        console.log(`✅ Sample list: ${walletActions.length} offers (capped)`)
-
-        return {
-          success: true,
-          response: `Here are a few deals in ${city} — Save one, then Redeem when you’re at the venue:`,
-          sources: [],
-          businessCarousel: [],
-          walletActions,
-          quickReplies: ['Open Offers page', 'Show more deals'],
-          eventCards: [],
-          uiMode: 'conversational',
-          hasBusinessResults: false,
-          modelUsed: 'gpt-4o-mini',
-          classification
         }
       } catch (error) {
         console.error('❌ Error in offer hard stop:', error)
