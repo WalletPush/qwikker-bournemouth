@@ -682,13 +682,20 @@ export async function updateBusinessTier(params: {
       return { success: false, error: 'Business profile not found' }
     }
     
-    // Enforce: paid tiers ONLY for approved businesses
-    const paidTiers = ['trial', 'featured', 'spotlight']
-    if (paidTiers.includes(selectedTier) && businessProfile.status !== 'approved') {
-      console.error(`❌ GUARD: Cannot assign ${selectedTier} tier to unapproved business (status: ${businessProfile.status})`)
-      return { 
-        success: false, 
-        error: `Cannot assign paid tier to unapproved business. Current status: ${businessProfile.status}` 
+    // Paid / trial tiers require a live profile. Upgrade FROM claimed_free is allowed
+    // (admin assigning Starter must flip status → approved or chat_eligible stays empty).
+    const paidOrTrialTiers = ['trial', 'starter', 'featured', 'spotlight']
+    const upgradableStatuses = ['approved', 'claimed_free', 'claimed']
+    if (
+      paidOrTrialTiers.includes(selectedTier) &&
+      !upgradableStatuses.includes(businessProfile.status)
+    ) {
+      console.error(
+        `❌ GUARD: Cannot assign ${selectedTier} tier to status=${businessProfile.status}`
+      )
+      return {
+        success: false,
+        error: `Cannot assign ${selectedTier} while listing status is ${businessProfile.status}. Claim/approve the business first.`,
       }
     }
 
@@ -775,14 +782,30 @@ export async function updateBusinessTier(params: {
       planForDB = franchiseConfig?.default_trial_tier || 'featured'
     }
 
+    // CRITICAL: chat_eligible requires status='approved'. Leaving claimed_free after
+    // assigning Starter/Featured/Spotlight made businesses invisible to AI
+    // (Zanzibar CHE Rock Bar / Jerry incident Aug 10 2026).
+    // Paid/trial also get visibility=ai_enabled (free stays discover_only).
+    const profileUpdate: Record<string, unknown> = {
+      plan: planForDB,
+      business_tier: tierForDB,
+      features: features,
+      visibility: 'ai_enabled',
+      updated_at: now.toISOString(),
+    }
+    if (
+      paidOrTrialTiers.includes(selectedTier) &&
+      businessProfile.status !== 'approved'
+    ) {
+      profileUpdate.status = 'approved'
+      console.log(
+        `✅ Flipping status ${businessProfile.status} → approved for ${selectedTier} tier`
+      )
+    }
+
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
-      .update({
-        plan: planForDB,
-        business_tier: tierForDB,
-        features: features,
-        updated_at: now.toISOString()
-      })
+      .update(profileUpdate)
       .eq('id', businessId)
 
     if (profileError) {
@@ -888,12 +911,15 @@ export async function downgradeToFreeListing(params: { businessId: string }) {
 
     const now = new Date()
 
-    // 1. Update business_profiles to free listing state
+    // 1. Free listing: leave T1 (approved/paid), enter T2 when lite-eligible.
+    // visibility=discover_only — Discover yes, paid AI ranking no.
     const { error: profileError } = await supabaseAdmin
       .from('business_profiles')
       .update({
+        status: 'claimed_free',
         plan: 'free',
         business_tier: 'free_tier',
+        visibility: 'discover_only',
         features: {
           social_wizard: false,
           loyalty_cards: false,

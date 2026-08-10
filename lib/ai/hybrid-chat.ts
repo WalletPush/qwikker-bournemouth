@@ -440,11 +440,20 @@ function findBusinessBySpokenName(queryName: string, businesses: any[]): any | n
     ) {
       score = 85
     } else if (targetTokens.length >= 2) {
-      const matched = targetTokens.filter((t) =>
-        bizTokens.some((bt) => bt === t || (t.length >= 4 && bt.startsWith(t)))
+      const exactMatched = targetTokens.filter((t) => bizTokens.some((bt) => bt === t))
+      const fuzzyMatched = targetTokens.filter(
+        (t) =>
+          !exactMatched.includes(t) &&
+          bizTokens.some((bt) => bt === t || (t.length >= 4 && bt.startsWith(t)))
       )
-      if (matched.length === targetTokens.length && matched.length >= 2) score = 80
-      else if (matched.length >= 2) score = 55 + matched.length * 5
+      // Exact token alignment wins (CHE Rock Bar vs Cheetah's Rock for "che rock bar")
+      if (exactMatched.length === targetTokens.length) score = 95
+      else if (exactMatched.length >= 2 && exactMatched.length + fuzzyMatched.length === targetTokens.length)
+        score = 85
+      else if (exactMatched.length + fuzzyMatched.length === targetTokens.length && exactMatched.length >= 1)
+        score = 75
+      else if (exactMatched.length >= 2) score = 60 + exactMatched.length * 5
+      else if (fuzzyMatched.length >= 2) score = 55
     } else if (targetTokens.length === 1 && targetTokens[0].length >= 6) {
       const tok = targetTokens[0]
       // Single distinctive token: only exact token hit on a unique business (scored later)

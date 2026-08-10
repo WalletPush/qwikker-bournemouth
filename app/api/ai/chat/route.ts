@@ -3,7 +3,6 @@ import { generateHybridAIResponse } from '@/lib/ai/hybrid-chat'
 import { generateQuickReplies, categorizeUserMessage } from '@/lib/ai/chat'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
-import { createTenantAwareServerClient } from '@/lib/utils/tenant-security'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
@@ -706,18 +705,38 @@ export async function POST(request: NextRequest) {
               .trim()
             const bizTokens = norm.split(' ').filter((t) => t.length >= 2)
             const tokensForScore = distinctiveTokens.length > 0 ? distinctiveTokens : nameTokens
-            const matched = tokensForScore.filter((t) =>
-              bizTokens.some((bt) => bt === t || (t.length >= 4 && (bt.includes(t) || t.includes(bt))))
+            // Prefer exact token hits: "che" in "CHE Rock Bar" beats prefix into "Cheetah"
+            const exactMatched = tokensForScore.filter((t) => bizTokens.some((bt) => bt === t))
+            const fuzzyMatched = tokensForScore.filter(
+              (t) =>
+                !exactMatched.includes(t) &&
+                bizTokens.some(
+                  (bt) =>
+                    (t.length >= 4 && (bt.includes(t) || t.includes(bt))) ||
+                    (bt.startsWith(t) && bt.length >= t.length + 3)
+                )
             )
-            if (matched.length >= 2) return 50 + matched.length * 10
-            if (matched.length === 1 && matched[0].length >= 6) return 45
+            if (exactMatched.length === tokensForScore.length && tokensForScore.length >= 2) {
+              return 90 + exactMatched.length * 5
+            }
+            if (exactMatched.length >= 2) return 70 + exactMatched.length * 5
+            if (exactMatched.length === 1 && exactMatched[0].length >= 6) return 55
+            if (exactMatched.length === 1 && tokensForScore.length === 1) return 48
+            if (exactMatched.length + fuzzyMatched.length >= 2) return 40 + exactMatched.length * 8
             return 0
           }
 
+          const mergeMatches = (rows: { id: string; business_name: string }[]) => {
+            for (const row of rows) {
+              if (!dbById.has(row.id)) dbById.set(row.id, row)
+            }
+          }
+
+          const dbById = new Map<string, { id: string; business_name: string }>()
           let dbMatches: { id: string; business_name: string }[] = []
 
           if (distinctiveTokens.length >= 2 || nameTokens.length >= 2) {
-            // AND-match distinctive tokens across all tiers (handles "Bar & Restaurant" vs "bar restaurant")
+            // AND-match across ALL tiers (merge — do not stop at first view)
             const andTokens =
               distinctiveTokens.length >= 2 ? distinctiveTokens.slice(0, 4) : nameTokens.slice(0, 4)
             for (const view of lookupViews) {
@@ -725,23 +744,42 @@ export async function POST(request: NextRequest) {
               for (const token of andTokens) {
                 q = q.ilike('business_name', `%${token}%`)
               }
-              const { data, error } = await q.limit(8)
+              const { data, error } = await q.limit(12)
               if (error) {
                 console.log(`🔍 [DB LOOKUP] ${view} error: ${error.message}`)
                 continue
               }
               if (data?.length) {
-                dbMatches = data
+                mergeMatches(data)
                 console.log(
                   `🔍 [DB LOOKUP] ${view} AND-match (${andTokens.join('+')}): ${data.map((b) => b.business_name).join(', ')}`
                 )
-                break
+              }
+            }
+
+            // Named-ask safety net: claimed/approved profiles can be missing from chat
+            // views (e.g. empty menu_preview). Search live profiles directly.
+            if (dbById.size === 0) {
+              let q = supabase
+                .from('business_profiles')
+                .select('id, business_name')
+                .eq('city', city)
+                .in('status', ['claimed_free', 'approved', 'active'])
+              for (const token of andTokens) {
+                q = q.ilike('business_name', `%${token}%`)
+              }
+              const { data, error } = await q.limit(12)
+              if (!error && data?.length) {
+                mergeMatches(data)
+                console.log(
+                  `🔍 [DB LOOKUP] business_profiles AND-match fallback: ${data.map((b) => b.business_name).join(', ')}`
+                )
               }
             }
           }
 
           // Phrase / single-token fallbacks if AND-match missed
-          if (dbMatches.length === 0 && distinctiveTokens.length > 0) {
+          if (dbById.size === 0 && distinctiveTokens.length > 0) {
             const searchTerm = distinctiveTokens.join(' ')
             console.log(`🔍 [DB LOOKUP] Searching for: "${searchTerm}"`)
             for (const view of lookupViews) {
@@ -750,25 +788,53 @@ export async function POST(request: NextRequest) {
                 .select('id, business_name')
                 .eq('city', city)
                 .ilike('business_name', `%${searchTerm}%`)
-                .limit(5)
-              if (!error && data?.length) {
-                dbMatches = data
-                break
-              }
+                .limit(12)
+              if (!error && data?.length) mergeMatches(data)
+            }
+            if (dbById.size === 0) {
+              const { data } = await supabase
+                .from('business_profiles')
+                .select('id, business_name')
+                .eq('city', city)
+                .in('status', ['claimed_free', 'approved', 'active'])
+                .ilike('business_name', `%${searchTerm}%`)
+                .limit(12)
+              if (data?.length) mergeMatches(data)
             }
           }
 
-          // Score multi-candidates — prefer CHE Rock over The Rock Restaurant for "che rock …"
+          dbMatches = Array.from(dbById.values())
+
+          // Prefer a business already in this turn's candidate list / history
+          if (dbMatches.length > 1 && recentCandidates.length > 0) {
+            const candidateSlugs = new Set(recentCandidates.map((c) => c.slug))
+            const inConversation = dbMatches.filter((b) =>
+              candidateSlugs.has(generateSlugFromName(b.business_name))
+            )
+            if (inConversation.length === 1) {
+              console.log(
+                `🔍 [DB LOOKUP] Preferring conversation candidate: ${inConversation[0].business_name}`
+              )
+              dbMatches = inConversation
+            }
+          }
+
+          // Score multi-candidates — prefer CHE Rock Bar over Cheetah's Rock for "che rock …"
           if (dbMatches.length > 1) {
             const ranked = dbMatches
               .map((b) => ({ b, score: scoreCandidate(b.business_name) }))
-              .filter((x) => x.score >= 50)
+              .filter((x) => x.score >= 40)
               .sort((a, b) => b.score - a.score)
-            if (ranked.length > 0) {
+            if (ranked.length === 1 || (ranked.length > 1 && ranked[0].score >= ranked[1].score + 5)) {
               dbMatches = [ranked[0].b]
               console.log(
                 `🔍 [DB LOOKUP] Scored best match: "${ranked[0].b.business_name}" (score ${ranked[0].score})`
               )
+            } else if (ranked.length > 0) {
+              console.log(
+                `⚠️ [DB LOOKUP] Ambiguous (close scores): ${ranked.map((r) => `${r.b.business_name}:${r.score}`).join(', ')}`
+              )
+              dbMatches = []
             } else {
               console.log(`⚠️ [DB LOOKUP] Ambiguous: ${dbMatches.map((b) => b.business_name).join(', ')}`)
               dbMatches = []
@@ -826,7 +892,10 @@ export async function POST(request: NextRequest) {
       console.log(`📋 [DETAIL MODE] Fetching full business details`)
       
       try {
-        const supabase = await createTenantAwareServerClient(city)
+        // Service role — same as DB name lookup. Anon/tenant client + RLS cannot
+        // read T3 unclaimed rows in business_profiles_ai_fallback_pool, which caused
+        // "Found Cheetah's Rock" then "No business found for ID=…" drops.
+        const supabase = createServiceRoleClient()
         
         // Fetch business with specific fields (matching actual DB columns)
         const selectFields = `
@@ -863,6 +932,7 @@ export async function POST(request: NextRequest) {
               .from(view)
               .select(selectFields)
               .eq('id', currentBusinessId)
+              .eq('city', city)
               .maybeSingle()
 
             if (data) {
@@ -875,8 +945,8 @@ export async function POST(request: NextRequest) {
 
         // 2️⃣ Fallback: resolve from inferredSlug -> business_name ilike, scoped to city
         if (!biz && currentBusinessSlug) {
-          const words = currentBusinessSlug.split('-').filter(Boolean)
-          const pattern = `%${words.join('%')}%` // e.g. "%triangle%gyross%"
+          const words = currentBusinessSlug.split('-').filter((w) => w.length > 1)
+          const pattern = `%${words.join('%')}%` // e.g. "%cheetah%rock%" (drop lone "s" from Cheetah's)
 
           for (const view of detailViews) {
             const { data } = await supabase
