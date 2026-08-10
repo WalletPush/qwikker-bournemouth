@@ -1368,9 +1368,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Persist messages (awaited to prevent Next.js context teardown, ~50ms)
+    // Include walletActions so offer cards survive navigate-away → history restore
     await persistChatMessages(sessionId, validatedWalletPassId, message, finalResponse, {
       quickReplies,
       intent,
+      walletActions: result.walletActions || [],
     }, city)
 
     return NextResponse.json({

@@ -62,12 +62,16 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     sessionId,
-    messages: (messages || []).map(m => ({
-      id: m.id,
-      type: m.role as 'user' | 'ai',
-      content: m.content,
-      timestamp: m.created_at,
-      quickReplies: (m.metadata as Record<string, unknown>)?.quickReplies || [],
-    })),
+    messages: (messages || []).map(m => {
+      const meta = (m.metadata || {}) as Record<string, unknown>
+      return {
+        id: m.id,
+        type: m.role as 'user' | 'ai',
+        content: m.content,
+        timestamp: m.created_at,
+        quickReplies: meta.quickReplies || [],
+        walletActions: meta.walletActions || [],
+      }
+    }),
   })
 }

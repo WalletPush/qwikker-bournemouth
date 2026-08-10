@@ -35,6 +35,37 @@ function slugifyBusinessName(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
+const CHAT_OFFER_CARDS_KEY = 'qwikker-chat-offer-cards'
+
+function cacheOfferCards(sessionId: string, messageId: string, actions: ChatWalletAction[]) {
+  if (typeof window === 'undefined' || !actions?.length) return
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(CHAT_OFFER_CARDS_KEY) || '{}') as {
+      sessionId?: string
+      byId?: Record<string, ChatWalletAction[]>
+    }
+    const byId = raw.sessionId === sessionId ? raw.byId || {} : {}
+    byId[messageId] = actions
+    sessionStorage.setItem(CHAT_OFFER_CARDS_KEY, JSON.stringify({ sessionId, byId }))
+  } catch {
+    /* ignore */
+  }
+}
+
+function readCachedOfferCards(sessionId: string): Record<string, ChatWalletAction[]> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(CHAT_OFFER_CARDS_KEY) || '{}') as {
+      sessionId?: string
+      byId?: Record<string, ChatWalletAction[]>
+    }
+    if (raw.sessionId !== sessionId) return {}
+    return raw.byId || {}
+  } catch {
+    return {}
+  }
+}
+
 interface ChatWalletAction {
   type: 'save_offer'
   offerId: string
@@ -141,7 +172,41 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   const openingLockRef = useRef(false)
   const [pendingRedeem, setPendingRedeem] = useState<PendingRedeemAction | null>(null)
   const [savedOfferIds, setSavedOfferIds] = useState<Set<string>>(new Set())
+  /** offerId → activeUntil ISO — currently on Wallet */
+  const [activeOfferUntil, setActiveOfferUntil] = useState<Record<string, string>>({})
   const [busyOfferId, setBusyOfferId] = useState<string | null>(null)
+
+  const isOfferOnWallet = (offerId: string) => {
+    const until = activeOfferUntil[offerId]
+    if (!until) return false
+    return new Date(until).getTime() > Date.now()
+  }
+
+  // Hydrate Save / Active state from the same localStorage keys as Offers page
+  useEffect(() => {
+    const walletPassId = currentUser?.wallet_pass_id
+    if (!walletPassId || typeof window === 'undefined') return
+    try {
+      const claimed = JSON.parse(
+        localStorage.getItem(`qwikker-claimed-${walletPassId}`) || '[]'
+      ) as string[]
+      setSavedOfferIds(new Set(claimed))
+
+      const activeRaw = JSON.parse(
+        localStorage.getItem(`qwikker-active-${walletPassId}`) || '{}'
+      ) as Record<string, { activeUntil?: string }>
+      const next: Record<string, string> = {}
+      const now = Date.now()
+      for (const [id, entry] of Object.entries(activeRaw)) {
+        if (entry?.activeUntil && new Date(entry.activeUntil).getTime() > now) {
+          next[id] = entry.activeUntil
+        }
+      }
+      setActiveOfferUntil(next)
+    } catch {
+      /* ignore */
+    }
+  }, [currentUser?.wallet_pass_id])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatWrapperRef = useRef<HTMLDivElement>(null)
@@ -322,12 +387,25 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
 
         if (data.messages && data.messages.length > 0) {
           console.log('Restoring chat session with', data.messages.length, 'messages')
-          setMessages(data.messages)
-          initialMessageCountRef.current = data.messages.length
+          const cached = readCachedOfferCards(data.sessionId || sessionId)
+          const restored = data.messages.map(
+            (m: ChatMessage & { walletActions?: ChatWalletAction[] }) => ({
+              ...m,
+              walletActions:
+                (m.walletActions && m.walletActions.length > 0
+                  ? m.walletActions
+                  : cached[m.id]) || undefined,
+            })
+          )
+          setMessages(restored)
+          initialMessageCountRef.current = restored.length
+          // History messages skip streaming — mark complete so offer cards/chips show
+          setStreamingComplete(new Set(restored.map((m: ChatMessage) => m.id)))
         } else {
           const welcome = buildWelcomeMessage()
           setMessages([welcome])
           initialMessageCountRef.current = 1
+          setStreamingComplete(new Set([welcome.id]))
         }
       } catch (err) {
         console.error('[chat-history] Failed to load — starting fresh:', err)
@@ -415,6 +493,20 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       setPendingRedeem(null)
       markOfferSavedLocally(walletPassId, pending.offerId)
       setSavedOfferIds((prev) => new Set([...prev, pending.offerId]))
+      const activeUntil = result.activeUntil
+      setActiveOfferUntil((prev) => {
+        const next = { ...prev, [pending.offerId]: activeUntil }
+        try {
+          const existing = JSON.parse(
+            localStorage.getItem(`qwikker-active-${walletPassId}`) || '{}'
+          ) as Record<string, { activeUntil: string }>
+          existing[pending.offerId] = { activeUntil }
+          localStorage.setItem(`qwikker-active-${walletPassId}`, JSON.stringify(existing))
+        } catch {
+          /* ignore */
+        }
+        return next
+      })
       appendAiMessage(redeemSuccessCopy(pending.offerName), {
         quickReplies: ['Open Offers page'],
       })
@@ -582,6 +674,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           quickReplies: data.quickReplies || ['Open Offers page'],
           walletActions: data.walletActions,
         }
+        if (aiMessage.walletActions?.length) {
+          cacheOfferCards(sessionId, aiMessage.id, aiMessage.walletActions)
+        }
         setMessages((prev) => [...prev, aiMessage])
       } catch (error) {
         console.error('❌ Save-intent deal fetch error:', error)
@@ -745,6 +840,10 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         hasEventCards: !!aiMessage.eventCards,
         eventCardsCount: aiMessage.eventCards?.length || 0
       })
+
+      if (aiMessage.walletActions?.length) {
+        cacheOfferCards(sessionId, aiMessage.id, aiMessage.walletActions)
+      }
 
       setMessages(prev => [...prev, aiMessage])
 
@@ -1417,11 +1516,14 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
 
-                {/* Offer cards — Save → Redeem (compact, with thumbnail when present) */}
-                {message.walletActions && message.walletActions.length > 0 && (
-                  <div className="mt-3 space-y-2">
+                {/* Offer cards — after text finishes streaming (same gate as event cards) */}
+                {message.walletActions &&
+                  message.walletActions.length > 0 &&
+                  streamingComplete.has(message.id) && (
+                  <div className="mt-3 space-y-2 animate-in fade-in duration-200">
                     {message.walletActions.slice(0, 3).map((action) => {
-                      const isSaved = savedOfferIds.has(action.offerId)
+                      const isActive = isOfferOnWallet(action.offerId)
+                      const isSaved = savedOfferIds.has(action.offerId) || isActive
                       const isBusy = busyOfferId === action.offerId
                       const slug = action.businessSlug || slugifyBusinessName(action.businessName)
                       return (
@@ -1447,10 +1549,21 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               {action.offerValue && (
                                 <p className="text-xs text-emerald-400 mt-0.5">{action.offerValue}</p>
                               )}
+                              {isActive && (
+                                <p className="text-xs text-amber-300 mt-0.5">On your Wallet now</p>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2 px-3 pb-3">
-                            {!isSaved ? (
+                            {isActive ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="flex-1 min-w-[5.5rem] bg-emerald-900/50 text-emerald-300 text-xs font-semibold py-2 px-3 rounded-lg cursor-default"
+                              >
+                                On Wallet
+                              </button>
+                            ) : !isSaved ? (
                               <button
                                 type="button"
                                 disabled={isBusy}
@@ -1505,8 +1618,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                   </div>
                 )}
 
-                {/* Simplified Quick Replies - Only show for AI messages and limit to 3 */}
-                {message.type === 'ai' && message.quickReplies && message.quickReplies.length > 0 && (
+                {/* Quick replies after stream finishes (keeps cards/chips from popping mid-stream) */}
+                {message.type === 'ai' &&
+                  message.quickReplies &&
+                  message.quickReplies.length > 0 &&
+                  streamingComplete.has(message.id) && (
                   <div className="mt-3">
                     <div className="flex flex-wrap gap-2 justify-start">
                       {message.quickReplies.slice(0, 3).map((reply, index) => (
