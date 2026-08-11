@@ -181,12 +181,37 @@ export function EmailSuiteInboxSetup({ city }: EmailSuiteInboxSetupProps) {
           </li>
 
           <li className="space-y-1">
+            <div className="font-medium text-slate-100">Set the Resend API key to Full access</div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Inbox must <span className="text-slate-300">read</span> received mail from Resend, not
+              only send. In Resend → API Keys, open the key stored in City Configuration (or create a
+              new one and paste it into Qwikker):
+            </p>
+            <ul className="text-xs text-slate-400 space-y-1 list-disc pl-4">
+              <li>
+                Permission: choose <span className="text-slate-200 font-medium">Full access</span>{' '}
+                — not <span className="text-slate-300">Sending access</span>
+              </li>
+              <li>Save the key in Resend</li>
+              <li>
+                If you created a new key, paste it into Admin → City Configuration → Resend API Key
+                → Save
+              </li>
+            </ul>
+            <p className="text-xs text-amber-100/90 bg-amber-500/10 border border-amber-500/25 rounded-md px-2.5 py-2 leading-relaxed mt-2">
+              If the key is Sending access only, Sync from Resend / Load body will fail and replies
+              may show “This API key is restricted to only send emails.” Full access fixes that.
+            </p>
+          </li>
+
+          <li className="space-y-1">
             <div className="font-medium text-slate-100">Test Inbox</div>
             <p className="text-xs text-slate-400 leading-relaxed">
               From any personal email, send a short message to{' '}
               <span className="font-mono text-slate-300">{replyTo}</span>. Within a minute it should
               appear under Email Suite → Inbox. Replies to franchise outbound mail (Reply-To{' '}
-              {replyTo}) use the same path.
+              {replyTo}) use the same path. If Sync from Resend errors on permissions, re-check the
+              Full access step above.
             </p>
           </li>
         </ol>
