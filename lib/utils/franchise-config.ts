@@ -93,7 +93,9 @@ export async function getWalletPushCredentials(city: string) {
     templateId: config?.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID,
     dashboardUrl: config?.walletpush_dashboard_url || undefined,
     city: city,
-    franchiseName: config?.display_name || city
+    franchiseName: config?.display_name || city,
+    // IANA tz from franchise_crm_configs (e.g. Africa/Dar_es_Salaam for Zanzibar)
+    timezone: config?.timezone || 'Europe/London',
   }
 }
 

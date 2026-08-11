@@ -10,6 +10,7 @@ import {
 } from '@/lib/email/fetch-received-email'
 import { normalizeEmailAddress } from '@/lib/email/normalize-email'
 import { upsertInboundReceivedEmail } from '@/lib/email/upsert-inbound'
+import { wrapInLayout } from '@/lib/email/templates/business-notifications'
 
 /**
  * Phase 3 Inbox — lists inbound email_sends + conversation by participant.
@@ -166,12 +167,39 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const { data: franchiseRow } = await supabase
+    .from('franchise_crm_configs')
+    .select('timezone')
+    .eq('city', auth.city)
+    .maybeSingle()
+  const timezone =
+    (franchiseRow?.timezone && String(franchiseRow.timezone)) || 'Europe/London'
+
+  const businessIds = [
+    ...new Set(
+      (data || [])
+        .map((row) => row.business_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ),
+  ]
+  const nameById = new Map<string, string>()
+  if (businessIds.length > 0) {
+    const { data: businesses } = await supabase
+      .from('business_profiles')
+      .select('id, business_name')
+      .in('id', businessIds)
+    for (const b of businesses || []) {
+      if (b.id && b.business_name) nameById.set(b.id, b.business_name)
+    }
+  }
+
   const inbound = (data || []).map((row) => ({
     ...row,
+    business_name: row.business_id ? nameById.get(row.business_id) || null : null,
     unread: isUnread(row.metadata),
   }))
 
-  return NextResponse.json({ inbound, sync: syncResult })
+  return NextResponse.json({ inbound, timezone, sync: syncResult })
 }
 
 const patchSchema = z.discriminatedUnion('action', [
@@ -358,10 +386,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid body', details: e }, { status: 400 })
   }
 
-  const html = `<div style="font-family:sans-serif;padding:16px;white-space:pre-wrap">${body.text
+  const escaped = body.text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')}</div>`
+    .replace(/>/g, '&gt;')
+  // Same branded shell as suite templates (logo + city footer) — not bare plain text
+  const content = `<div style="padding:32px 30px;">
+    <p style="font-size:15px;line-height:1.7;color:#e8e8e8;margin:0;white-space:pre-wrap;">${escaped}</p>
+  </div>`
+  const html = wrapInLayout(content, auth.city)
 
   const threadId = body.threadId || body.inReplyToSendId || undefined
 

@@ -44,19 +44,21 @@ function extractHeadline(input: string): string {
   return beforeParen.length >= 3 ? beforeParen : clean
 }
 
-function formatExpiry(expiryTime: Date): string {
+/** Format expiry in the franchise city timezone (not hardcoded London). */
+function formatExpiry(expiryTime: Date, timeZone: string): string {
+  const tz = timeZone || 'Europe/London'
   return (
     expiryTime.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
-      timeZone: 'Europe/London',
+      timeZone: tz,
     }) +
     ' ' +
     expiryTime.toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-      timeZone: 'Europe/London',
+      timeZone: tz,
     })
   )
 }
@@ -122,7 +124,8 @@ export async function updateMainPassOffer(
             60 *
             1000
       )
-  const expiryFormatted = formatExpiry(activeUntil)
+  // City timezone from franchise config (Zanzibar → Africa/Dar_es_Salaam = EAT)
+  const expiryFormatted = formatExpiry(activeUntil, credentials.timezone)
 
   const businessName = input.offerDetails?.businessName || 'Business'
   const offerName = input.currentOffer || 'Offer'

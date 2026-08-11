@@ -12,10 +12,18 @@ import { EmailSuiteInboxSetup } from '@/components/admin/email-suite-inbox-setup
 
 type SuiteSubTab = 'inbox' | 'history' | 'templates' | 'campaigns' | 'automations' | 'settings'
 
-/** Make email HTML fill the iframe viewport and size the frame to the full message. */
+/** Email HTML assumes a light client; force white canvas so dark body text stays readable. */
 function wrapPreviewSrcDoc(html: string): string {
   const fillCss = `<style>
-    html, body { margin:0 !important; padding:0 !important; min-height:100% !important; height:auto !important; background-color:#0a0a0a !important; }
+    html, body {
+      margin: 0 !important;
+      padding: 12px !important;
+      min-height: 100% !important;
+      height: auto !important;
+      background-color: #ffffff !important;
+      color: #111111 !important;
+    }
+    a { color: #0b57d0; }
   </style>`
   if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${fillCss}</head>`)
   if (/<html/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${fillCss}</head>`)
@@ -45,7 +53,7 @@ function EmailHtmlPreview({ html, title }: { html: string; title: string }) {
       sandbox="allow-same-origin"
       srcDoc={srcDoc}
       onLoad={fitHeight}
-      className="w-full border-0 bg-[#0a0a0a]"
+      className="w-full border-0 bg-white"
       style={{ height }}
     />
   )
@@ -100,6 +108,42 @@ function formatRecipientName(r: RecipientOption): string {
   return person ? `${r.business_name} · ${person}` : r.business_name
 }
 
+/** Pull address from `Name <email@x>` or bare email. */
+function extractEmailAddress(raw: string): string {
+  const m = String(raw || '').match(/<([^>]+)>/)
+  return (m ? m[1] : String(raw || '')).trim().toLowerCase()
+}
+
+function extractDisplayName(raw: string): string | null {
+  const m = String(raw || '').match(/^"?([^"<]+)"?\s*</)
+  const name = m?.[1]?.trim()
+  return name && name.length > 1 ? name : null
+}
+
+/** Primary “who” label: CRM business → display name → local-part. */
+function inboxFromPrimary(raw: string, businessName?: string | null): string {
+  if (businessName?.trim()) return businessName.trim()
+  const named = extractDisplayName(raw)
+  if (named) return named
+  const email = extractEmailAddress(raw)
+  const local = email.split('@')[0] || email
+  return local || 'Unknown'
+}
+
+function formatInboxWhen(iso: string | null | undefined, timeZone?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return String(iso)
+  return d.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    ...(timeZone ? { timeZone } : {}),
+  })
+}
+
 const SUB_TABS: { id: SuiteSubTab; label: string }[] = [
   { id: 'inbox', label: 'Inbox' },
   { id: 'history', label: 'History' },
@@ -137,6 +181,7 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
   const [automations, setAutomations] = useState<AutomationRow[]>([])
   const [suppressions, setSuppressions] = useState<Array<Record<string, unknown>>>([])
   const [inbound, setInbound] = useState<Array<Record<string, unknown>>>([])
+  const [inboxTimezone, setInboxTimezone] = useState<string>('Europe/London')
   const [selectedInboundId, setSelectedInboundId] = useState<string | null>(null)
   const [threadMessages, setThreadMessages] = useState<Array<Record<string, unknown>>>([])
   const [threadLoading, setThreadLoading] = useState(false)
@@ -531,6 +576,9 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
     if (res.ok) {
       const json = await res.json()
       const rows = (json.inbound || []) as Array<Record<string, unknown>>
+      if (typeof json.timezone === 'string' && json.timezone) {
+        setInboxTimezone(json.timezone)
+      }
       setInbound(rows)
       setSelectedInboundId((prev) => {
         if (prev && rows.some((r) => String(r.id) === prev)) return prev
@@ -949,6 +997,16 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                   const id = String(m.id)
                   const active = id === selectedInboundId
                   const unread = m.unread !== false
+                  const fromRaw = String(m.from_email || '')
+                  const fromPrimary = inboxFromPrimary(
+                    fromRaw,
+                    m.business_name ? String(m.business_name) : null
+                  )
+                  const fromEmail = extractEmailAddress(fromRaw)
+                  const when = formatInboxWhen(
+                    String(m.sent_at || m.created_at || ''),
+                    inboxTimezone
+                  )
                   return (
                     <li key={id}>
                       <button
@@ -980,10 +1038,14 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                                 unread ? 'text-slate-50 font-semibold' : 'text-slate-100 font-medium'
                               }`}
                             >
+                              {fromPrimary}
+                            </div>
+                            <div className="truncate text-slate-300 text-[13px]">
                               {String(m.subject || '(no subject)')}
                             </div>
-                            <div className="text-xs text-slate-400 truncate">
-                              From {String(m.from_email)} · {String(m.created_at)}
+                            <div className="text-xs text-slate-500 truncate">
+                              {fromEmail}
+                              {when ? ` · ${when}` : ''}
                             </div>
                           </div>
                         </div>
@@ -1002,8 +1064,17 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                       </div>
                       <div className="text-xs text-slate-400">
                         Conversation with{' '}
-                        <span className="font-mono text-slate-300">
-                          {String(selectedInbound.from_email)}
+                        <span className="text-slate-200 font-medium">
+                          {inboxFromPrimary(
+                            String(selectedInbound.from_email || ''),
+                            selectedInbound.business_name
+                              ? String(selectedInbound.business_name)
+                              : null
+                          )}
+                        </span>
+                        <span className="font-mono text-slate-500">
+                          {' '}
+                          ({extractEmailAddress(String(selectedInbound.from_email || ''))})
                         </span>
                         {threadLoading ? ' · loading…' : ` · ${threadMessages.length || 1} messages`}
                       </div>
@@ -1013,6 +1084,21 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                         const isOut = String(msg.direction) === 'outbound'
                         const bodyHtml = msg.html_body ? String(msg.html_body) : null
                         const bodyText = msg.text_body ? String(msg.text_body) : null
+                        const partyRaw = String(isOut ? msg.to_email : msg.from_email || '')
+                        const partyPrimary = isOut
+                          ? extractEmailAddress(partyRaw)
+                          : inboxFromPrimary(
+                              partyRaw,
+                              msg.business_name
+                                ? String(msg.business_name)
+                                : selectedInbound.business_name
+                                  ? String(selectedInbound.business_name)
+                                  : null
+                            )
+                        const when = formatInboxWhen(
+                          String(msg.sent_at || msg.created_at || ''),
+                          inboxTimezone
+                        )
                         return (
                           <div
                             key={String(msg.id)}
@@ -1030,15 +1116,17 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                               >
                                 {isOut ? 'You (sent)' : 'Inbound'}
                               </span>
-                              <span className="text-[10px] text-slate-500">
-                                {String(msg.sent_at || msg.created_at || '')}
-                              </span>
+                              <span className="text-[10px] text-slate-500">{when}</span>
                             </div>
                             <div className="text-xs text-slate-400 mb-2 truncate">
                               {isOut ? 'To' : 'From'}{' '}
-                              <span className="font-mono text-slate-300">
-                                {String(isOut ? msg.to_email : msg.from_email)}
-                              </span>
+                              <span className="text-slate-200 font-medium">{partyPrimary}</span>
+                              {!isOut && partyPrimary !== extractEmailAddress(partyRaw) ? (
+                                <span className="font-mono text-slate-500">
+                                  {' '}
+                                  ({extractEmailAddress(partyRaw)})
+                                </span>
+                              ) : null}
                             </div>
                             {bodyHtml ? (
                               <div className="rounded-md overflow-hidden border border-slate-800">
@@ -1080,8 +1168,17 @@ export function EmailSuiteTab({ city }: EmailSuiteTabProps) {
                     <div className="border-t border-slate-700 p-3 space-y-2 bg-slate-900/60">
                       <div className="text-xs text-slate-400">
                         Reply to{' '}
-                        <span className="text-slate-200 font-mono">
-                          {String(selectedInbound.from_email)}
+                        <span className="text-slate-200 font-medium">
+                          {inboxFromPrimary(
+                            String(selectedInbound.from_email || ''),
+                            selectedInbound.business_name
+                              ? String(selectedInbound.business_name)
+                              : null
+                          )}
+                        </span>
+                        <span className="font-mono text-slate-500">
+                          {' '}
+                          ({extractEmailAddress(String(selectedInbound.from_email || ''))})
                         </span>
                         {' · '}
                         Subject:{' '}
