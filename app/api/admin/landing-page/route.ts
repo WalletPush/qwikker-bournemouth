@@ -81,6 +81,23 @@ const landingPageConfigSchema = z.object({
     enabled: z.boolean().optional(),
     heading: z.string().max(100).nullable().optional(),
     categories: z.array(z.string().max(40)).max(12).nullable().optional(),
+    // Per-category curated images (city overrides). Without this, Zod strips
+    // `images` on save and uploads only live in editor state until refresh.
+    images: z
+      .record(
+        z.string().max(40),
+        z.object({
+          source_url: z.string().url(),
+          media_id: z.string().uuid().nullable().optional(),
+          focal_x: z.number().nullable().optional(),
+          focal_y: z.number().nullable().optional(),
+          zoom: z.number().nullable().optional(),
+          fit: z.enum(['cover', 'contain']).optional(),
+          gravity_mode: z.enum(['auto', 'centre', 'manual']).optional(),
+        })
+      )
+      .nullable()
+      .optional(),
   }).optional(),
 })
 
@@ -225,7 +242,21 @@ export async function POST(request: NextRequest) {
     }
 
     const existingConfig = (existingRow?.landing_page_config as Record<string, unknown>) || {}
-    const mergedConfig = { ...existingConfig, ...parsed.data }
+    const mergedConfig: Record<string, unknown> = { ...existingConfig, ...parsed.data }
+
+    // Deep-merge category_tiles so a save that omits `images` does not wipe
+    // previously uploaded tile overrides (shallow top-level merge alone would).
+    if (parsed.data.category_tiles) {
+      const prevTiles =
+        (existingConfig.category_tiles as Record<string, unknown> | undefined) || {}
+      const nextTiles = parsed.data.category_tiles as Record<string, unknown>
+      mergedConfig.category_tiles = {
+        ...prevTiles,
+        ...nextTiles,
+        images:
+          nextTiles.images !== undefined ? nextTiles.images : prevTiles.images ?? null,
+      }
+    }
 
     const { error } = await supabaseAdmin
       .from('franchise_crm_configs')
