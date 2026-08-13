@@ -225,6 +225,32 @@ async function resolveActivationBackgroundUrl(
   })
 }
 
+/** Drop stale clear jobs so cron cannot wipe a pass we just (or are about to) activate. */
+async function cancelStaleWalletClears(
+  walletPassId: string,
+  keepActivationId?: string
+): Promise<void> {
+  const supabase = createServiceRoleClient()
+  let q = supabase
+    .from('offer_activations')
+    .update({
+      wallet_sync_status: 'cleared',
+      wallet_sync_last_error: 'skipped_superseded_by_new_activation',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('wallet_pass_id', walletPassId)
+    .in('wallet_sync_status', ['clear_pending', 'clear_failed'])
+
+  if (keepActivationId) {
+    q = q.neq('id', keepActivationId)
+  }
+
+  const { error } = await q
+  if (error) {
+    console.warn('cancelStaleWalletClears failed (non-critical):', error.message)
+  }
+}
+
 /**
  * Redeem now — create timed activation via RPC, then sync wallet.
  * If another offer is active, returns needs_replace_confirm unless confirmReplace.
@@ -272,6 +298,11 @@ export async function activateOffer(input: {
   const windowMinutes = Number(activationRaw.activation_window_minutes || 60)
   const activation = asActivation(activationRaw, windowMinutes)
 
+  // Replace/expiry queues clear_pending on the old row. Cancel those BEFORE we
+  // morph the pass — otherwise cron can race and reset Current_Offer + poster
+  // right after a successful activate (looks like "flashed then reverted").
+  await cancelStaleWalletClears(walletPassId, activation.id)
+
   // Notify business: activated (not redeemed)
   try {
     const { data: user } = await supabase
@@ -314,6 +345,10 @@ export async function activateOffer(input: {
       wallet_sync_last_error: sync.ok ? null : sync.error || 'unknown',
     })
     .eq('id', activation.id)
+
+  if (sync.ok) {
+    await cancelStaleWalletClears(walletPassId, activation.id)
+  }
 
   return {
     success: true,
@@ -459,7 +494,7 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
           .update({
             wallet_sync_status: 'cleared',
             wallet_sync_attempts: (row.wallet_sync_attempts || 0) + 1,
-            wallet_sync_last_error: null,
+            wallet_sync_last_error: 'skipped_active_offer_present',
           })
           .eq('id', row.id)
         cleared++
@@ -468,6 +503,23 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
     }
 
     const windowEnded = new Date(row.active_until).getTime() <= Date.now()
+
+    // Replace ends the old row but leaves active_until in the future and queues
+    // clear_pending. Wiping the wallet here races the new activate morph and
+    // snaps Current_Offer + poster back to the city default.
+    if (isClear && !windowEnded) {
+      await supabase
+        .from('offer_activations')
+        .update({
+          wallet_sync_status: 'cleared',
+          wallet_sync_attempts: (row.wallet_sync_attempts || 0) + 1,
+          wallet_sync_last_error: 'skipped_replaced_not_expired',
+        })
+        .eq('id', row.id)
+      cleared++
+      continue
+    }
+
     const firstName =
       passUser?.first_name?.trim() || passUser?.name?.split(/\s+/)[0] || null
     const clearMessage =
@@ -489,6 +541,33 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
         typeof business.business_images[0] === 'string' &&
         business.business_images[0]) ||
       (typeof business?.logo === 'string' ? business.logo : null)
+
+    // TOCTOU: replace/activate can land between our stillActive check and the
+    // WalletPush clear PUTs (those take seconds). Re-check immediately before wipe.
+    if (isClear) {
+      const { data: stillActiveNow } = await supabase
+        .from('offer_activations')
+        .select('id')
+        .eq('wallet_pass_id', row.wallet_pass_id)
+        .eq('status', 'active')
+        .gt('active_until', new Date().toISOString())
+        .neq('id', row.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (stillActiveNow?.id) {
+        await supabase
+          .from('offer_activations')
+          .update({
+            wallet_sync_status: 'cleared',
+            wallet_sync_attempts: (row.wallet_sync_attempts || 0) + 1,
+            wallet_sync_last_error: 'skipped_active_offer_present_pre_put',
+          })
+          .eq('id', row.id)
+        cleared++
+        continue
+      }
+    }
 
     const sync = await syncActivationToWallet({
       walletPassId: row.wallet_pass_id,
