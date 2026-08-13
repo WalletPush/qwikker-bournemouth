@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation'
 import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import { ActivationCountdownPanel } from '@/components/user/activation-countdown-panel'
+import { OfferActivatingOverlay } from '@/components/user/offer-activating-overlay'
 
 interface ActiveOfferEntry {
   activeUntil: string
@@ -22,6 +23,12 @@ interface ActivateSuccessState {
   activeUntil: string
   walletSynced: boolean
   message?: string
+}
+
+interface ActivatingState {
+  offerId: string
+  offerTitle: string
+  businessName: string
 }
 
 interface UserOffersPageProps {
@@ -73,6 +80,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   /** Offers that have been activated at least once (blocks Redeem on single-use) */
   const [usedOfferIds, setUsedOfferIds] = useState<Set<string>>(new Set())
   const [activateSuccess, setActivateSuccess] = useState<ActivateSuccessState | null>(null)
+  const [activating, setActivating] = useState<ActivatingState | null>(null)
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const autoClaimProcessed = useRef(false)
@@ -538,6 +546,9 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       alert('This offer is already active on your pass.')
       return
     }
+    if (activating) return
+
+    setActivating({ offerId, offerTitle, businessName })
 
     try {
       const response = await fetch('/api/offers/activate', {
@@ -553,6 +564,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       const body = await response.json().catch(() => ({}))
 
       if (body.error === 'needs_replace_confirm' && body.active) {
+        setActivating(null)
         const ok = window.confirm(
           `You already have an active offer at ${body.active.business_name} with about ${body.active.minutes_left} minutes left. Activating this will end it. Continue?`
         )
@@ -588,6 +600,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         return next
       })
 
+      setActivating(null)
       setActivateSuccess({
         offerId,
         offerTitle,
@@ -598,6 +611,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       })
     } catch (error) {
       console.error('Error activating offer:', error)
+      setActivating(null)
       alert(
         error instanceof Error
           ? error.message
@@ -863,10 +877,11 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold"
+                    disabled={!!activating}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold disabled:opacity-60"
                     size="sm"
                   >
-                    Redeem now
+                    {activating?.offerId === offer.id ? 'Putting on Wallet…' : 'Redeem now'}
                   </Button>
                   <ShareButton
                     title={`Amazing Deal: ${offer.title}`}
@@ -1053,12 +1068,13 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
               ) : canRedeem ? (
                 <Button
                   onClick={() => handleAddToWallet(offer.id, offer.title, businessName)}
-                  className="w-full h-[44px] text-base bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200"
+                  disabled={!!activating}
+                  className="w-full h-[44px] text-base bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-200 disabled:opacity-60"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  Redeem now
+                  {activating?.offerId === offer.id ? 'Putting on Wallet…' : 'Redeem now'}
                 </Button>
               ) : (
                 <Button
@@ -1194,9 +1210,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                       handleAddToWallet(offer.id, offer.title, businessName)
                       setShowModal(false)
                     }}
-                    className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200"
+                    disabled={!!activating}
+                    className="w-full h-12 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-lg rounded-xl transition-all duration-200 disabled:opacity-60"
                   >
-                    Redeem now
+                    {activating?.offerId === offer.id ? 'Putting on Wallet…' : 'Redeem now'}
                   </Button>
                 ) : null}
               </div>
@@ -1438,6 +1455,14 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             Load More Offers
           </Button>
         </div>
+      )}
+
+      {/* Redeem in progress — WalletPush morph latency */}
+      {activating && !activateSuccess && (
+        <OfferActivatingOverlay
+          offerTitle={activating.offerTitle}
+          businessName={activating.businessName}
+        />
       )}
 
       {/* Post-Redeem confirm — live countdown, then Active filter */}
