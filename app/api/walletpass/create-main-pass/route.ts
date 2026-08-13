@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getWalletPushCredentials } from '@/lib/utils/franchise-config'
 import { getWalletPushCreateUrl, getWalletPushAuthHeader, getWalletPushFieldUrl, WALLET_PASS_FIELDS } from '@/lib/config/wallet-pass-fields'
+import { getCityPassPosterUrl } from '@/lib/config/wallet-pass-posters'
 
 export async function POST(request: NextRequest) {
   try {
@@ -201,6 +202,20 @@ export async function POST(request: NextRequest) {
         MOBILE_WALLET_APP_KEY, passTypeId, passSerialNumber, cityBaseUrl, walletpushDashboardUrl
       ).catch(err => console.warn('⚠️ Non-critical: pass link update failed:', err))
 
+      // Fire-and-forget: city Poster Generic background (requires Dynamic member background in WP)
+      const cityPoster = getCityPassPosterUrl(city)
+      if (cityPoster) {
+        setPassBackgroundImageAsync(
+          MOBILE_WALLET_APP_KEY,
+          passTypeId,
+          passSerialNumber,
+          cityPoster,
+          walletpushDashboardUrl
+        ).catch((err) =>
+          console.warn('⚠️ Non-critical: Background_Image set failed:', err)
+        )
+      }
+
       // 📧 SEND CONSUMER WELCOME EMAIL (non-blocking)
       if (email && marketingEmailConsent !== false) {
         try {
@@ -323,4 +338,31 @@ async function updatePassLinksAsync(
       }
     }
   }
+}
+
+/** Best-effort city poster — never blocks install if template lacks Background_Image. */
+async function setPassBackgroundImageAsync(
+  apiKey: string,
+  passTypeId: string,
+  serialNumber: string,
+  imageUrl: string,
+  walletpushDashboardUrl?: string
+) {
+  const url = getWalletPushFieldUrl(
+    passTypeId,
+    serialNumber,
+    WALLET_PASS_FIELDS.BACKGROUND_IMAGE,
+    walletpushDashboardUrl
+  )
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: getWalletPushAuthHeader(apiKey),
+    body: JSON.stringify({ value: imageUrl, push: false }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.warn(`⚠️ Background_Image set failed: ${res.status} ${body}`)
+    return
+  }
+  console.log('✅ Background_Image set for new pass')
 }

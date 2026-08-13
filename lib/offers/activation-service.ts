@@ -163,6 +163,8 @@ async function syncActivationToWallet(params: {
   warningMessage?: string
   /** Expiry clear: Last_Message CTA (pushes). Omit for silent clear. */
   clearMessage?: string
+  /** Offer / business HTTPS image for living-pass Background_Image morph. */
+  backgroundImageUrl?: string | null
 }): Promise<{ ok: boolean; error?: string }> {
   try {
     const { updateMainPassOffer } = await import('@/lib/wallet/update-main-pass-offer')
@@ -175,6 +177,7 @@ async function syncActivationToWallet(params: {
       lastMessageOverride: isClear
         ? params.clearMessage
         : params.warningMessage,
+      backgroundImageUrl: isClear ? null : params.backgroundImageUrl,
       offerDetails: {
         businessName: params.businessName,
         activationWindowMinutes: params.windowMinutes,
@@ -188,6 +191,38 @@ async function syncActivationToWallet(params: {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Wallet sync failed' }
   }
+}
+
+/** Resolve HTTPS background for activate morph (offer → business → null). */
+async function resolveActivationBackgroundUrl(
+  offerId: string,
+  businessId: string
+): Promise<string | null> {
+  const supabase = createServiceRoleClient()
+  const [{ data: offer }, { data: business }] = await Promise.all([
+    supabase
+      .from('business_offers')
+      .select('offer_image')
+      .eq('id', offerId)
+      .maybeSingle(),
+    supabase
+      .from('business_profiles')
+      .select('business_images, logo')
+      .eq('id', businessId)
+      .maybeSingle(),
+  ])
+  const { resolvePassBackgroundImageUrl } = await import(
+    '@/lib/config/wallet-pass-posters'
+  )
+  const businessImage =
+    (Array.isArray(business?.business_images) &&
+      typeof business.business_images[0] === 'string' &&
+      business.business_images[0]) ||
+    (typeof business?.logo === 'string' ? business.logo : null)
+  return resolvePassBackgroundImageUrl({
+    offerImage: offer?.offer_image,
+    businessImage,
+  })
 }
 
 /**
@@ -265,6 +300,10 @@ export async function activateOffer(input: {
     activeUntil: activation.active_until,
     windowMinutes,
     mode: 'activate',
+    backgroundImageUrl: await resolveActivationBackgroundUrl(
+      input.offerId,
+      offerMeta.business_id
+    ),
   })
 
   await supabase
@@ -385,12 +424,12 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
     const [{ data: offer }, { data: business }, { data: passUser }] = await Promise.all([
       supabase
         .from('business_offers')
-        .select('offer_name, activation_window_minutes')
+        .select('offer_name, offer_image, activation_window_minutes')
         .eq('id', row.offer_id)
         .maybeSingle(),
       supabase
         .from('business_profiles')
-        .select('business_name, city')
+        .select('business_name, city, business_images, logo')
         .eq('id', row.business_id)
         .maybeSingle(),
       supabase
@@ -442,6 +481,15 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
           })
         : undefined
 
+    const { resolvePassBackgroundImageUrl } = await import(
+      '@/lib/config/wallet-pass-posters'
+    )
+    const businessImage =
+      (Array.isArray(business?.business_images) &&
+        typeof business.business_images[0] === 'string' &&
+        business.business_images[0]) ||
+      (typeof business?.logo === 'string' ? business.logo : null)
+
     const sync = await syncActivationToWallet({
       walletPassId: row.wallet_pass_id,
       offerName: offer?.offer_name || 'Offer',
@@ -450,6 +498,13 @@ export async function processWalletActivationOutbox(limit = 40): Promise<{
       windowMinutes: offer?.activation_window_minutes || 60,
       mode: isClear ? 'clear' : 'activate',
       clearMessage,
+      backgroundImageUrl: isClear
+        ? null
+        : resolvePassBackgroundImageUrl({
+            offerImage: offer?.offer_image,
+            businessImage,
+            city: business?.city,
+          }),
     })
 
     if (sync.ok) {

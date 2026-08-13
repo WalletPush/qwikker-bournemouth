@@ -6,6 +6,7 @@ import {
   getWalletPushAuthHeader,
   WALLET_PASS_FIELDS,
 } from '@/lib/config/wallet-pass-fields'
+import { getCityPassPosterUrl } from '@/lib/config/wallet-pass-posters'
 
 export interface UpdateMainPassOfferInput {
   userWalletPassId: string
@@ -13,6 +14,8 @@ export interface UpdateMainPassOfferInput {
   clearOffer?: boolean
   lastMessageOnly?: boolean
   lastMessageOverride?: string
+  /** HTTPS offer/business image for living-pass morph (best-effort). */
+  backgroundImageUrl?: string | null
   offerDetails?: {
     businessName?: string
     activationWindowMinutes?: number
@@ -217,6 +220,39 @@ export async function updateMainPassOffer(
         pushMessage,
         expiryTime: expiryFormatted,
         error: `Current_Offer silent update failed: ${offerResponse.status}`,
+      }
+    }
+
+    // Living pass: morph poster (offer image) or restore city default on clear.
+    // Best-effort — never fail the wallet sync if Background_Image is unsupported.
+    const backgroundUrl = input.clearOffer
+      ? getCityPassPosterUrl(userCity)
+      : (input.backgroundImageUrl?.trim().startsWith('https://')
+          ? input.backgroundImageUrl.trim()
+          : null)
+    if (backgroundUrl) {
+      try {
+        const bgUrl = getWalletPushFieldUrl(
+          passTypeId,
+          serialNumber,
+          WALLET_PASS_FIELDS.BACKGROUND_IMAGE,
+          walletpushDashboardUrl
+        )
+        const bgResponse = await fetch(bgUrl, {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ value: backgroundUrl, push: false }),
+        })
+        if (!bgResponse.ok) {
+          const errorText = await bgResponse.text()
+          console.warn(
+            'Background_Image update skipped:',
+            bgResponse.status,
+            errorText
+          )
+        }
+      } catch (e) {
+        console.warn('Background_Image update failed (non-critical):', e)
       }
     }
   }

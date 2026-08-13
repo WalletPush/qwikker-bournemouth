@@ -4,6 +4,35 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## 🔴 ESSENTIAL BEFORE LAUNCH — Stripe billing hardening (Aug 13, 2026)
+
+**Status:** NOT DONE — **gate for paid / commercial launch** (Codex audit + live Supabase cross-check).  
+**Roadmap todo:** `stripe-billing-launch-gate` in `platform_audit_roadmap_7ed16549.plan.md`.
+
+### Verified in code (`app/api/webhooks/stripe/route.ts`)
+1. **`tier_id: tierId || existingSub.id`** — wrong fallback. Uses subscription **row** PK, not previous `tier_id`. Should be `existingSub.tier_id` (and select that column). If `tierName` lookup fails, update likely **FK-fails** rather than corrupting data.
+2. **`past_due` mapped to `'active'`** — failed renewals can look healthy in-app. Needs explicit past_due / grace policy.
+3. **No Stripe `event.id` idempotency** — duplicate webhook delivery not deduped.
+
+### Live Supabase check (Aug 13) — no corruption today
+- FK `business_subscriptions_tier_id_fkey` → `subscription_tiers(id)` present.
+- 0 orphan `tier_id`s; 0 rows where `tier_id = subscription.id`; 0 Stripe subs with broken tier join.
+- One paid sample (Ember & Oak / spotlight) looks fine; `current_period_end` null is a separate data-quality note.
+
+**Verdict:** Latent code defects, not live data damage. Still **essential before promoting paid subscriptions / franchise launch volume**.
+
+### Must ship before launch
+| # | Fix | Notes |
+|---|---|---|
+| 1 | Correct `tier_id` fallback → keep prior `tier_id` or fail closed | Never write `existingSub.id` |
+| 2 | Map `past_due` (and unpaid) to non-active status + grace/feature-lock policy | Documented behaviour |
+| 3 | Persist Stripe `event.id` uniquely; ignore replays | `(provider, event_id)` or equivalent |
+| 4 | Smoke: checkout, upgrade/downgrade, cancel, failed renewal, duplicate webhook | Two cities if possible |
+
+Do **not** treat as “low priority edge case” anymore — was understated on the old `stripe-security` todo.
+
+---
+
 ## ✅ Offers Save + Redeem now (R1) + follow-ups — SHIPPED (Aug 9–10, 2026)
 
 **Plan:** `/Users/qwikker/.cursor/plans/offers_and_qr_installs_695ddaa2.plan.md` (R1 todos completed; R2 QR attribution still pending)  
@@ -346,7 +375,7 @@ Deferred (noted): owner-name discovery; WhatsApp verified-detection (needs Meta 
 ## Execution Priority (April/May 2026)
 
 ### NEXT UP (Most Urgent)
-1. ~~**Stripe Security Hardening**~~ — **DONE (May 5).** Auth added to all 4 business Stripe routes (`create-checkout-session`, `update-subscription`, `cancel-subscription`, `create-portal-session`) via `verifyBusinessOwner()`. Admin auth on `stripe-connect` route. HMAC-signed OAuth state with timing-safe verification in callback. Canonical URL redirect already in place. **Remaining:** Register redirect URI in Stripe Dashboard, set `STRIPE_WEBHOOK_SECRET` in Vercel.
+1. **🔴 ESSENTIAL BEFORE LAUNCH — Stripe billing hardening** — Webhook `tier_id` wrong fallback, `past_due`→`active`, no event-id idempotency. Live DB clean (Aug 13); still a launch gate. See top of this file + roadmap `stripe-billing-launch-gate`. (Route auth hardening May 5 remains DONE.)
 2. **Admin Onboarding Training Videos** — Screen-recorded tutorials for franchise operators covering: pass creation, admin setup wizard credentials, Google Places API, Resend email, import tool, offer/secret menu creation, loyalty setup. See "Training Video Plan" section below.
 3. **⚠️ IMPORTANT — Duplicate City Name Handling (Subdomain Collisions)** — Multiple real cities share names (Newport RI / Newport Wales / Newport KY, Cambridge UK/MA, Richmond, etc.). The subdomain IS the unique tenant key (`{slug}.qwikker.com` → `franchise_crm_configs.city`), so two cities cannot both own `newport`. **Two parts:**
    - **(a) Naming convention (operational/policy):** Globally-unique names use bare slug (`bournemouth`, `zanzibar`). Collision-prone names MUST be qualified at creation: US → `{city}-{state}` (`newport-ri`, `newport-ky`); UK → `{city}-{nation/county}` (`newport-wales`, `newport-gwent`). `display_name` stays clean ("Newport") for the UI; the qualified slug only lives in the URL. Qualify on first suspicion of collision — migrating a live franchise slug later is painful. The subdomain field already accepts hyphens (`replace(/[^a-z0-9-]/g, '')`) and hyphenated franchises already work (`costa-blanca`, `koh-samui`, `las-vegas`).
@@ -1070,6 +1099,7 @@ WalletPush API returns `google.saveUrl` — now captured and returned to client.
 "From Email" field is now read-only, auto-derived from subdomain. From: `no-reply@{city}.qwikker.com`, Reply-to/support: `hello@{city}.qwikker.com`. Owner email never exposed.
 
 ### 0.22 Pre-Launch Environment Variables (pending — ESSENTIAL before go-live)
+Also gate: **Stripe billing hardening** at top of this file (`stripe-billing-launch-gate`) — code fixes, not just env vars.
 Environment variables that must be set in Vercel before production launch:
 - **`STRIPE_SECRET_KEY`** — Live secret key from Stripe Dashboard → Developers → API keys (starts with `sk_live_`). Replaces the test key.
 - **`STRIPE_CONNECT_CLIENT_ID`** — Platform Connect Client ID from Stripe Dashboard → Settings → Connect (starts with `ca_`). Required for franchise onboarding OAuth flow.
