@@ -132,7 +132,13 @@ export async function updateMainPassOffer(
   const headline = extractHeadline(offerName)
   const shortOffer = truncateAtWord(headline, 50)
   const shortBusiness = truncateAtWord(businessName, 34)
-  const passDisplayText = input.clearOffer ? '' : `${shortOffer} @ ${shortBusiness}`
+  // Never clear Current_Offer to "" — Google Wallet often falls back to the
+  // class sample ("Hey Sample First_Name…") when the face field is empty.
+  const cityDisplay =
+    (userCity || 'Qwikker').charAt(0).toUpperCase() + (userCity || 'qwikker').slice(1)
+  const passDisplayText = input.clearOffer
+    ? `Welcome to Qwikker ${cityDisplay}`
+    : `${shortOffer} @ ${shortBusiness}`
 
   const authHeaders = getWalletPushAuthHeader(appKey)
 

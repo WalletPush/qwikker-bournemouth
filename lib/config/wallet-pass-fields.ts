@@ -56,6 +56,8 @@ export const WALLET_PASS_FIELDS = {
   AI_URL: 'AI_Url',
   DASHBOARD_URL: 'Dashboard_Url',
   MEMBER_ID: 'MEMBER_ID',
+  /** Dynamic poster/hero when template has “Dynamic member background” enabled */
+  BACKGROUND_IMAGE: 'Background_Image',
 } as const
 
 export type WalletPassFieldName = typeof WALLET_PASS_FIELDS[keyof typeof WALLET_PASS_FIELDS]
