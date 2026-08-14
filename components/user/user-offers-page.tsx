@@ -11,6 +11,7 @@ import { SYSTEM_CATEGORY_LABEL } from '@/lib/constants/system-categories'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import { ActivationCountdownPanel } from '@/components/user/activation-countdown-panel'
 import { OfferActivatingOverlay } from '@/components/user/offer-activating-overlay'
+import { FilterChipGroup, FilterPanel } from '@/components/user/filter-panel'
 
 interface ActiveOfferEntry {
   activeUntil: string
@@ -65,7 +66,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   /** Type refine: % off, 2-for-1, ending soon, favourites */
   const [typeFilter, setTypeFilter] = useState<'all' | 'percentage_off' | 'two_for_one' | 'ending_soon' | 'favorites'>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [showAllCategories, setShowAllCategories] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const searchParams = useSearchParams()
   const urlWalletPassId = searchParams.get('wallet_pass_id')
   // Use prop first, then URL, then null - this ensures consistency with server-side logic
@@ -388,6 +389,30 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     setTypeFilter('all')
     setSelectedCategory('all')
   }
+
+  const offerTypeChips = [
+    { id: 'all' as const, label: 'All types', active: 'bg-[#00d083] text-black border-[#00d083]' },
+    { id: 'percentage_off' as const, label: '% Off', active: 'bg-orange-400 text-black border-orange-300' },
+    { id: 'two_for_one' as const, label: '2-for-1', active: 'bg-violet-400 text-black border-violet-300' },
+    { id: 'ending_soon' as const, label: 'Ending soon', active: 'bg-rose-400 text-black border-rose-300' },
+    {
+      id: 'favorites' as const,
+      label: favoritesCount > 0 ? `Favourites (${favoritesCount})` : 'Favourites',
+      active: 'bg-pink-400 text-black border-pink-300',
+    },
+  ]
+
+  const offerFilterActiveCount =
+    (typeFilter !== 'all' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
+
+  const offerFilterSummary = [
+    typeFilter !== 'all' ? offerTypeChips.find((c) => c.id === typeFilter)?.label : null,
+    selectedCategory !== 'all' ? selectedCategory : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const CHIP_OFF = 'bg-zinc-800 text-zinc-100 border-zinc-500'
 
   const toggleFavorite = (offerId: string) => {
     const userId = walletPassId || 'anonymous-user'
@@ -1225,7 +1250,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   }
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-amber-500/10 px-4 py-5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
           Deals
@@ -1275,109 +1300,75 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         })}
       </div>
 
-      {/* Sticky type + category filters */}
-      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-black/90 backdrop-blur-md border-b border-zinc-800/80">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {(
-            [
-              { id: 'all' as const, label: 'All types', active: 'bg-[#00d083]/20 text-[#9dffc0] border-[#00d083]/40' },
-              { id: 'percentage_off' as const, label: '% Off', active: 'bg-orange-500/20 text-orange-200 border-orange-400/40' },
-              { id: 'two_for_one' as const, label: '2-for-1', active: 'bg-violet-500/20 text-violet-200 border-violet-400/40' },
-              { id: 'ending_soon' as const, label: 'Ending soon', active: 'bg-rose-500/20 text-rose-200 border-rose-400/40' },
-              { id: 'favorites' as const, label: favoritesCount > 0 ? `Favourites (${favoritesCount})` : 'Favourites', active: 'bg-pink-500/20 text-pink-200 border-pink-400/40' },
-            ]
-          ).map((chip) => {
+      {/* Collapsed filters — no sticky chip bar (avoids mobile scroll glitches) */}
+      <FilterPanel
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        activeCount={offerFilterActiveCount}
+        summary={offerFilterSummary}
+        onClear={resetRefineFilters}
+      >
+        <FilterChipGroup label="Type">
+          {offerTypeChips.map((chip) => {
             const isSelected = typeFilter === chip.id
             return (
               <button
                 key={chip.id}
                 type="button"
-                onClick={() => {
-                  setTypeFilter(chip.id)
-                  scrollToResults()
-                }}
-                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  isSelected
-                    ? chip.active
-                    : 'bg-zinc-900/80 text-zinc-400 border-zinc-700 hover:text-zinc-200'
+                onClick={() => setTypeFilter(chip.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  isSelected ? chip.active : CHIP_OFF
                 }`}
               >
                 {chip.label}
               </button>
             )
           })}
-        </div>
+        </FilterChipGroup>
 
         {uniqueCategories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto mt-2 pt-2 border-t border-zinc-800/60 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <FilterChipGroup label="Category">
             <button
               type="button"
-              onClick={() => {
-                setSelectedCategory('all')
-                scrollToResults()
-              }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              onClick={() => setSelectedCategory('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 selectedCategory === 'all'
                   ? 'bg-white text-black border-white'
-                  : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
+                  : CHIP_OFF
               }`}
             >
               All categories
             </button>
-            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 6)).map((cat, i) => {
-              const tints = [
-                'bg-teal-500/15 text-teal-200 border-teal-400/30',
-                'bg-indigo-500/15 text-indigo-200 border-indigo-400/30',
-                'bg-orange-500/15 text-orange-200 border-orange-400/30',
-                'bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30',
-              ]
-              return (
+            {uniqueCategories.map((cat) => (
               <button
                 key={cat}
                 type="button"
-                onClick={() => {
-                  setSelectedCategory(cat)
-                  scrollToResults()
-                }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  selectedCategory === cat
-                    ? tints[i % tints.length]
-                    : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  selectedCategory === cat ? 'bg-[#00d083] text-black border-[#00d083]' : CHIP_OFF
                 }`}
               >
                 {cat}
-                <span className="ml-1 text-[10px] opacity-70 hidden sm:inline">({getCategoryCount(cat)})</span>
+                <span className="ml-1 text-[10px] opacity-70">({getCategoryCount(cat)})</span>
               </button>
-            )})}
-            {uniqueCategories.length > 6 && (
-              <button
-                type="button"
-                onClick={() => setShowAllCategories(!showAllCategories)}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-zinc-300 border border-transparent"
-              >
-                {showAllCategories ? 'Less' : `+${uniqueCategories.length - 6} more`}
-              </button>
-            )}
-          </div>
+            ))}
+          </FilterChipGroup>
         )}
-      </div>
+      </FilterPanel>
 
-      {/* AI Companion Card */}
-      <div className="mb-2">
-        <AiCompanionCard
-          title="Ask Qwikker"
-          prompts={[
-            'Find me the best 2-for-1 deals',
-            'What pizza offers are available?',
-            'Show me deals ending this week',
-          ]}
-          walletPassId={walletPassId || undefined}
-          className="border-[#00d083]/25 bg-gradient-to-r from-[#00d083]/10 via-zinc-900 to-zinc-800"
-        />
-      </div>
+      <AiCompanionCard
+        title="Ask Qwikker"
+        prompts={[
+          'Find me the best 2-for-1 deals',
+          'What pizza offers are available?',
+          'Show me deals ending this week',
+        ]}
+        walletPassId={walletPassId || undefined}
+        className="border-[#00d083]/25 bg-gradient-to-r from-[#00d083]/10 via-zinc-900 to-zinc-800"
+      />
 
       {/* Results Title */}
-      <div className="text-center mb-4">
+      <div className="text-center">
         <h2 className="text-xl sm:text-2xl font-semibold text-slate-100">
           {listMode === 'claimed'
             ? 'Saved Offers'

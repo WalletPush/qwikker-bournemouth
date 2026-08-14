@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Calendar, Clock, MapPin, Users, ExternalLink, Heart, Bookmark } from 'lucide-react'
 import { saveItem, unsaveItem, getUserSavedItems } from '@/lib/actions/user-saved-actions'
+import { FilterChipGroup, FilterPanel } from '@/components/user/filter-panel'
 
 interface UserEventsPageProps {
   events?: any[]
@@ -19,6 +20,7 @@ interface UserEventsPageProps {
 export function UserEventsPage({ events = [], walletPassId: propWalletPassId, city }: UserEventsPageProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('upcoming')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const searchParams = useSearchParams()
   const urlWalletPassId = searchParams.get('wallet_pass_id')
   const walletPassId = propWalletPassId || urlWalletPassId
@@ -62,16 +64,6 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
     }
   }, [selectedEventId])
 
-  // Helper function to scroll to results
-  const scrollToResults = () => {
-    setTimeout(() => {
-      const resultsSection = document.querySelector('[data-events-results]')
-      if (resultsSection) {
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }, 100)
-  }
-  
   // Get unique event types
   const eventTypes = ['all', ...Array.from(new Set(events.map(e => e.event_type).filter(Boolean)))]
   
@@ -436,7 +428,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-violet-500/10 px-4 py-5">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
             What&apos;s on
@@ -451,37 +443,93 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
           </div>
         </div>
 
-        {/* Filter chips — not neon count tiles */}
-        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5 -mx-1 px-1">
-          {[
-            { id: 'upcoming', label: 'All', count: upcomingEvents.length, active: 'bg-violet-500/20 text-violet-200 border-violet-400/40' },
-            { id: 'today', label: 'Today', count: todayEvents.length, active: 'bg-sky-500/20 text-sky-200 border-sky-400/40' },
-            { id: 'this_week', label: 'This week', count: thisWeekEvents.length, active: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40' },
-            { id: 'free', label: 'Free', count: upcomingEvents.filter(e => e.price_info?.toLowerCase().includes('free')).length, active: 'bg-[#00d083]/20 text-[#9dffc0] border-[#00d083]/40' },
-            { id: 'saved', label: 'Saved', count: savedEventsList.length, active: 'bg-amber-500/20 text-amber-200 border-amber-400/40' },
-            { id: 'interested', label: 'Interested', count: interestedEventsList.length, active: 'bg-rose-500/20 text-rose-200 border-rose-400/40' },
-          ].map((tab) => {
-            const isActive = selectedFilter === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setSelectedFilter(tab.id)
-                  scrollToResults()
-                }}
-                className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
-                  isActive
-                    ? tab.active
-                    : 'bg-zinc-900/80 text-zinc-400 border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                {tab.label}
-                <span className="ml-1 opacity-80">{tab.count}</span>
-              </button>
-            )
-          })}
-        </div>
+        <FilterPanel
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          activeCount={
+            (selectedFilter !== 'upcoming' ? 1 : 0) + (selectedCategory !== 'all' ? 1 : 0)
+          }
+          summary={[
+            selectedFilter !== 'upcoming'
+              ? (
+                  [
+                    { id: 'today', label: 'Today' },
+                    { id: 'this_week', label: 'This week' },
+                    { id: 'free', label: 'Free' },
+                    { id: 'saved', label: 'Saved' },
+                    { id: 'interested', label: 'Interested' },
+                  ].find((t) => t.id === selectedFilter)?.label ?? selectedFilter
+                )
+              : null,
+            selectedCategory !== 'all' ? getEventTypeLabel(selectedCategory) : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          onClear={() => {
+            setSelectedFilter('upcoming')
+            setSelectedCategory('all')
+          }}
+        >
+          <FilterChipGroup label="When">
+            {[
+              { id: 'upcoming', label: 'All', count: upcomingEvents.length, on: 'bg-violet-400 text-black border-violet-300' },
+              { id: 'today', label: 'Today', count: todayEvents.length, on: 'bg-sky-400 text-black border-sky-300' },
+              { id: 'this_week', label: 'This week', count: thisWeekEvents.length, on: 'bg-cyan-400 text-black border-cyan-300' },
+              {
+                id: 'free',
+                label: 'Free',
+                count: upcomingEvents.filter((e) => e.price_info?.toLowerCase().includes('free')).length,
+                on: 'bg-[#00d083] text-black border-[#00d083]',
+              },
+              { id: 'saved', label: 'Saved', count: savedEventsList.length, on: 'bg-amber-400 text-black border-amber-300' },
+              {
+                id: 'interested',
+                label: 'Interested',
+                count: interestedEventsList.length,
+                on: 'bg-rose-400 text-black border-rose-300',
+              },
+            ].map((tab) => {
+              const isActive = selectedFilter === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedFilter(tab.id)}
+                  className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+                    isActive ? tab.on : 'bg-zinc-800 text-zinc-100 border-zinc-500'
+                  }`}
+                >
+                  {tab.label}
+                  <span className="ml-1 opacity-80">{tab.count}</span>
+                </button>
+              )
+            })}
+          </FilterChipGroup>
+
+          {eventTypes.length > 2 && (
+            <FilterChipGroup label="Type">
+              {eventTypes.map((type) => {
+                const isActive = selectedCategory === type
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setSelectedCategory(type)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      isActive
+                        ? type === 'all'
+                          ? 'bg-white text-black border-white'
+                          : 'bg-[#00d083] text-black border-[#00d083]'
+                        : 'bg-zinc-800 text-zinc-100 border-zinc-500'
+                    }`}
+                  >
+                    {type === 'all' ? 'All types' : getEventTypeLabel(type)}
+                  </button>
+                )
+              })}
+            </FilterChipGroup>
+          )}
+        </FilterPanel>
 
         <AiCompanionCard
           title="Ask Qwikker"
@@ -493,36 +541,6 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
           walletPassId={walletPassId}
           className="border-[#00d083]/25 bg-gradient-to-r from-[#00d083]/10 via-zinc-900 to-zinc-800"
         />
-
-        {eventTypes.length > 2 && (
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-            {eventTypes.map((type, i) => {
-              const tints = [
-                'bg-teal-500/15 text-teal-200 border-teal-400/30',
-                'bg-indigo-500/15 text-indigo-200 border-indigo-400/30',
-                'bg-orange-500/15 text-orange-200 border-orange-400/30',
-                'bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30',
-              ]
-              const isActive = selectedCategory === type
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setSelectedCategory(type)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    isActive
-                      ? type === 'all'
-                        ? 'bg-white text-black border-white'
-                        : tints[i % tints.length]
-                      : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
-                  }`}
-                >
-                  {type === 'all' ? 'All types' : getEventTypeLabel(type)}
-                </button>
-              )
-            })}
-          </div>
-        )}
 
         {/* Events Grid */}
         <div data-events-results className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

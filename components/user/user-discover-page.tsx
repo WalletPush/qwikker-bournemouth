@@ -6,6 +6,7 @@ import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES, mapGoogleType
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import { useSidebar } from '@/components/user/user-dashboard-layout'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
+import { FilterChipGroup, FilterPanel } from '@/components/user/filter-panel'
 
 interface Business {
   id: string
@@ -117,8 +118,8 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
   const { sidebarOpen } = useSidebar()
   
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
-  const [showMoreFilters, setShowMoreFilters] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   
   // Quick filters state
   const [quickFilters, setQuickFilters] = useState({
@@ -144,7 +145,6 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     })
   }
   
-  // Don't jump the page on filter taps — sticky chips already stay visible.
   const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Toggle quick filter
@@ -384,32 +384,56 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
 
   const segmentTabs = [
     { id: 'all', label: 'All', count: businesses.length, on: 'bg-[#00d083] text-black border-[#00d083]', off: 'bg-zinc-800 text-zinc-100 border-zinc-500' },
-    { id: 'qwikker_picks', label: 'Picks', count: qwikkerPicks.length, on: 'bg-amber-400 text-black border-amber-300', off: 'bg-zinc-800 text-amber-200 border-amber-500/50' },
+    { id: 'qwikker_picks', label: 'Qwikker Picks', count: qwikkerPicks.length, on: 'bg-amber-400 text-black border-amber-300', off: 'bg-zinc-800 text-amber-200 border-amber-500/50' },
     { id: 'featured', label: 'Featured', count: featured.length, on: 'bg-emerald-400 text-black border-emerald-300', off: 'bg-zinc-800 text-emerald-200 border-emerald-500/50' },
     { id: 'recommended', label: 'Recommended', count: recommended.length, on: 'bg-violet-400 text-black border-violet-300', off: 'bg-zinc-800 text-violet-200 border-violet-500/50' },
   ]
 
-  const primaryFilters = [
+  const quickFilterChips = [
     { key: 'openNow' as const, label: 'Open' },
     { key: 'hasOffers' as const, label: 'Offers' },
     { key: 'closest' as const, label: 'Closest' },
     { key: 'mySaved' as const, label: 'Saved' },
-  ]
-
-  const extraFilters = [
     { key: 'hasSecretMenu' as const, label: 'Secrets' },
     { key: 'hasLoyalty' as const, label: 'Loyalty' },
   ]
 
-  const extraActiveCount = (quickFilters.hasSecretMenu ? 1 : 0) + (quickFilters.hasLoyalty ? 1 : 0)
+  const activeFilterCount =
+    (selectedFilter !== 'all' ? 1 : 0) +
+    (selectedCategory !== 'all' ? 1 : 0) +
+    Object.values(quickFilters).filter(Boolean).length
 
-  // High-contrast chip styles — must be literal class strings Tailwind always emits.
-  // Dynamic bg-teal-500 etc. were getting dropped → black text on black sticky bar = vanished chip.
+  const filterSummary = [
+    selectedFilter !== 'all'
+      ? segmentTabs.find((t) => t.id === selectedFilter)?.label
+      : null,
+    selectedCategory !== 'all'
+      ? categoryOptions.find((o) => o.value === selectedCategory)?.label
+      : null,
+    ...quickFilterChips.filter((f) => quickFilters[f.key]).map((f) => f.label),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const clearAllFilters = () => {
+    setSelectedFilter('all')
+    setSelectedCategory('all')
+    setQuickFilters({
+      openNow: false,
+      hasOffers: false,
+      hasSecretMenu: false,
+      hasLoyalty: false,
+      closest: false,
+      mySaved: false,
+    })
+  }
+
+  // Literal classes so Tailwind always emits selected/unselected chip styles
   const CHIP_ON = 'bg-[#00d083] text-black border-[#00d083]'
   const CHIP_OFF = 'bg-zinc-800 text-zinc-100 border-zinc-500'
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <div className="rounded-2xl border border-[#00d083]/20 bg-gradient-to-br from-[#00d083]/10 via-zinc-950 to-violet-500/10 px-4 py-5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083]/90 font-semibold mb-1">
           Discover
@@ -417,10 +441,22 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
         <h1 className="text-3xl font-bold text-white tracking-tight">
           {cityDisplayName}
         </h1>
-        <p className="text-sm text-zinc-300 mt-1.5">
-          {businesses.length} places
-          {userLocation ? ' · tap Closest to sort by distance' : ''}
-        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm text-zinc-300">{businesses.length} places</p>
+          {userLocation && (
+            <button
+              type="button"
+              onClick={() => toggleQuickFilter('closest')}
+              className={`text-sm font-medium transition-colors ${
+                quickFilters.closest
+                  ? 'text-[#00d083]'
+                  : 'text-[#00d083]/90 underline underline-offset-2 decoration-[#00d083]/40 hover:text-[#00d083]'
+              }`}
+            >
+              {quickFilters.closest ? 'Closest · on' : 'Closest to me'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="relative">
@@ -448,104 +484,79 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
         )}
       </div>
 
-      <div className={`sticky top-0 z-10 -mx-4 px-4 py-3 bg-black/90 backdrop-blur-md border-b border-zinc-800/80 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0 space-y-2.5 ${
-        sidebarOpen ? 'hidden lg:block' : ''
-      }`}>
-        {/* Tier segments — colourful filled pills */}
-        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-          {segmentTabs.map((tab) => {
-            const isActive = selectedFilter === tab.id
-            const isEmpty = tab.id !== 'all' && tab.count === 0
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                disabled={isEmpty}
-                onClick={() => setSelectedFilter(tab.id)}
-                className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
-                  isActive ? tab.on : tab.off
-                } ${isEmpty ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                {tab.label}
-                <span className="ml-1 opacity-80">{tab.count}</span>
-              </button>
-            )
-          })}
-        </div>
+      <div className={sidebarOpen ? 'hidden lg:block' : ''}>
+        <FilterPanel
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          activeCount={activeFilterCount}
+          summary={filterSummary}
+          onClear={clearAllFilters}
+        >
+          <FilterChipGroup label="Tier">
+            {segmentTabs.map((tab) => {
+              const isActive = selectedFilter === tab.id
+              const isEmpty = tab.id !== 'all' && tab.count === 0
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  disabled={isEmpty}
+                  onClick={() => setSelectedFilter(tab.id)}
+                  className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+                    isActive ? tab.on : tab.off
+                  } ${isEmpty ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  {tab.label}
+                  <span className="ml-1 opacity-80">{tab.count}</span>
+                </button>
+              )
+            })}
+          </FilterChipGroup>
 
-        {/* Primary filters only — extras behind More */}
-        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-          {primaryFilters.map((f) => {
-            const isActive = quickFilters[f.key]
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => toggleQuickFilter(f.key)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  isActive ? CHIP_ON : CHIP_OFF
-                }`}
-              >
-                {f.key === 'mySaved' ? `Saved (${savedBusinesses.size})` : f.label}
-              </button>
-            )
-          })}
-          <button
-            type="button"
-            onClick={() => setShowMoreFilters((v) => !v)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-              showMoreFilters || extraActiveCount > 0 ? CHIP_ON : CHIP_OFF
-            }`}
-          >
-            More{extraActiveCount > 0 ? ` · ${extraActiveCount}` : ''}
-          </button>
-        </div>
-
-        {showMoreFilters && (
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-            {extraFilters.map((f) => {
+          <FilterChipGroup label="Quick">
+            {quickFilterChips.map((f) => {
               const isActive = quickFilters[f.key]
               return (
                 <button
                   key={f.key}
                   type="button"
                   onClick={() => toggleQuickFilter(f.key)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                     isActive ? CHIP_ON : CHIP_OFF
                   }`}
                 >
-                  {f.label}
+                  {f.key === 'mySaved' ? `Saved (${savedBusinesses.size})` : f.label}
                 </button>
               )
             })}
-          </div>
-        )}
+          </FilterChipGroup>
 
-        {categoryOptions.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('all')}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                selectedCategory === 'all' ? 'bg-white text-black border-white' : CHIP_OFF
-              }`}
-            >
-              All types
-            </button>
-            {categoryOptions.map((option) => (
+          {categoryOptions.length > 0 && (
+            <FilterChipGroup label="Type">
               <button
-                key={option.value}
                 type="button"
-                onClick={() => setSelectedCategory(option.value)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  selectedCategory === option.value ? CHIP_ON : CHIP_OFF
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  selectedCategory === 'all' ? 'bg-white text-black border-white' : CHIP_OFF
                 }`}
               >
-                {option.label}
+                All types
               </button>
-            ))}
-          </div>
-        )}
+              {categoryOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSelectedCategory(option.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                    selectedCategory === option.value ? CHIP_ON : CHIP_OFF
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </FilterChipGroup>
+          )}
+        </FilterPanel>
       </div>
 
       <div className={sidebarOpen ? 'hidden lg:block' : ''} data-discover-results>
@@ -556,7 +567,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
               : selectedFilter === 'all'
                 ? 'All places'
                 : selectedFilter === 'qwikker_picks'
-                  ? 'Picks'
+                  ? 'Qwikker Picks'
                   : selectedFilter === 'featured'
                     ? 'Featured'
                     : 'Recommended'}

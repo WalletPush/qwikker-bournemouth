@@ -590,7 +590,7 @@ function CardRail({ children }: { children: React.ReactNode }) {
 }
 
 // =============================================================================
-// Coloured section shortcuts — full-width 3×2 grid (not skinny scroll chips)
+// Section shortcuts — unified brand green, roomy 3×2 grid
 // =============================================================================
 
 function NavigationCards({
@@ -613,16 +613,64 @@ function NavigationCards({
   getNavUrl: (href: string) => string
 }) {
   const cards = [
-    { href: '/user/discover', label: 'Discover', count: businessCount, sub: 'places', card: 'from-emerald-500/15 to-emerald-500/5 border-emerald-500/30', text: 'text-emerald-300', iconBg: 'from-emerald-500/40 to-teal-500/30 border-emerald-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> },
-    { href: '/user/offers', label: 'Offers', count: offerCount, sub: 'live', card: 'from-orange-500/15 to-amber-500/5 border-orange-500/30', text: 'text-orange-300', iconBg: 'from-orange-500/40 to-amber-500/30 border-orange-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /> },
-    { href: '/user/secret-menu', label: 'Secrets', count: `${secretsUnlockedCount}/${secretMenuCount}`, sub: 'unlocked', card: 'from-purple-500/15 to-fuchsia-500/5 border-purple-500/30', text: 'text-purple-300', iconBg: 'from-purple-500/40 to-pink-500/30 border-purple-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /> },
-    { href: '/user/events', label: 'Events', count: eventCount, sub: 'upcoming', card: 'from-sky-500/15 to-blue-500/5 border-sky-500/30', text: 'text-sky-300', iconBg: 'from-sky-500/40 to-blue-500/30 border-sky-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> },
-    { href: '/user/saved', label: 'Saved', count: savedItemsCount, sub: 'items', card: 'from-rose-500/15 to-pink-500/5 border-rose-500/30', text: 'text-rose-300', iconBg: 'from-rose-500/40 to-pink-500/30 border-rose-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /> },
-    { href: '/user/badges', label: 'Badges', count: badgeCount, sub: 'earned', card: 'from-amber-500/15 to-yellow-500/5 border-amber-500/30', text: 'text-amber-300', iconBg: 'from-amber-500/40 to-yellow-500/30 border-amber-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /> },
+    {
+      href: '/user/discover',
+      label: 'Discover',
+      count: businessCount,
+      sub: 'places',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      ),
+    },
+    {
+      href: '/user/offers',
+      label: 'Offers',
+      count: offerCount,
+      sub: 'live',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      ),
+    },
+    {
+      href: '/user/secret-menu',
+      label: 'Secrets',
+      count: `${secretsUnlockedCount}/${secretMenuCount}`,
+      sub: 'unlocked',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      ),
+    },
+    {
+      href: '/user/events',
+      label: 'Events',
+      count: eventCount,
+      sub: 'upcoming',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      ),
+    },
+    {
+      href: '/user/saved',
+      label: 'Saved',
+      count: savedItemsCount,
+      sub: 'items',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      ),
+    },
+    {
+      href: '/user/badges',
+      label: 'Badges',
+      count: badgeCount,
+      sub: 'earned',
+      icon: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+      ),
+    },
   ]
 
   return (
-    <div className="grid grid-cols-3 gap-2.5">
+    <div className="grid grid-cols-3 gap-3.5 sm:gap-4">
       {cards.map((c) => (
         <PendingLink
           key={c.label}
@@ -630,15 +678,15 @@ function NavigationCards({
           pendingLabel={c.label}
           className="block min-w-0"
         >
-          <div className={`rounded-xl border bg-gradient-to-br ${c.card} px-2.5 py-3 text-center transition-colors active:scale-[0.98] h-full`}>
-            <div className={`w-9 h-9 mx-auto mb-2 rounded-lg bg-gradient-to-br ${c.iconBg} border flex items-center justify-center`}>
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-2xl border border-[#00d083]/35 bg-gradient-to-br from-[#00d083]/12 to-zinc-950 px-2.5 py-3.5 text-center transition-colors active:scale-[0.98] h-full">
+            <div className="w-9 h-9 mx-auto mb-2.5 rounded-lg bg-[#00d083]/20 border border-[#00d083]/35 flex items-center justify-center">
+              <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {c.icon}
               </svg>
             </div>
             <p className="text-[11px] font-semibold text-zinc-100 leading-tight truncate">{c.label}</p>
-            <p className={`text-lg font-bold tabular-nums leading-none mt-1 ${c.text}`}>{c.count}</p>
-            <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{c.sub}</p>
+            <p className="text-lg font-bold tabular-nums leading-none mt-1.5 text-[#00d083]">{c.count}</p>
+            <p className="text-[10px] text-zinc-500 leading-tight mt-1">{c.sub}</p>
           </div>
         </PendingLink>
       ))}
