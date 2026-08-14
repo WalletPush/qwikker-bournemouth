@@ -4,6 +4,30 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## 📋 PLANNED — Consumer App Shell (bottom nav + darker UX) — Aug 14, 2026
+
+**Branch:** `feat/consumer-app-shell` (from clean `8dc7ce9b`)  
+**Plan:** `/Users/qwikker/.cursor/plans/consumer_app_shell_bottom_nav_a1b2c3d4.plan.md`  
+**Status:** Plan written — **awaiting founder OK before Phase A code**  
+**Rollback pin:** `8dc7ce9b` (Living Pass Layer 1 working)
+
+### Intent
+App-like mobile chrome: bottom tabs (Nearby / Offers / Loyalty / Ask / More), no hamburger primary, darker canvas, keep home-feed personalization + conditional secret menus.
+
+### Phases
+| Phase | Scope | Phone test? |
+|---|---|---|
+| **A** | Bottom nav + More hub + darker shell + safe area | **Yes — stop here first** |
+| B | Home feed restyle (same `lib/home-feed` brain) | After A OK |
+| C | Card polish, chat/desktop IA, cleanup | Later |
+
+### Explicit
+- Keep dynamic home learning / personalization  
+- Show Secret menus / Loyalty sections only when data exists  
+- Do not fake distance without real location  
+
+---
+
 ## ✅ Living Pass Layer 1 (offer face morph) — WORKING (Aug 13–14, 2026)
 
 **Status:** Founder confirmed live on Bournemouth — morph + stick + redeem UX all good.  
