@@ -91,10 +91,18 @@ button {
   z-index: 10 !important;
 }
 
-/* Subtle press feedback — CSS :active only (no JS class toggle; that double-fired) */
+/* Subtle press feedback — CSS :active only (no JS class toggle; that double-fired).
+   Disable transforms on touch / coarse pointers so scroll finger-down doesn't shrink cards. */
 .tap-feedback {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tap-feedback:active {
+    transform: none !important;
+    filter: none !important;
+  }
 }
 
 /* Fix mobile navigation and touch targets */

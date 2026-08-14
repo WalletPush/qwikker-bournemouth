@@ -129,7 +129,7 @@ export function BusinessCard({
         </div>
       )}
       
-      <Card className={`bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/40 sm:hover:border-[#00d083]/50 sm:hover:shadow-lg sm:hover:shadow-[#00d083]/10 transition-colors sm:transition-shadow duration-200 group cursor-pointer sm:py-6 p-0 h-full ring-1 ring-white/5 active:border-[#00d083]/40 ${className}`}>
+      <Card className={`bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/40 sm:hover:border-[#00d083]/50 sm:hover:shadow-lg sm:hover:shadow-[#00d083]/10 sm:transition-shadow duration-200 group cursor-pointer sm:py-6 p-0 h-full ring-1 ring-white/5 ${className}`}>
         
         {/* MOBILE LAYOUT: Thumbnail-left (horizontal layout) */}
         <div className="sm:hidden">

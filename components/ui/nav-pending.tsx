@@ -32,16 +32,26 @@ export function useNavPending() {
 interface PendingLinkProps extends ComponentProps<typeof Link> {
   /** Ignored — kept so existing call sites don't need a mass rename. */
   pendingLabel?: string
+  /**
+   * Visual press scale/brightness. Off by default for large tappable surfaces
+   * (listing cards) — iOS :active fires on scroll finger-down and glitches.
+   * Set true for small controls (nav chips, icon buttons).
+   */
+  pressFeedback?: boolean
   children: ReactNode
 }
 
-/** Shared subtle press classes for links and buttons. */
+/**
+ * Press feedback for fine-pointer / hover devices only.
+ * Never use active:scale on full-width listing cards — it breaks mobile scroll.
+ */
 export const TAP_FEEDBACK_CLASS =
-  'tap-feedback transition-[transform,filter] duration-100 ease-out active:scale-[0.98] active:brightness-110'
+  'tap-feedback [@media(hover:hover)_and_(pointer:fine)]:transition-[transform,filter] [@media(hover:hover)_and_(pointer:fine)]:duration-100 [@media(hover:hover)_and_(pointer:fine)]:ease-out [@media(hover:hover)_and_(pointer:fine)]:active:scale-[0.98] [@media(hover:hover)_and_(pointer:fine)]:active:brightness-110'
 
-/** Drop-in Link with subtle press feedback only (no overlay / no JS flash). */
+/** Drop-in Link — pressFeedback off by default (scroll-safe for listing cards). */
 export function PendingLink({
   pendingLabel: _pendingLabel,
+  pressFeedback = false,
   className,
   children,
   ...props
@@ -49,7 +59,13 @@ export function PendingLink({
   return (
     <Link
       {...props}
-      className={[TAP_FEEDBACK_CLASS, className || ''].join(' ')}
+      className={[
+        'tap-feedback',
+        pressFeedback ? TAP_FEEDBACK_CLASS : '',
+        className || '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       {children}
     </Link>
