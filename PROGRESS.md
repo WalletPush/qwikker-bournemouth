@@ -4,6 +4,37 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## ✅ Living Pass Layer 1 (offer face morph) — WORKING (Aug 13–14, 2026)
+
+**Status:** Founder confirmed live on Bournemouth — morph + stick + redeem UX all good.  
+**Roadmap:** `living-pass-layer1` completed in `platform_audit_roadmap_7ed16549.plan.md`.
+
+### What shipped
+- **Activate:** silent `Background_Image` PUT to offer artwork (fallback business photo) after `Last_Message` + `Current_Offer`.
+- **Clear / expiry:** restore Bournemouth city poster (Cloudinary HTTPS). Soft-fail if WP rejects — text/push unchanged.
+- **Race fix (`f8f9a7e0`):** cancel stale `clear_pending` around activate; skip wipe for replaced (not expired) activations; re-check before clear PUTs. Fixes flash-then-revert.
+- **Redeem overlay (`fce3a78d`):** “Putting it on your Wallet…” busy state with real white logo + lock-in animation → existing Activated countdown modal.
+- **Assets:** night shoreline poster + white logo PNGs under `public/wallet/`; city map in `lib/config/wallet-pass-posters.ts`.
+- **WP template (ops):** Dynamic member background ON; `Background_Image` placeholder; Poster Generic + Featured Actions on Bournemouth.
+
+### Key commits
+`9f2867cc` morph + poster · `f8f9a7e0` clear race · `fce3a78d` redeem overlay · (earlier) `336bcbac` Current_Offer welcome on clear
+
+### Explicitly NOT doing now
+- Batch `updateValues` to cut WalletPush/Supabase invoke cost — Dad flagged per-PUT billing; **leave as-is** until scale pain (3 PUTs/redeem acceptable for now).
+- Stamp Card BETA / Lucide→PNG wallet faces — researched, not built.
+- Walk-past geofence living offer (`ft-1a`) — still idea/backlog.
+- Chat / business-detail redeem overlay — offers page only.
+
+### Follow-ups (optional)
+| Item | Notes |
+|---|---|
+| Expiry → night poster | Confirm once on a full window (cron every 10m) |
+| Other cities’ posters | Add to `CITY_PASS_POSTERS` when ready |
+| Google hero crop | Same URL may look different under QR |
+
+---
+
 ## 🔴 ESSENTIAL BEFORE LAUNCH — Stripe billing hardening (Aug 13, 2026)
 
 **Status:** NOT DONE — **gate for paid / commercial launch** (Codex audit + live Supabase cross-check).  
@@ -57,7 +88,9 @@ Do **not** treat as “low priority edge case” anymore — was understated on 
 | Expiry CTA click metric | Vibe submit tracked; push tap not a separate event |
 | Client-side halfway backup | Optional if cron late |
 
-**Key commits:** `3ffd82d1` R1 · `60afdc93` countdown · `87b462aa` silent Current_Offer · `41fdf8df` / `3771dbae` expiry vibe · `3df7580e` Turbopack fix · `18501087` offers filter UI.
+**Living Pass Layer 1 (Aug 13–14):** offer image on activate + city poster restore + clear-race fix + redeem overlay — **working** (see top section). Not an R1 blocker; ships on top of activations.
+
+**Key commits:** `3ffd82d1` R1 · `60afdc93` countdown · `87b462aa` silent Current_Offer · `41fdf8df` / `3771dbae` expiry vibe · `3df7580e` Turbopack fix · `18501087` offers filter UI · `9f2867cc` / `f8f9a7e0` / `fce3a78d` living pass.
 
 ---
 
@@ -380,6 +413,8 @@ Deferred (noted): owner-name discovery; WhatsApp verified-detection (needs Meta 
 3. **⚠️ IMPORTANT — Duplicate City Name Handling (Subdomain Collisions)** — Multiple real cities share names (Newport RI / Newport Wales / Newport KY, Cambridge UK/MA, Richmond, etc.). The subdomain IS the unique tenant key (`{slug}.qwikker.com` → `franchise_crm_configs.city`), so two cities cannot both own `newport`. **Two parts:**
    - **(a) Naming convention (operational/policy):** Globally-unique names use bare slug (`bournemouth`, `zanzibar`). Collision-prone names MUST be qualified at creation: US → `{city}-{state}` (`newport-ri`, `newport-ky`); UK → `{city}-{nation/county}` (`newport-wales`, `newport-gwent`). `display_name` stays clean ("Newport") for the UI; the qualified slug only lives in the URL. Qualify on first suspicion of collision — migrating a live franchise slug later is painful. The subdomain field already accepts hyphens (`replace(/[^a-z0-9-]/g, '')`) and hyphenated franchises already work (`costa-blanca`, `koh-samui`, `las-vegas`).
    - **(b) CODE BUG to fix:** `app/api/walletpass/create-main-pass/route.ts` (line ~57) derives the wallet pass welcome name by capitalizing the SLUG (`citySubdomain.charAt(0).toUpperCase() + citySubdomain.slice(1)`), so a `newport-ri` slug produces "Welcome to Qwikker Newport-ri!". Must use the franchise `display_name` from config instead. Affects all hyphenated/multi-word cities (existing `costa-blanca`, `koh-samui` already latently broken). Low-risk fix, do before launching any multi-word city.
+
+~~Living Pass Layer 1~~ — **DONE Aug 13–14** (founder confirmed). See top of this file.
 
 ### Completed (April 2026)
 1. ~~**0.23 Trial System Fix**~~ — DONE. Root cause: stale DB trigger `setup_free_trial_on_approval` racing the RPC. Trigger dropped. Code fixes already in place.
