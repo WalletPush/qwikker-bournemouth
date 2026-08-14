@@ -1175,21 +1175,44 @@ export async function generateHybridAIResponse(
     // MIXED queries (discovery + offers) → KB for discovery, DB for filtering
     
     // Chip "List a few" / save follow-ups must force offers hard-path (not Splash follow-up)
+    // Typo-tolerant: "ofers", "ofer", "deasl" etc. still mean offers
+    const offerNormalized = lowerMessage
+      .replace(/\bof+ers?\b/g, (m) => (m.endsWith('s') ? 'offers' : 'offer'))
+      .replace(/\bdeasl?s?\b/g, (m) => (m.includes('s') ? 'deals' : 'deal'))
+      .replace(/\bdiscountss?\b/g, 'discounts')
+
+    const lastAssistantText =
+      [...conversationHistory].reverse().find((m) => m.role === 'assistant')?.content || ''
+    const prevTurnWasOffers =
+      /\b(live deals?|save one|redeem when|walletActions|full Offers page|active offers?)\b/i.test(
+        lastAssistantText
+      ) || /\b(offer|deal)\b/i.test(lastAssistantText)
+
     const wantsSaveFollowUp =
       /\b(save (it|this|that)|can i save|how (do i|to) save|save (the )?offer)\b/i.test(
         userMessage
       )
     const wantsOfferSample =
       wantsSaveFollowUp ||
-      /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|list a few deals)\b/i.test(
-        userMessage
+      /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|more offers|list a few deals|current deals|live deals|any deals|any offers)\b/i.test(
+        offerNormalized
+      ) ||
+      // "more ofers" / "any more?" right after an offers reply
+      (prevTurnWasOffers &&
+        /\b(more|any more|another|else|again|keep going)\b/i.test(offerNormalized))
+
+    // Specific deal claims ("Roma has a free tiramisu", "10% off at X") → offers DB, not KB waffle
+    const assertsSpecificOffer =
+      /\b(has\s+(a\s+)?(free|offer|deal)\b|\bfree\s+[a-z][a-z\-]*(?:\s+[a-z]+)?\b|\d+\s*%\s*off|percent(?:age)?\s*off|2[\s-]?for[\s-]?1)\b/i.test(
+        lowerMessage
       )
 
     // Detect if offers/events are mentioned
     const isOfferQuery =
       wantsOfferSample ||
-      /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(lowerMessage) ||
-      /\b(show|list|all|any|get|find|see|tell me).*(deals?|offers?)\b/i.test(lowerMessage)
+      assertsSpecificOffer ||
+      /\b(offers?|deals?|discounts?|promos?|specials?)\b/i.test(offerNormalized) ||
+      /\b(show|list|all|any|get|find|see|tell me|more).*(deals?|offers?)\b/i.test(offerNormalized)
     // Match "shows" (noun) but NOT "show" (verb) to avoid false positives like "show me restaurants"
     const isEventQuery = /\b(events?|shows|concerts?|gigs?|happening|what'?s on|things to do)\b/i.test(lowerMessage) && 
                          !/\b(show me|show all|showing)\b/i.test(lowerMessage)
@@ -1198,26 +1221,31 @@ export async function generateHybridAIResponse(
     // HARD = pure offer/event ask (e.g. "any deals?", "any good deals?", "list a few")
     // MIXED = discovery + offers (e.g. "restaurants with offers", "family places with deals")
     // NOTE: cheap/good/best alone must NOT flip a deal ask into mixed.
+    // "Roma has a free tiramisu" mentions a place but is still a HARD offer lookup.
     const hasDiscoveryConstraint =
+      !assertsSpecificOffer &&
       /\b(with|that has|which has|anywhere|places|restaurants?|bars?|cafes?|family|kids?)\b/i.test(
         userMessage
       )
     const hasQualityModifier = /\b(cheap|good|best)\b/i.test(userMessage)
     const isMixedQuery =
       !wantsOfferSample &&
+      !assertsSpecificOffer &&
       (hasDiscoveryConstraint ||
         (hasQualityModifier && !isOfferQuery && !isEventQuery))
     
     const mentionsSecretMenu = /\b(secret\s*menus?)\b/i.test(lowerMessage)
     const isHardOfferQuery =
-      wantsOfferSample || (isOfferQuery && !isMixedQuery && !mentionsSecretMenu)
+      wantsOfferSample ||
+      assertsSpecificOffer ||
+      (isOfferQuery && !isMixedQuery && !mentionsSecretMenu)
     const isHardEventQuery = isEventQuery && !isMixedQuery
     
     const isKbDisabled = isHardOfferQuery || isHardEventQuery
     const intent = isOfferQuery || wantsOfferSample ? 'offers' : (isEventQuery ? 'events' : 'general')
     
     console.log(`🔍 KB GATE CHECK: query="${userMessage}"`)
-    console.log(`  isOfferQuery=${isOfferQuery}, isEventQuery=${isEventQuery}`)
+    console.log(`  isOfferQuery=${isOfferQuery}, isEventQuery=${isEventQuery}, assertsSpecificOffer=${assertsSpecificOffer}`)
     console.log(`  isMixedQuery=${isMixedQuery} (discovery with constraints)`)
     console.log(`  isHardOfferQuery=${isHardOfferQuery} (pure offers, no discovery)`)
     console.log(`  isKbDisabled=${isKbDisabled}, intent="${intent}"`)
@@ -1536,29 +1564,76 @@ export async function generateHybridAIResponse(
         }
 
         // Prefer the business the user was just talking about (e.g. "Can I save it?" after CHE)
+        // Also match names in the current message ("Roma has a free tiramisu")
         let focusedOffers = offers
         const focusName =
           state.currentBusiness?.name ||
           namedLockBusiness?.name ||
           ''
-        if (focusName && (wantsSaveFollowUp || /\boffer\b/i.test(userMessage))) {
-          const focusLower = focusName.toLowerCase()
-          const matched = offers.filter((o) =>
-            (o.business_profiles?.business_name || '').toLowerCase().includes(
-              focusLower.slice(0, Math.min(12, focusLower.length))
+
+        const matchOffersByBusinessHint = (hint: string) => {
+          const h = hint.toLowerCase().trim()
+          if (h.length < 3) return [] as ChatOfferRow[]
+          return offers.filter((o) => {
+            const name = (o.business_profiles?.business_name || '').toLowerCase()
+            if (!name) return false
+            // "Roma" → Roma Italian… ; full name substring either way
+            return (
+              name.includes(h) ||
+              h.includes(name) ||
+              name.split(/\s+/).some((w) => w.length >= 4 && h.includes(w)) ||
+              h.split(/\s+/).some((w) => w.length >= 4 && name.includes(w))
             )
+          })
+        }
+
+        // Pull a likely business token from the user message (first capitalized run / known focus)
+        const nameFromMessage = (() => {
+          const m = userMessage.match(
+            /\b([A-Z][a-zA-Z0-9'&]*(?:\s+[A-Z][a-zA-Z0-9'&]*){0,3})\b/
           )
+          return m?.[1]?.trim() || ''
+        })()
+
+        if (focusName && (wantsSaveFollowUp || /\boffer\b/i.test(userMessage) || assertsSpecificOffer)) {
+          const matched = matchOffersByBusinessHint(focusName)
+          if (matched.length > 0) focusedOffers = matched
+        } else if (nameFromMessage && (assertsSpecificOffer || isOfferQuery)) {
+          const matched = matchOffersByBusinessHint(nameFromMessage)
           if (matched.length > 0) focusedOffers = matched
         } else if (wantsSaveFollowUp) {
           // Scan recent assistant text for a business name that has a live offer
-          const recentAssistant = [...conversationHistory]
-            .reverse()
-            .find((m) => m.role === 'assistant')?.content || ''
+          const recentAssistant = lastAssistantText
           const hit = offers.find((o) => {
             const name = o.business_profiles?.business_name || ''
             return name.length >= 4 && recentAssistant.toLowerCase().includes(name.toLowerCase())
           })
           if (hit) focusedOffers = [hit]
+        }
+
+        // Match offer title/value keywords from the user message (tiramisu, pizza, etc.)
+        const offerKeywordHit = (o: ChatOfferRow) => {
+          const blob = `${o.offer_name || ''} ${o.offer_value || ''} ${o.offer_description || ''}`.toLowerCase()
+          const tokens = lowerMessage
+            .replace(/[^a-z0-9\s%]/g, ' ')
+            .split(/\s+/)
+            .filter(
+              (t) =>
+                t.length >= 4 &&
+                !/^(have|has|with|from|this|that|they|them|free|offer|offers|deal|deals|roma|just|about|some|more)$/i.test(
+                  t
+                )
+            )
+          return tokens.some((t) => blob.includes(t))
+        }
+        if (assertsSpecificOffer) {
+          const byKeyword = focusedOffers.filter(offerKeywordHit)
+          if (byKeyword.length > 0) {
+            focusedOffers = byKeyword
+          } else if (focusedOffers === offers) {
+            // No business/keyword match — still show live deals rather than AI "couldn't find"
+            focusedOffers = offers
+          }
         }
 
         // Honour specific deal-type asks (2-for-1 / BOGOF / % off) instead of random live deals
