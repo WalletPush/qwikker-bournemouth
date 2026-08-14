@@ -1,6 +1,9 @@
 'use client'
 
-import { PendingLink } from '@/components/ui/nav-pending'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useLinkStatus } from 'next/link'
+import { TAP_FEEDBACK_CLASS } from '@/components/ui/nav-pending'
 
 export interface BottomTabItem {
   id: string
@@ -82,11 +85,56 @@ interface UserBottomNavProps {
   notifBadge?: number
 }
 
+function BottomTabFace({
+  tab,
+  isRouteActive,
+  showBadge,
+  notifBadge,
+}: {
+  tab: BottomTabItem
+  isRouteActive: boolean
+  showBadge: boolean
+  notifBadge: number
+}) {
+  const { pending } = useLinkStatus()
+  const isActive = isRouteActive || pending
+
+  return (
+    <>
+      <span className="relative">
+        {tab.icon}
+        {isActive && (
+          <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-0.5 w-4 rounded-full bg-[#00d083]" />
+        )}
+        {showBadge && (
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-[#00d083] text-[10px] font-bold text-black flex items-center justify-center">
+            {notifBadge > 99 ? '99+' : notifBadge}
+          </span>
+        )}
+      </span>
+      <span
+        className={`text-[11px] leading-none font-semibold ${
+          isActive ? 'text-[#00d083]' : 'text-zinc-400'
+        }`}
+      >
+        {tab.label}
+      </span>
+    </>
+  )
+}
+
 export function UserBottomNav({
   currentSection,
   getNavUrl,
   notifBadge = 0,
 }: UserBottomNavProps) {
+  // Instant highlight on tap — don't wait for the server page to resolve
+  const [pendingTabId, setPendingTabId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setPendingTabId(null)
+  }, [currentSection])
+
   return (
     <nav
       className="lg:hidden fixed bottom-0 inset-x-0 z-[90] border-t border-zinc-700/80 bg-black backdrop-blur-xl"
@@ -95,36 +143,30 @@ export function UserBottomNav({
     >
       <div className="flex items-stretch justify-between px-1 pt-2 pb-1.5 max-w-lg mx-auto">
         {BOTTOM_TABS.map((tab) => {
-          const isActive = tab.matchSections.includes(currentSection)
+          const isRouteActive = tab.matchSections.includes(currentSection)
+          const isActive = pendingTabId
+            ? pendingTabId === tab.id
+            : isRouteActive
           const showBadge = tab.id === 'more' && notifBadge > 0
+
           return (
-            <PendingLink
+            <Link
               key={tab.id}
               href={getNavUrl(tab.href)}
-              pendingLabel={tab.label}
-              className={`relative flex flex-1 flex-col items-center justify-center gap-1 py-1.5 min-h-[52px] touch-manipulation transition-colors ${
+              prefetch
+              onClick={() => setPendingTabId(tab.id)}
+              className={`${TAP_FEEDBACK_CLASS} relative flex flex-1 flex-col items-center justify-center gap-1 py-1.5 min-h-[52px] touch-manipulation transition-colors ${
                 isActive ? 'text-[#00d083]' : 'text-zinc-400 active:text-zinc-200'
               }`}
+              aria-current={isActive ? 'page' : undefined}
             >
-              <span className="relative">
-                {tab.icon}
-                {isActive && (
-                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-0.5 w-4 rounded-full bg-[#00d083]" />
-                )}
-                {showBadge && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-[#00d083] text-[10px] font-bold text-black flex items-center justify-center">
-                    {notifBadge > 99 ? '99+' : notifBadge}
-                  </span>
-                )}
-              </span>
-              <span
-                className={`text-[11px] leading-none font-semibold ${
-                  isActive ? 'text-[#00d083]' : 'text-zinc-400'
-                }`}
-              >
-                {tab.label}
-              </span>
-            </PendingLink>
+              <BottomTabFace
+                tab={tab}
+                isRouteActive={isActive}
+                showBadge={showBadge}
+                notifBadge={notifBadge}
+              />
+            </Link>
           )
         })}
       </div>

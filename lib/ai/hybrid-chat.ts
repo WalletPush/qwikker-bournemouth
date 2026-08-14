@@ -917,7 +917,7 @@ HARD RULES (DO NOT BREAK):
 - 📋 HOURS QUERIES: When a user asks "what are the hours?" or "when is X open?", show the FULL weekly schedule from the data — not just today's or tomorrow's. Present it clearly (e.g. "Mon-Fri: 9am-5pm, Sat: 10am-4pm, Sun: Closed"). Only show a single day if the user specifically asked about that day (e.g. "are they open on Sunday?").
 - GOOGLE REVIEWS: Numeric rating + review_count only. Never quote or paraphrase review text.
 - OFFERS: DB-authoritative only. If an offer is not in current data, it does not exist.
-- TIERS: If there are relevant Qwikker Picks for the user's request, list them first. Never force a Qwikker Pick that doesn't match the request — relevance always wins over tier.
+- TIERS: Lead with paid partners when they match the request: [TIER: qwikker_picks] first, then [TIER: featured], then [TIER: recommended] (starter), then free/unclaimed. Never force a paid venue that does not match — but if a Recommended/Featured/Pick bar matches a drinks query, it MUST be mentioned before free bars. Relevance still beats tier when a free venue is clearly a better match (e.g. exact dish only they have).
 - "QWIKKER PICKS": Only use this label if EVERY business you mentioned is [TIER: qwikker_picks].
 - ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, end your response with a short line like: "Tap **Explore on Atlas** below to take a guided tour of these spots on the map!" — use natural wording but always mention the Atlas button.' : 'DO NOT mention map views or Atlas — the map is not available for these businesses.'}
 - 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone:" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
@@ -1894,6 +1894,13 @@ export async function generateHybridAIResponse(
           console.log(`🔍 Category search (${c}): found/boosted ${boosted} venues in inventory`)
         }
       }
+      // Paid partners get a nudge so starter bars surface above free name-matches
+      for (const b of tier1) {
+        const prev = businessRelevanceScores.get(b.id) || 0
+        if (prev >= INJECT_MIN) {
+          businessRelevanceScores.set(b.id, prev + 1)
+        }
+      }
     }
       
       console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
@@ -2115,12 +2122,16 @@ export async function generateHybridAIResponse(
         
         return 0
       } else {
-        // INTENT MODE: Integer relevance band first, then tier within band, then
-        // decimal precision within same band+tier. This ensures a score-5 bar always
-        // beats a score-2 restaurant, but within the same band (e.g. both "2.x"),
-        // a spotlight business ranks above a featured one -- that's what they pay for.
+        // INTENT MODE: Relevance first, but paid partners win when scores are close.
+        // Starter/Featured/Picks (CHE) must beat free bars that only match on name/area.
         const scoreA = a.relevanceScore || 0
         const scoreB = b.relevanceScore || 0
+        const bothRelevant = scoreA >= INJECT_MIN && scoreB >= INJECT_MIN
+        const scoresClose = Math.abs(scoreA - scoreB) <= 2
+        if (bothRelevant && scoresClose && a.tierPriority !== b.tierPriority) {
+          return a.tierPriority - b.tierPriority
+        }
+
         const bandA = Math.floor(scoreA)
         const bandB = Math.floor(scoreB)
         
