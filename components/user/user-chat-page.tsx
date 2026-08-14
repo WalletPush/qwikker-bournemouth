@@ -1568,7 +1568,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               <button
                                 type="button"
                                 disabled
-                                className="flex-1 min-w-[5.5rem] bg-[#00d083]/15 text-[#00d083] text-xs font-semibold py-2 px-3 rounded-lg cursor-default"
+                                className="flex-1 min-w-[5.5rem] bg-[#00d083]/10 text-[#00d083]/90 text-xs font-semibold py-2 px-3 rounded-lg cursor-default border border-[#00d083]/25"
                               >
                                 On Wallet
                               </button>
@@ -1577,7 +1577,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => void handleSaveOffer(action)}
-                                className="flex-1 min-w-[5.5rem] bg-[#00d083] hover:bg-[#00b86f] disabled:opacity-50 text-black text-xs font-semibold py-2 px-3 rounded-lg"
+                                className="flex-1 min-w-[5.5rem] bg-[#00d083]/18 hover:bg-[#00d083]/28 disabled:opacity-50 text-[#7dffa8] text-xs font-semibold py-2 px-3 rounded-lg border border-[#00d083]/35"
                               >
                                 {isBusy ? 'Saving…' : 'Save'}
                               </button>
@@ -1696,7 +1696,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             <Button
               onClick={() => handleSendMessage(inputValue)}
               disabled={!inputValue.trim() || isTyping}
-              className="h-12 w-12 shrink-0 rounded-full bg-[#00d083] hover:bg-[#00b86f] text-black p-0 font-semibold transition-colors disabled:opacity-50"
+              className="h-12 w-12 shrink-0 rounded-full bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#7dffa8] border border-[#00d083]/40 p-0 font-semibold transition-colors disabled:opacity-50"
             >
               {isTyping ? (
                 <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
