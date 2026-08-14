@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PendingLink } from '@/components/ui/nav-pending'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type {
   HomeFeedResponse,
@@ -243,8 +244,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
   }, [walletPassId, currentCity])
 
   const getNavUrl = useCallback((href: string) => {
-    if (!walletPassId) return href
-    return `${href}?wallet_pass_id=${walletPassId}`
+    return withWalletPassId(href, walletPassId)
   }, [walletPassId])
 
   const getChatUrl = useCallback((message: string) => {

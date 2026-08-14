@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface SimpleBadgeCardProps {
   walletPassId?: string
@@ -41,12 +42,7 @@ const simpleBadges = [
 export function SimpleBadgeCard({ walletPassId, userProfile }: SimpleBadgeCardProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
 
   // Use actual badge tracker
   const [badgeProgress, setBadgeProgress] = useState<any[]>([])

@@ -7,6 +7,7 @@ import { useElegantModal } from '@/components/ui/elegant-modal'
 import { useSearchParams } from 'next/navigation'
 import { getBadgeTracker } from '@/lib/utils/simple-badge-tracker'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface RealSecretMenu {
   businessId: string
@@ -44,12 +45,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
   const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [unlockedItems, setUnlockedItems] = useState<Set<string>>(new Set())

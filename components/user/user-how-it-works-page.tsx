@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface HowItWorksStats {
   partnerVenues: number
@@ -30,12 +31,7 @@ export function UserHowItWorksPage({
 }: UserHowItWorksPageProps = {}) {
   
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
   const [visibleStep, setVisibleStep] = useState(0)
 
   useEffect(() => {

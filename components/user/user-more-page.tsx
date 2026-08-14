@@ -1,6 +1,7 @@
 'use client'
 
 import { PendingLink } from '@/components/ui/nav-pending'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface MoreHubItem {
   id: string
@@ -19,8 +20,7 @@ interface UserMorePageProps {
 }
 
 function getNavUrl(href: string, walletPassId?: string | null) {
-  if (!walletPassId) return href
-  return `${href}?wallet_pass_id=${walletPassId}`
+  return withWalletPassId(href, walletPassId)
 }
 
 export function UserMorePage({

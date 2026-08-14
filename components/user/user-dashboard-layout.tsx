@@ -7,6 +7,7 @@ import {
   UserBottomNav,
   USER_BOTTOM_NAV_HEIGHT_CLASS,
 } from '@/components/user/user-bottom-nav'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface UserDashboardLayoutProps {
   children: React.ReactNode
@@ -213,10 +214,7 @@ export function UserDashboardLayout({
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
 
-  const getNavUrl = (href: string) => {
-    if (!resolvedPassId) return href
-    return `${href}?wallet_pass_id=${resolvedPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, resolvedPassId)
 
   return (
     <NavPendingProvider>

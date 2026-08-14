@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface AiCompanionCardProps {
   title?: string
@@ -21,15 +22,11 @@ export function AiCompanionCard({
   walletPassId,
   className = '',
 }: AiCompanionCardProps) {
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) return href
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
-
   const prompt = prompts[0]
+  const chatBase = withWalletPassId('/user/chat', walletPassId)
   const href = prompt
-    ? `${getNavUrl('/user/chat')}${walletPassId ? '&' : '?'}message=${encodeURIComponent(prompt)}`
-    : getNavUrl('/user/chat')
+    ? `${chatBase}${chatBase.includes('?') ? '&' : '?'}message=${encodeURIComponent(prompt)}`
+    : chatBase
 
   const subtitle = description
     ? description

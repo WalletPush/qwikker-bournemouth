@@ -7,6 +7,7 @@ import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName }
 import { useSidebar } from '@/components/user/user-dashboard-layout'
 import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 import { FilterChipGroup, FilterPanel } from '@/components/user/filter-panel'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface Business {
   id: string
@@ -375,12 +376,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     }
   }, [selectedCategory, categoryOptions])
 
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
 
   const segmentTabs = [
     { id: 'all', label: 'All', count: businesses.length, on: 'bg-[#00d083] text-black border-[#00d083]', off: 'bg-zinc-800 text-zinc-100 border-zinc-500' },
@@ -434,7 +430,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="rounded-2xl border border-[#00d083]/20 bg-gradient-to-br from-[#00d083]/10 via-zinc-950 to-violet-500/10 px-4 py-5">
+      <div className="rounded-2xl border border-[#00d083]/20 bg-gradient-to-br from-[#00d083]/10 via-zinc-950 to-zinc-900 px-4 py-5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083]/90 font-semibold mb-1">
           Discover
         </p>

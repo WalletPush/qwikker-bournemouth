@@ -630,7 +630,11 @@ function deriveAvailableTypes(businesses: any[], limit = 5): string[] {
  * Post-process AI response: strip internal tags, enforce inventory-only mentions,
  * guard hallucinations for zero-data businesses.
  */
-function postProcessResponse(response: string, businesses: any[]): string {
+function postProcessResponse(
+  response: string,
+  businesses: any[],
+  loyaltyBusinessNames: Set<string> = new Set()
+): string {
   let result = response
   const allowedSlugs = new Set(
     businesses.map((b) => getBusinessSlug(b)).filter((s) => typeof s === 'string' && s.length > 0)
@@ -731,6 +735,35 @@ function postProcessResponse(response: string, businesses: any[]): string {
       }
     }
   }
+
+  // 3b. Kill fabricated stamp / reward-progress claims.
+  // Models parrot prompt examples ("1 stamp away") onto venues with no loyalty.
+  // Only keep progress sentences that name a business the user actually has stamps at.
+  const stampProgressPattern =
+    /\b(\d+\s*stamp(?:s)?\s+away|one stamp away|just\s+\d+\s+stamp|stamps?\s+until|free reward waiting|claim that reward|reward waiting at|\/\s*\d+\s*stamps?\b|almost there[^.!?\n]{0,40}reward)\b/i
+
+  result = result
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((sentence) => {
+      if (!stampProgressPattern.test(sentence)) return true
+      if (loyaltyBusinessNames.size === 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🧹 Stripped fabricated loyalty sentence (no user stamps): "${sentence.slice(0, 80)}"`)
+        }
+        return false
+      }
+      const lower = sentence.toLowerCase()
+      const mentionsReal = [...loyaltyBusinessNames].some((name) => lower.includes(name))
+      if (!mentionsReal) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🧹 Stripped loyalty sentence for non-member venue: "${sentence.slice(0, 80)}"`)
+        }
+        return false
+      }
+      return true
+    })
+    .join(' ')
+    .replace(/  +/g, ' ')
   
   // 4. Clean up double spaces and trailing whitespace from stripping
   result = result.replace(/  +/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
@@ -939,12 +972,13 @@ HARD RULES (DO NOT BREAK):
   4. SILENT USE: Do NOT repeat the user's profile back to them. Just use it.
   5. NO PROFILE = NO ASSUMPTIONS: If no USER PROFILE section exists, do not assume any preferences or restrictions.
   6. TIE-BREAKER ONLY: USER PROFILE is a tie-breaker, not an override. When two businesses are similarly relevant to the query, prefer the one matching the user's profile. Never promote a low-relevance business above a high-relevance one just because it matches preferences. The ranked business list order reflects verified relevance — respect it.
-- LOYALTY (CRITICAL — READ CAREFULLY):
-  1. NEVER fabricate loyalty stamp counts, stamp progress, or reward proximity. Only cite data that appears in the structured [USER: X/Y stamps] tag within a business entry.
-  2. BROAD DISCOVERY (e.g. "where should I go tonight", "any recommendations", "what's good"): If USER LOYALTY PROGRESS shows "REWARD READY" or "ALMOST THERE", you MUST lead with those businesses. Example: "You've got a free [reward] waiting at [business] — tonight could be the night to claim it!" Then continue with other recommendations.
-  3. SPECIFIC INTENT (e.g. "best Greek food", "good burger place"): Only mention loyalty rewards if the reward business MATCHES the query. If the user asks for Greek food and their reward is at a cocktail bar, do NOT shoehorn it in. Instead, add a brief PS at the end: "P.S. Don't forget you've got a free [reward] at [business] whenever you're ready!"
-  4. NEAR-REWARD NUDGE: If the user is within 3 stamps of a reward and the business is relevant to the query, mention it naturally. Example: "You're just 1 stamp away from a free [reward] at [business]!"
-  5. If NO USER LOYALTY PROGRESS section exists below, NEVER mention stamp counts, "stamps away", or reward progress. You may mention that a business has a loyalty program if it shows "Loyalty:" in its context — but ONLY as a general incentive (e.g. "They have a loyalty card you can join").
+- LOYALTY (ABSOLUTE HARD RULES — ZERO TOLERANCE FOR FABRICATION):
+  1. Stamp progress is ONLY real when a business entry includes the exact tag format [USER: X/Y stamps, N to go]. If that tag is absent for a business, that user has NO stamp progress there — do NOT invent, guess, or imply any count.
+  2. FORBIDDEN without [USER: … stamps …]: any phrase like "X stamp(s) away", "one stamp away", "almost there", "free reward waiting", "claim that reward", "stamps until", or inventing a stamp balance. This is a CRITICAL product failure when the venue has no loyalty program.
+  3. USER LOYALTY PROGRESS section (if present below) lists ONLY venues the user actually joined. You may reference those venues' progress ONLY as written there. Never transplant that progress onto a different business.
+  4. A plain "Loyalty: Collect N stamps for …" line (without [USER: …]) means the venue offers a program the user has NOT joined — you may say they have a loyalty card to join, NEVER that the user is close to a reward.
+  5. If there is no USER LOYALTY PROGRESS section AND no [USER: … stamps …] tags on any business, do not mention stamp progress at all.
+  6. BROAD DISCOVERY only: if USER LOYALTY PROGRESS marks REWARD READY or ALMOST THERE for a venue, you may lead with that venue using the numbers from the section — never invent different numbers.
 - OFFERS (CRITICAL — READ CAREFULLY):
   Only mention offers for businesses that have [Has X offers available] in their context line. If a business does NOT have this tag, they have NO current valid offers — do NOT reference any offers from KB descriptions, even if the text mentions past promotions.
 
@@ -1957,7 +1991,7 @@ export async function generateHybridAIResponse(
           .select(`
             program_id, stamps_balance,
             loyalty_programs!inner(
-              business_id, program_name, reward_description, reward_threshold,
+              business_id, program_name, reward_description, reward_threshold, status,
               business_profiles!inner(business_name)
             )
           `)
@@ -1968,7 +2002,7 @@ export async function generateHybridAIResponse(
 
         for (const m of memberships || []) {
           const prog = (m as any).loyalty_programs
-          if (prog?.business_id) {
+          if (prog?.business_id && prog.status === 'active') {
             const remaining = prog.reward_threshold - m.stamps_balance
             userLoyaltyByBusinessId.set(prog.business_id, {
               stamps_balance: m.stamps_balance,
@@ -2778,7 +2812,13 @@ Present this information clearly and offer further help.`
     }
     
     // === POST-PROCESSING GUARDRAILS ===
-    aiResponse = postProcessResponse(aiResponse, allBusinessesForContext)
+    const loyaltyNamesForGuard = new Set<string>()
+    for (const [bizId] of userLoyaltyByBusinessId) {
+      const biz = allBusinessesForContext.find((b) => b.id === bizId)
+      const name = (biz?.business_name || '').toLowerCase().trim()
+      if (name) loyaltyNamesForGuard.add(name)
+    }
+    aiResponse = postProcessResponse(aiResponse, allBusinessesForContext, loyaltyNamesForGuard)
     
     // --- DEDUPE: Parse AI response for business links to prevent duplicates in Tier2/Tier3 ---
     // NOTE: These are RAW slugs - not yet validated against actual business inventory

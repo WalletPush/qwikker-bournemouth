@@ -758,7 +758,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         }}
         data-offer-card
         data-offer-id={offer.id}
-        className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 hover:border-green-500/30 transition-all duration-300 overflow-hidden group h-full flex flex-col ${
+        className={`bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-700/50 sm:hover:border-green-500/30 transition-colors duration-200 overflow-hidden group h-full flex flex-col active:border-[#00d083]/35 ${
           isActive ? 'ring-1 ring-emerald-500/40' : ''
         } ${
           highlightedCard === businessSlug || highlightedCard === offer.id
@@ -1251,17 +1251,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-amber-500/10 px-4 py-5">
+      <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-zinc-950 px-4 py-5">
         <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
-          Deals
+          Offers
         </p>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Offers</h1>
-        <p className="text-sm text-zinc-300 mt-1.5">
-          Local deals you can save and redeem
-        </p>
-        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9dffc0] bg-[#00d083]/10 border border-[#00d083]/25 px-2.5 py-1 rounded-full">
-          {liveCount} live
-        </div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">{cityDisplayName}</h1>
+        <p className="text-sm text-zinc-300 mt-1.5">{liveCount} live</p>
       </div>
 
       {/* Primary: All / Saved / Active */}

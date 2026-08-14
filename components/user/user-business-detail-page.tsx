@@ -22,6 +22,7 @@ import { getHeroLine } from '@/lib/utils/business-labels'
 import { VibePromptSheet } from '@/components/user/vibe-prompt-sheet'
 import { saveItem, unsaveItem } from '@/lib/actions/user-saved-actions'
 import { BusinessLoyaltyPanel } from '@/components/loyalty/business-loyalty-panel'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface UserBusinessDetailPageProps {
   slug: string
@@ -37,12 +38,7 @@ interface UserBusinessDetailPageProps {
 export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, trackingData, currencySymbol = '£' }: UserBusinessDetailPageProps) {
   
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
   const [activeTab, setActiveTab] = useState<'overview' | 'menu' | 'offers' | 'reviews'>('overview')
   const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set())
   const [userDistance, setUserDistance] = useState<number | null>(null)

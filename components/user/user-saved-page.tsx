@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { PendingLink } from '@/components/ui/nav-pending'
 import { unsaveItem } from '@/lib/actions/user-saved-actions'
 import { useRouter } from 'next/navigation'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface SavedItem {
   id: string
@@ -26,12 +27,7 @@ export function UserSavedPage({ savedItems, walletPassId }: UserSavedPageProps) 
   const [removingId, setRemovingId] = useState<string | null>(null)
 
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
 
   const handleUnsave = async (item: SavedItem) => {
     if (!walletPassId) return

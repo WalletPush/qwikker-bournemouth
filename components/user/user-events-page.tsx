@@ -429,18 +429,12 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
       )}
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-violet-500/10 px-4 py-5">
+        <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-zinc-950 px-4 py-5">
           <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
-            What&apos;s on
+            Events
           </p>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Events</h1>
-          <p className="text-sm text-zinc-300 mt-1.5">
-            Live music, tastings, workshops &amp; more around {city}
-          </p>
-          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9dffc0] bg-[#00d083]/10 border border-[#00d083]/25 px-2.5 py-1 rounded-full">
-            <Calendar className="w-3.5 h-3.5" />
-            {upcomingEvents.length} upcoming
-          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{city}</h1>
+          <p className="text-sm text-zinc-300 mt-1.5">{upcomingEvents.length} upcoming</p>
         </div>
 
         <FilterPanel
@@ -591,7 +585,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             filteredEvents.map((event) => (
               <Card 
                 key={event.id}
-                className="bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/30 ring-1 ring-white/5 hover:border-[#00d083]/45 transition-all duration-300 overflow-hidden group cursor-pointer p-0 gap-0"
+                className="bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/30 ring-1 ring-white/5 sm:hover:border-[#00d083]/45 transition-colors duration-200 overflow-hidden group cursor-pointer p-0 gap-0 active:border-[#00d083]/40"
                 onClick={() => handleOpenHeroCard(event.id)}
               >
                 {/* Event Image */}

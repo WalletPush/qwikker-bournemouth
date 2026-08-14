@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import Link from 'next/link'
+import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface UserDashboardLayoutProps {
   children: React.ReactNode
@@ -77,12 +78,7 @@ export function UserDashboardLayoutMobile({ children, currentSection, currentUse
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => {
-    if (!walletPassId) {
-      return href
-    }
-    return `${href}?wallet_pass_id=${walletPassId}`
-  }
+  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
