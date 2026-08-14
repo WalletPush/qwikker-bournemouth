@@ -27,10 +27,10 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-slate-400">Invalid franchise location detected.</p>
+          <p className="text-zinc-500">Invalid franchise location detected.</p>
         </div>
       </div>
     )
@@ -233,8 +233,14 @@ export default async function OffersPage({ searchParams }: OffersPageProps) {
       cityDisplayName={cityDisplayName}
     >
       <Suspense fallback={
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-slate-400">Loading offers...</div>
+        <div className="max-w-3xl mx-auto space-y-4 animate-pulse">
+          <div className="h-28 rounded-2xl bg-zinc-800 border border-zinc-700/80" />
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-16 rounded-2xl bg-zinc-800" />
+            <div className="h-16 rounded-2xl bg-zinc-800" />
+            <div className="h-16 rounded-2xl bg-zinc-800" />
+          </div>
+          <div className="h-40 rounded-2xl bg-zinc-800/80" />
         </div>
       }>
         <UserOffersPage 

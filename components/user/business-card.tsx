@@ -34,12 +34,6 @@ export function BusinessCard({
   const [showTooltip, setShowTooltip] = useState(false)
   const systemCategory = resolveSystemCategory(business)
   
-  console.log('🐛 BusinessCard state:', { 
-    businessName: business.name, 
-    status: business.status, 
-    showTooltip 
-  })
-  
   // Helper to get utility line for mobile
   const getUtilityLine = () => {
     const raw = business.hours || business.business_hours
@@ -115,7 +109,7 @@ export function BusinessCard({
   const cardContent = (
     <div className="relative h-full">
       {/* Tier badge - half on/half off card (MOBILE ONLY) - OUTSIDE card to avoid clipping */}
-      {(business.plan === 'spotlight' || business.plan === 'featured') && (
+      {(business.plan === 'spotlight' || business.plan === 'featured' || business.plan === 'starter') && (
         <div className="absolute -top-2 right-3 z-[1] sm:hidden">
           {business.plan === 'spotlight' && (
             <span className="inline-block px-3 py-1 rounded-full shadow-lg border border-white/10 backdrop-blur bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[11px] font-extrabold tracking-wide uppercase">
@@ -127,10 +121,15 @@ export function BusinessCard({
               FEATURED
             </span>
           )}
+          {business.plan === 'starter' && (
+            <span className="inline-block px-3 py-1 rounded-full shadow-lg border border-white/10 backdrop-blur bg-gradient-to-r from-violet-400 to-purple-500 text-black text-[11px] font-extrabold tracking-wide uppercase">
+              RECOMMENDED
+            </span>
+          )}
         </div>
       )}
       
-      <Card className={`bg-gradient-to-br from-slate-800/50 to-slate-700/30 border-slate-600 hover:border-[#00d083]/50 transition-all duration-300 hover:shadow-lg hover:shadow-[#00d083]/10 group cursor-pointer sm:py-6 p-0 h-full ${className}`}>
+      <Card className={`bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/40 hover:border-[#00d083]/50 hover:shadow-lg hover:shadow-[#00d083]/10 transition-all duration-300 group cursor-pointer sm:py-6 p-0 h-full ring-1 ring-white/5 ${className}`}>
         
         {/* MOBILE LAYOUT: Thumbnail-left (horizontal layout) */}
         <div className="sm:hidden">
@@ -154,7 +153,7 @@ export function BusinessCard({
                 className="h-full w-full"
               />
               {business.status === 'unclaimed' && (
-                <div className="absolute bottom-2 left-2 z-[1] bg-slate-900/95 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-slate-200 font-medium flex items-center gap-1 border border-slate-700/50">
+                <div className="absolute bottom-2 left-2 z-[1] bg-zinc-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-zinc-100 font-medium flex items-center gap-1 border border-zinc-600/60">
                   <span>ⓘ</span>
                   <span>Unclaimed</span>
                 </div>
@@ -212,26 +211,26 @@ export function BusinessCard({
                   <>
                     {/* Open/Closed/Hours Pill - FIRST, above name (transparent colors with border) */}
                     {isOpen !== null && isOpen !== undefined ? (
-                      <div className={`inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 ${
+                      <div className={`inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-semibold border mb-1 ${
                         isOpen 
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40' 
+                          : 'bg-rose-500/15 text-rose-300 border-rose-400/30'
                       }`}>
                         {isOpen ? '● Open' : '● Closed'}
                       </div>
                     ) : (
-                      <div className="inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 bg-slate-700/10 text-slate-400 border-slate-600/20">
+                      <div className="inline-flex self-start px-2.5 py-0.5 rounded-full text-[10px] font-medium border mb-1 bg-zinc-800/60 text-zinc-400 border-zinc-700/50">
                         Hours not available
                       </div>
                     )}
                     
                     {/* Business Name */}
-                    <h3 className="text-white text-base font-semibold leading-tight line-clamp-1 mb-1.5">
+                    <h3 className="text-white text-[17px] font-bold leading-tight line-clamp-1 mb-1.5 tracking-tight">
                       {business.name}
                     </h3>
                     
                     {/* Category */}
-                    <p className="text-slate-400 text-xs line-clamp-1 mb-1.5">
+                    <p className="text-zinc-300 text-xs line-clamp-1 mb-1.5">
                       {displayCategory}
                     </p>
                     
@@ -240,12 +239,12 @@ export function BusinessCard({
                       <div className="flex items-center gap-1 text-xs mb-2">
                         <span className="text-yellow-400">⭐</span>
                         <span className="text-white font-semibold">{rating.toFixed(1)}</span>
-                        <span className="text-slate-400">({reviewCount})</span>
+                        <span className="text-zinc-400">({reviewCount})</span>
                       </div>
                     )}
                     
                     {/* Distance + Hours - wrapped in subtle pill */}
-                    <div className="inline-flex self-start items-center gap-1 text-[10px] text-slate-400 bg-slate-800/40 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                    <div className="inline-flex self-start items-center gap-1 text-[10px] text-zinc-300 bg-zinc-800/50 backdrop-blur-sm px-2 py-0.5 rounded-full border border-zinc-700/40">
                       <span>ⓘ</span>
                       {business.distance !== null && business.distance !== undefined ? (
                         <>
@@ -302,7 +301,7 @@ export function BusinessCard({
               })()}
             </div>
             
-            {/* Heart Icon - Absolute positioned top-right corner */}
+            {/* Heart — drop below tier badge when present so they don't overlap */}
             <button 
               onClick={(e) => {
                 e.preventDefault()
@@ -311,10 +310,14 @@ export function BusinessCard({
                   onToggleSave()
                 }
               }}
-              className={`absolute top-1 right-1 w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
+              className={`absolute right-1 z-[2] w-7 h-7 flex items-center justify-center backdrop-blur-sm rounded-full transition-all ${
+                business.plan === 'spotlight' || business.plan === 'featured' || business.plan === 'starter'
+                  ? 'top-8'
+                  : 'top-1'
+              } ${
                 isSaved 
                   ? 'bg-pink-500/90 hover:bg-pink-600/90' 
-                  : 'bg-slate-800/80 hover:bg-slate-700/80'
+                  : 'bg-zinc-700/90 hover:bg-zinc-600'
               }`}
             >
               <svg 
@@ -389,6 +392,11 @@ export function BusinessCard({
             {business.plan === 'featured' && (
               <span className="bg-gradient-to-r from-[#00d083] to-[#00b86f] text-black text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full font-bold shadow-lg">
                 FEATURED
+              </span>
+            )}
+            {business.plan === 'starter' && (
+              <span className="bg-gradient-to-r from-violet-400 to-purple-500 text-black text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-full font-bold shadow-lg">
+                RECOMMENDED
               </span>
             )}
           </div>

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { BusinessCard } from '@/components/user/business-card'
-import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES } from '@/lib/constants/system-categories'
+import { SYSTEM_CATEGORY_LABEL, SystemCategory, SYSTEM_CATEGORIES, mapGoogleTypesToSystemCategory } from '@/lib/constants/system-categories'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
 import { useSidebar } from '@/components/user/user-dashboard-layout'
+import { getBusinessStatusProps } from '@/lib/utils/business-hours'
 
 interface Business {
   id: string
@@ -117,6 +118,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
   
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all') // NEW: Category filter
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
   
   // Quick filters state
   const [quickFilters, setQuickFilters] = useState({
@@ -142,15 +144,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     })
   }
   
-  // Helper function to scroll to results after filter change
-  const scrollToResults = () => {
-    setTimeout(() => {
-      const resultsSection = document.querySelector('[data-discover-results]')
-      if (resultsSection) {
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }, 100)
-  }
+  // Don't jump the page on filter taps — sticky chips already stay visible.
   const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Toggle quick filter
@@ -159,7 +153,6 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
       ...prev,
       [filter]: !prev[filter]
     }))
-    scrollToResults()
   }
   
   // Track badge progress for visiting discover page
@@ -238,38 +231,44 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     { id: 'recommended', label: 'Recommended', count: recommended.length },
   ]
 
-  // Get unique categories from both systemCategory AND google_primary_type
-  const availableSystemCategories = Array.from(
-    new Set(
-      businesses
-        .map(b => b.systemCategory)
-        .filter(Boolean)
-    )
-  )
-  
-  const availableGoogleCategories = Array.from(
-    new Set(
-      businesses
-        .map(b => b.google_primary_type)
-        .filter(Boolean)
-    )
-  )
-  
-  // Combine both for dropdown
-  const allFilterOptions = [
-    ...availableSystemCategories.map(cat => ({
-      value: `system:${cat}`,
-      label: SYSTEM_CATEGORY_LABEL[cat as SystemCategory] || cat,
-      count: businesses.filter(b => b.systemCategory === cat).length,
-      type: 'system' as const
-    })),
-    ...availableGoogleCategories.map(cat => ({
-      value: `google:${cat}`,
-      label: (cat || '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      count: businesses.filter(b => b.google_primary_type === cat).length,
-      type: 'google' as const
+  // Resolve each business to one system category (DB value, or mapped from Google types)
+  const resolveSystemCategory = (b: Business): SystemCategory | null => {
+    if (b.systemCategory && (SYSTEM_CATEGORIES as readonly string[]).includes(b.systemCategory)) {
+      return b.systemCategory as SystemCategory
+    }
+    const googleTypes = ((b as any).google_types as string[] | undefined) || []
+    const primary = b.google_primary_type || null
+    if (primary || googleTypes.length > 0) {
+      return mapGoogleTypesToSystemCategory(googleTypes, primary)
+    }
+    return null
+  }
+
+  // System-category chips only — no Google-type duplicates / blank labels
+  const categoryOptions = SYSTEM_CATEGORIES
+    .map((cat) => ({
+      value: cat,
+      label: SYSTEM_CATEGORY_LABEL[cat],
+      count: businesses.filter((b) => resolveSystemCategory(b) === cat).length,
     }))
-  ].sort((a, b) => b.count - a.count) // Sort by count descending.sort()
+    .filter((o) => o.count > 0 && o.label && o.label.trim().length > 0 && o.value !== 'other')
+    .sort((a, b) => b.count - a.count)
+
+  const tierRank = (b: Business) => {
+    if (b.plan === 'spotlight') return 0
+    if (b.plan === 'featured') return 1
+    if (b.plan === 'starter') return 2
+    return 3 // free / unclaimed / null
+  }
+
+  const sortDiscoverDefault = (list: Business[]) =>
+    [...list].sort((a, b) => {
+      const tierDiff = tierRank(a) - tierRank(b)
+      if (tierDiff !== 0) return tierDiff
+      const ratingDiff = (b.rating || 0) - (a.rating || 0)
+      if (ratingDiff !== 0) return ratingDiff
+      return (b.reviewCount || 0) - (a.reviewCount || 0)
+    })
 
   // NEW: Count businesses per category
   const getFilteredBusinesses = () => {
@@ -289,22 +288,14 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
         filtered = businesses
     }
 
-    // Filter by category if selected (handles both system and google categories)
+    // Category chip = system category id (e.g. "restaurant", "bar")
     if (selectedCategory !== 'all') {
-      if (selectedCategory.startsWith('system:')) {
-        const category = selectedCategory.replace('system:', '')
-        filtered = filtered.filter(b => b.systemCategory === category)
-      } else if (selectedCategory.startsWith('google:')) {
-        const category = selectedCategory.replace('google:', '')
-        filtered = filtered.filter(b => b.google_primary_type === category)
-      }
+      filtered = filtered.filter((b) => resolveSystemCategory(b) === selectedCategory)
     }
     
     // Quick filters
     if (quickFilters.openNow) {
       filtered = filtered.filter(b => {
-        // Import getBusinessStatusProps inline to avoid circular deps
-        const { getBusinessStatusProps } = require('@/lib/utils/business-hours')
         const status = getBusinessStatusProps(
           (b as any).hours || (b as any).business_hours, 
           (b as any).hours_structured || (b as any).business_hours_structured
@@ -340,8 +331,8 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     }
     
     if (quickFilters.closest && userLocation) {
-      // Sort by distance (closest first)
-      filtered = filtered.sort((a, b) => {
+      // Explicit Closest mode — distance only
+      filtered = [...filtered].sort((a, b) => {
         const distA = (a as any).latitude && (a as any).longitude
           ? calculateDistance(userLocation.lat, userLocation.lng, (a as any).latitude, (a as any).longitude)
           : Infinity
@@ -350,6 +341,9 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
           : Infinity
         return distA - distB
       })
+    } else {
+      // Default: Picks → Featured → Recommended → free, then rating
+      filtered = sortDiscoverDefault(filtered)
     }
 
     // Then filter by search query if present
@@ -369,6 +363,18 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     return filtered
   }
 
+  const filteredBusinesses = getFilteredBusinesses()
+
+  // Drop stale category values from the old system:/google: chip scheme
+  useEffect(() => {
+    if (
+      selectedCategory !== 'all' &&
+      !categoryOptions.some((o) => o.value === selectedCategory)
+    ) {
+      setSelectedCategory('all')
+    }
+  }, [selectedCategory, categoryOptions])
+
   const getNavUrl = (href: string) => {
     if (!walletPassId) {
       return href
@@ -376,18 +382,49 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     return `${href}?wallet_pass_id=${walletPassId}`
   }
 
+  const segmentTabs = [
+    { id: 'all', label: 'All', count: businesses.length, on: 'bg-[#00d083] text-black border-[#00d083]', off: 'bg-zinc-800 text-zinc-100 border-zinc-500' },
+    { id: 'qwikker_picks', label: 'Picks', count: qwikkerPicks.length, on: 'bg-amber-400 text-black border-amber-300', off: 'bg-zinc-800 text-amber-200 border-amber-500/50' },
+    { id: 'featured', label: 'Featured', count: featured.length, on: 'bg-emerald-400 text-black border-emerald-300', off: 'bg-zinc-800 text-emerald-200 border-emerald-500/50' },
+    { id: 'recommended', label: 'Recommended', count: recommended.length, on: 'bg-violet-400 text-black border-violet-300', off: 'bg-zinc-800 text-violet-200 border-violet-500/50' },
+  ]
+
+  const primaryFilters = [
+    { key: 'openNow' as const, label: 'Open' },
+    { key: 'hasOffers' as const, label: 'Offers' },
+    { key: 'closest' as const, label: 'Closest' },
+    { key: 'mySaved' as const, label: 'Saved' },
+  ]
+
+  const extraFilters = [
+    { key: 'hasSecretMenu' as const, label: 'Secrets' },
+    { key: 'hasLoyalty' as const, label: 'Loyalty' },
+  ]
+
+  const extraActiveCount = (quickFilters.hasSecretMenu ? 1 : 0) + (quickFilters.hasLoyalty ? 1 : 0)
+
+  // High-contrast chip styles — must be literal class strings Tailwind always emits.
+  // Dynamic bg-teal-500 etc. were getting dropped → black text on black sticky bar = vanished chip.
+  const CHIP_ON = 'bg-[#00d083] text-black border-[#00d083]'
+  const CHIP_OFF = 'bg-zinc-800 text-zinc-100 border-zinc-500'
+
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Places</h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          {businesses.length} in {cityDisplayName}
-          {userLocation ? ' · sorted near you when Closest is on' : ''}
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="rounded-2xl border border-[#00d083]/20 bg-gradient-to-br from-[#00d083]/10 via-zinc-950 to-violet-500/10 px-4 py-5">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083]/90 font-semibold mb-1">
+          Discover
+        </p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">
+          {cityDisplayName}
+        </h1>
+        <p className="text-sm text-zinc-300 mt-1.5">
+          {businesses.length} places
+          {userLocation ? ' · tap Closest to sort by distance' : ''}
         </p>
       </div>
 
       <div className="relative">
-        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00d083]/80 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -395,7 +432,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
           placeholder="Search places..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-white placeholder-zinc-500 focus:outline-none focus:border-[#00d083]/45 focus:ring-1 focus:ring-[#00d083]/20 transition-colors text-sm"
+          className="w-full pl-10 pr-10 py-3.5 bg-zinc-900/80 border border-[#00d083]/25 rounded-2xl text-white placeholder-zinc-400 focus:outline-none focus:border-[#00d083]/55 focus:ring-1 focus:ring-[#00d083]/25 transition-colors text-sm"
         />
         {searchQuery && (
           <button
@@ -411,95 +448,97 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
         )}
       </div>
 
-      <div className={`sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-black/95 backdrop-blur-md border-b border-zinc-900 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0 space-y-2.5 ${
+      <div className={`sticky top-0 z-10 -mx-4 px-4 py-3 bg-black/90 backdrop-blur-md border-b border-zinc-800/80 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:backdrop-blur-0 sm:border-0 space-y-2.5 ${
         sidebarOpen ? 'hidden lg:block' : ''
       }`}>
+        {/* Tier segments — colourful filled pills */}
         <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-          {[
-            { id: 'all', label: 'All', count: businesses.length },
-            { id: 'qwikker_picks', label: 'Picks', count: qwikkerPicks.length },
-            { id: 'featured', label: 'Featured', count: featured.length },
-            { id: 'recommended', label: 'For you', count: recommended.length },
-          ].map((tab) => {
+          {segmentTabs.map((tab) => {
             const isActive = selectedFilter === tab.id
+            const isEmpty = tab.id !== 'all' && tab.count === 0
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => {
-                  setSelectedFilter(tab.id)
-                  scrollToResults()
-                }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#00d083]/18 text-[#9dffc0] border border-[#00d083]/35'
-                    : 'bg-zinc-950 text-zinc-400 border border-zinc-800'
-                }`}
+                disabled={isEmpty}
+                onClick={() => setSelectedFilter(tab.id)}
+                className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+                  isActive ? tab.on : tab.off
+                } ${isEmpty ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {tab.label}
-                <span className="ml-1 opacity-70">{tab.count}</span>
+                <span className="ml-1 opacity-80">{tab.count}</span>
               </button>
             )
           })}
         </div>
 
+        {/* Primary filters only — extras behind More */}
         <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
-          {(
-            [
-              { key: 'openNow' as const, label: 'Open now' },
-              { key: 'hasOffers' as const, label: 'Offers' },
-              { key: 'hasSecretMenu' as const, label: 'Secrets' },
-              { key: 'hasLoyalty' as const, label: 'Loyalty' },
-              { key: 'closest' as const, label: 'Closest' },
-              { key: 'mySaved' as const, label: `Saved (${savedBusinesses.size})` },
-            ]
-          ).map((f) => {
+          {primaryFilters.map((f) => {
             const isActive = quickFilters[f.key]
             return (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => toggleQuickFilter(f.key)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-[#00d083]/18 text-[#9dffc0] border border-[#00d083]/35'
-                    : 'bg-zinc-950 text-zinc-400 border border-zinc-800'
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  isActive ? CHIP_ON : CHIP_OFF
                 }`}
               >
-                {f.label}
+                {f.key === 'mySaved' ? `Saved (${savedBusinesses.size})` : f.label}
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={() => setShowMoreFilters((v) => !v)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              showMoreFilters || extraActiveCount > 0 ? CHIP_ON : CHIP_OFF
+            }`}
+          >
+            More{extraActiveCount > 0 ? ` · ${extraActiveCount}` : ''}
+          </button>
         </div>
 
-        {allFilterOptions.length > 0 && (
+        {showMoreFilters && (
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
+            {extraFilters.map((f) => {
+              const isActive = quickFilters[f.key]
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => toggleQuickFilter(f.key)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                    isActive ? CHIP_ON : CHIP_OFF
+                  }`}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {categoryOptions.length > 0 && (
           <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
             <button
               type="button"
-              onClick={() => {
-                setSelectedCategory('all')
-                scrollToResults()
-              }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-zinc-100 text-black'
-                  : 'bg-zinc-950 text-zinc-500 border border-zinc-800'
+              onClick={() => setSelectedCategory('all')}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                selectedCategory === 'all' ? 'bg-white text-black border-white' : CHIP_OFF
               }`}
             >
               All types
             </button>
-            {allFilterOptions.map((option) => (
+            {categoryOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => {
-                  setSelectedCategory(option.value)
-                  scrollToResults()
-                }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  selectedCategory === option.value
-                    ? 'bg-zinc-100 text-black'
-                    : 'bg-zinc-950 text-zinc-500 border border-zinc-800'
+                onClick={() => setSelectedCategory(option.value)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  selectedCategory === option.value ? CHIP_ON : CHIP_OFF
                 }`}
               >
                 {option.label}
@@ -509,9 +548,9 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
         )}
       </div>
 
-      <div className={sidebarOpen ? 'hidden lg:block' : ''}>
+      <div className={sidebarOpen ? 'hidden lg:block' : ''} data-discover-results>
         <div className="flex items-center justify-between px-0.5 mb-3">
-          <h2 className="text-sm font-semibold text-zinc-200">
+          <h2 className="text-lg font-semibold text-white">
             {searchQuery
               ? `Results for “${searchQuery}”`
               : selectedFilter === 'all'
@@ -520,29 +559,31 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
                   ? 'Picks'
                   : selectedFilter === 'featured'
                     ? 'Featured'
-                    : 'For you'}
+                    : 'Recommended'}
           </h2>
-          <span className="text-xs text-zinc-500">{getFilteredBusinesses().length}</span>
+          <span className="text-xs font-medium text-[#00d083]/90 bg-[#00d083]/10 border border-[#00d083]/25 px-2 py-0.5 rounded-full">
+            {filteredBusinesses.length}
+          </span>
         </div>
 
         {locationStatus === 'denied' && (
-          <div className="mb-4 px-3.5 py-3 rounded-2xl border border-zinc-800 bg-zinc-950 flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-400">
-              Location off — distances won’t show.
+          <div className="mb-4 px-3.5 py-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3">
+            <p className="text-xs text-amber-100/90">
+              Location off — distances won&apos;t show.
             </p>
             <button
               type="button"
               onClick={requestLocation}
-              className="shrink-0 text-xs font-medium text-[#9dffc0] border border-[#00d083]/30 px-3 py-1.5 rounded-full"
+              className="shrink-0 text-xs font-semibold text-amber-200 border border-amber-400/40 px-3 py-1.5 rounded-full"
             >
               Enable
             </button>
           </div>
         )}
 
-        {getFilteredBusinesses().length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-discover-results>
-            {getFilteredBusinesses().map((business) => {
+        {filteredBusinesses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {filteredBusinesses.map((business) => {
               const distance = userLocation && (business as any).latitude && (business as any).longitude
                 ? calculateDistance(userLocation.lat, userLocation.lng, (business as any).latitude, (business as any).longitude)
                 : null
@@ -563,32 +604,36 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
             })}
           </div>
         ) : (
-          <div className="text-center py-12 px-4">
-            <p className="text-zinc-200 font-medium">No places match</p>
-            <p className="text-zinc-500 text-sm mt-1">
-              {searchQuery ? 'Try a different search.' : 'Try clearing a filter.'}
+          <div className="text-center py-12 px-4 rounded-2xl border border-zinc-700/80 bg-zinc-900">
+            <p className="text-zinc-100 font-semibold">No places in this filter</p>
+            <p className="text-zinc-400 text-sm mt-1">
+              {selectedFilter === 'featured'
+                ? 'No Featured listings yet.'
+                : selectedFilter === 'recommended'
+                  ? 'No Recommended listings yet.'
+                  : searchQuery
+                    ? 'Try a different search.'
+                    : 'Try another filter.'}
             </p>
-            {(searchQuery || selectedCategory !== 'all' || Object.values(quickFilters).some(Boolean)) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('')
-                  setSelectedCategory('all')
-                  setSelectedFilter('all')
-                  setQuickFilters({
-                    openNow: false,
-                    hasOffers: false,
-                    hasSecretMenu: false,
-                    hasLoyalty: false,
-                    closest: false,
-                    mySaved: false,
-                  })
-                }}
-                className="mt-4 text-xs font-medium text-[#9dffc0] border border-[#00d083]/30 px-4 py-2 rounded-full"
-              >
-                Clear filters
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('')
+                setSelectedCategory('all')
+                setSelectedFilter('all')
+                setQuickFilters({
+                  openNow: false,
+                  hasOffers: false,
+                  hasSecretMenu: false,
+                  hasLoyalty: false,
+                  closest: false,
+                  mySaved: false,
+                })
+              }}
+              className="mt-4 text-xs font-semibold text-black bg-[#00d083] border border-[#00d083] px-4 py-2 rounded-full"
+            >
+              Show all places
+            </button>
           </div>
         )}
       </div>

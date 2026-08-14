@@ -8,7 +8,7 @@ import { searchBusinessKnowledge, searchCityKnowledge } from './embeddings'
 import { classifyQueryIntent, logClassification } from './intent-classifier'
 import { detectIntent } from './intent-detector'
 import { scoreBusinessRelevance } from './relevance-scorer'
-import { detectFacet } from './facets'
+import { detectFacet, isAlcoholCapableCategory } from './facets'
 import { getReasonTag, getReasonMeta } from './reason-tagger'
 import { 
   ConversationState, 
@@ -922,7 +922,8 @@ HARD RULES (DO NOT BREAK):
 - ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, end your response with a short line like: "Tap **Explore on Atlas** below to take a guided tour of these spots on the map!" — use natural wording but always mention the Atlas button.' : 'DO NOT mention map views or Atlas — the map is not available for these businesses.'}
 - 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone:" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
 - 🍝 CUISINE QUERIES WITH PARTIAL MATCHES: If the user asks for a specific cuisine (e.g. "Italian", "Mexican", "Thai") and no business in your context is categorized exactly as that cuisine, but some businesses have related dishes or items in their KB/menu data (pasta, pizza, tacos, pad thai, etc.), you MUST recommend those businesses. Acknowledge honestly that there isn't a dedicated [cuisine] restaurant on Qwikker yet, then highlight the businesses that offer relevant dishes: "There isn't a dedicated Italian spot on Qwikker yet, but [Business Name] has some great Italian-inspired dishes — try their [specific item from KB]." This is FAR more helpful than saying "I don't have any recommendations." The businesses are in your context BECAUSE they have relevant menu items — use them.
-- ZERO RESULTS: Be honest. NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
+- ZERO RESULTS: ONLY when AVAILABLE BUSINESSES is literally empty (or says "No businesses available"). NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
+- 🚨 NEVER FAKE AN EMPTY CITY: If AVAILABLE BUSINESSES lists ANY venues, you MUST recommend from that list. Saying "there aren't any bars/places listed", "I couldn't find any", or "none on Qwikker" while businesses are in your context is a CRITICAL failure — users will think the product is broken. Prefer imperfect matches ("here are solid spots for a drink") over claiming inventory is empty.
 - MATCH USER LANGUAGE: If the user asked for "bars", say "bars" in your response — never substitute with "dining options", "restaurants", or "places to eat". Mirror the user's terminology.
 - "ANY MORE?" HANDLING: If you showed all matches, say so. If you missed any, correct yourself immediately.
 - USER PROFILE (READ CAREFULLY):
@@ -1186,6 +1187,25 @@ export async function generateHybridAIResponse(
     console.log(`  isMixedQuery=${isMixedQuery} (discovery with constraints)`)
     console.log(`  isHardOfferQuery=${isHardOfferQuery} (pure offers, no discovery)`)
     console.log(`  isKbDisabled=${isKbDisabled}, intent="${intent}"`)
+
+    // Intent early — beer/drinks must expand search to bars BEFORE KB retrieval
+    const earlyIntent = detectIntent(userMessage)
+    const earlyFacet = detectFacet(userMessage)
+    if (earlyFacet.alcohol && !earlyIntent.categories.includes('bar')) {
+      earlyIntent.categories.push('bar')
+      earlyIntent.hasIntent = true
+    }
+    const categorySearchTerms: Record<string, string> = {
+      bar: 'bar pub lounge cocktail drinks beer wine nightlife',
+      cafe: 'cafe coffee espresso',
+      bakery: 'bakery bread pastry',
+      dessert: 'dessert ice cream gelato',
+      restaurant: 'restaurant dining food',
+    }
+    const intentSearchExpand = earlyIntent.categories
+      .map((c) => categorySearchTerms[c.toLowerCase()])
+      .filter(Boolean)
+      .join(' ')
     
     if (isKbDisabled) {
       console.log(`🚫 KB search DISABLED: HARD ${intent} query (DB-authoritative only)`)
@@ -1223,6 +1243,12 @@ export async function generateHybridAIResponse(
             console.log(`🎯 Enhanced query with context: "${enhancedQuery}"`)
           }
         }
+      }
+
+      // beer → bars: search the category the user actually wants
+      if (intentSearchExpand) {
+        enhancedQuery = `${enhancedQuery} ${intentSearchExpand}`
+        console.log(`🔍 Category-expanded KB search: "${enhancedQuery}"`)
       }
       
       businessResults = await searchBusinessKnowledge(enhancedQuery, city, { 
@@ -1410,7 +1436,7 @@ export async function generateHybridAIResponse(
           .select(offerSelect)
           .eq('business_profiles.city', city)
           .order('offer_end_date', { ascending: false })
-          .limit(3)
+          .limit(40)
 
         if (primary.error) {
           console.error('❌ chat_eligible offers query failed, trying business_offers fallback:', primary.error)
@@ -1424,7 +1450,7 @@ export async function generateHybridAIResponse(
             `)
             .eq('business_profiles.city', city)
             .order('offer_end_date', { ascending: false })
-            .limit(3)
+            .limit(40)
 
           if (!primarySimple.error && primarySimple.data) {
             offers = primarySimple.data as unknown as ChatOfferRow[]
@@ -1435,7 +1461,7 @@ export async function generateHybridAIResponse(
               .eq('status', 'approved')
               .eq('business_profiles.city', city)
               .order('offer_end_date', { ascending: false })
-              .limit(3)
+              .limit(40)
             if (fallback.error) {
               console.error('❌ business_offers fallback also failed:', fallback.error)
             } else {
@@ -1445,6 +1471,16 @@ export async function generateHybridAIResponse(
         } else {
           offers = (primary.data || []) as unknown as ChatOfferRow[]
         }
+
+        // Drop expired / not-yet-started offers (same rules as Offers tab)
+        const now = new Date()
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        offers = offers.filter((o) => {
+          if (o.offer_end_date && new Date(o.offer_end_date) < todayStart) return false
+          if (o.offer_start_date && new Date(o.offer_start_date) > now) return false
+          return true
+        })
 
         if (!offers || offers.length === 0) {
           console.log(`🚫 ZERO OFFERS in DB → authoritative "no offers" response`)
@@ -1489,6 +1525,49 @@ export async function generateHybridAIResponse(
             return name.length >= 4 && recentAssistant.toLowerCase().includes(name.toLowerCase())
           })
           if (hit) focusedOffers = [hit]
+        }
+
+        // Honour specific deal-type asks (2-for-1 / BOGOF / % off) instead of random live deals
+        const wantsTwoForOne = /\b(2[\s-]?for[\s-]?1|2[\s-]?4[\s-]?1|two[\s-]?for[\s-]?(one|1)|bogof|buy\s+one\s+get\s+one)\b/i.test(userMessage)
+        const wantsPercentOff = /\b(\d+\s*%|\d+\s*percent|percentage\s*off|%[\s-]?off)\b/i.test(userMessage)
+        const isTwoForOneOffer = (o: ChatOfferRow) => {
+          const type = (o.offer_type || '').toLowerCase()
+          const blob = `${o.offer_name || ''} ${o.offer_value || ''} ${o.offer_description || ''}`.toLowerCase()
+          return (
+            type.includes('two_for') ||
+            type.includes('2_for') ||
+            type.includes('bogof') ||
+            /\b(2[\s-]?for[\s-]?1|2[\s-]?4[\s-]?1|two[\s-]?for[\s-]?(one|1)|bogof|buy\s+one\s+get\s+one)\b/i.test(blob)
+          )
+        }
+        const isPercentOffer = (o: ChatOfferRow) => {
+          const type = (o.offer_type || '').toLowerCase()
+          const blob = `${o.offer_name || ''} ${o.offer_value || ''}`.toLowerCase()
+          return type.includes('percentage') || type.includes('percent') || /\d+\s*%/.test(blob)
+        }
+
+        if (wantsTwoForOne) {
+          const matched = focusedOffers.filter(isTwoForOneOffer)
+          if (matched.length > 0) {
+            focusedOffers = matched
+          } else {
+            return {
+              success: true,
+              response: `I don’t see any live 2-for-1 deals in ${cityLabel} right now. Want me to show other live offers instead?`,
+              sources: [],
+              businessCarousel: [],
+              walletActions: [],
+              quickReplies: ['Show me live deals', 'Open Offers page'],
+              eventCards: [],
+              uiMode: 'conversational',
+              hasBusinessResults: false,
+              modelUsed: 'gpt-4o-mini',
+              classification,
+            }
+          }
+        } else if (wantsPercentOff) {
+          const matched = focusedOffers.filter(isPercentOffer)
+          if (matched.length > 0) focusedOffers = matched
         }
 
         const sampleOffers = focusedOffers.slice(0, 3)
@@ -1564,7 +1643,9 @@ export async function generateHybridAIResponse(
             ? `Yes — tap **Save** on **${walletActions[0].offerName}** at ${walletActions[0].businessName} below. Redeem when you’re at the venue.`
             : wantsSaveFollowUp
               ? `Yes — you can Save right here. Tap **Save** on the deal you want below, then Redeem when you’re ready to show staff.`
-              : `Here are a few live deals in ${cityLabel} — Save one, then Redeem when you’re at the venue. Or open the full Offers page for everything.`
+              : wantsTwoForOne
+                ? `Here are live 2-for-1 deals in ${cityLabel} — Save one, then Redeem when you’re at the venue.`
+                : `Here are a few live deals in ${cityLabel} — Save one, then Redeem when you’re at the venue. Or open the full Offers page for everything.`
 
         return {
           success: true,
@@ -1599,13 +1680,18 @@ export async function generateHybridAIResponse(
       })
     }
     
-    // 🔒 FACET INJECTION: If alcohol facet is detected but no intent, treat as intentful
-    // Prevents "cocktails" from being treated as browse mode
-    if (!detectedIntent.hasIntent && facet.alcohol) {
+    // 🔒 FACET INJECTION: alcohol queries always need bar venue intent
+    // (covers "a beer in Nungwi" even if intent detector missed category)
+    if (facet.alcohol) {
       detectedIntent.hasIntent = true
-      detectedIntent.keywords = [...detectedIntent.keywords, 'alcohol']
+      if (!detectedIntent.categories.includes('bar')) {
+        detectedIntent.categories.push('bar')
+      }
+      if (!detectedIntent.keywords.includes('alcohol')) {
+        detectedIntent.keywords = [...detectedIntent.keywords, 'alcohol']
+      }
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔒 FACET INJECTION: alcohol facet detected, treating as intentful query`)
+        console.log(`🔒 FACET INJECTION: alcohol → bar intent`)
       }
     }
 
@@ -1764,6 +1850,51 @@ export async function generateHybridAIResponse(
         const score = scoreBusinessRelevance(b, detectedIntent, kbContentByBusinessId.get(b.id), kbScoreById.get(b.id), facet, userMessage)
         businessRelevanceScores.set(b.id, score)
       })
+
+    // 🔍 CATEGORY SEARCH: beer→bar means SEARCH bars in inventory, not hope scoring finds "beer" text.
+    // Deterministic sweep so venues like "Che Bar" surface even with empty/odd categories.
+    if (detectedIntent.categories.length > 0) {
+      const inventory = [...tier1, ...tier2, ...tier3]
+      for (const cat of detectedIntent.categories) {
+        const c = cat.toLowerCase()
+        let boosted = 0
+        for (const b of inventory) {
+          const blob = [
+            b.business_name,
+            b.display_category,
+            b.system_category,
+            b.google_primary_type,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+
+          let matches = false
+          if (c === 'bar') {
+            matches =
+              isAlcoholCapableCategory(blob) ||
+              /\b(bar|pub|lounge|tavern|night\s*club|cocktail|wine|brew|taproom)\b/i.test(blob)
+          } else {
+            matches =
+              blob.includes(c) ||
+              (c === 'cafe' && /\b(cafe|coffee)\b/i.test(blob)) ||
+              (c === 'restaurant' && /\b(restaurant|dining|bistro|eatery|grill)\b/i.test(blob)) ||
+              (c === 'bakery' && /\b(bakery|pastry)\b/i.test(blob)) ||
+              (c === 'dessert' && /\b(dessert|ice\s*cream|gelato)\b/i.test(blob))
+          }
+
+          if (!matches) continue
+          const prev = businessRelevanceScores.get(b.id) || 0
+          if (prev < CAROUSEL_MIN) {
+            businessRelevanceScores.set(b.id, CAROUSEL_MIN)
+            boosted++
+          }
+        }
+        if (boosted > 0) {
+          console.log(`🔍 Category search (${c}): found/boosted ${boosted} venues in inventory`)
+        }
+      }
+    }
       
       console.log(`🎯 Scored ${businessRelevanceScores.size} businesses (${Array.from(businessRelevanceScores.values()).filter(s => s > 0).length} relevant)`)
     
@@ -1877,14 +2008,62 @@ export async function generateHybridAIResponse(
       (b.relevanceScore || 0) >= contextThreshold
     )
     
+    let usedSoftCategoryFallback = false
+
+    /** Soft match when scoring fails — never wipe inventory for bar/drink (etc.) queries. */
+    const softMatchIntentCategory = (b: (typeof allBusinessesForContext)[number]): boolean => {
+      const blob = [
+        b.business_name,
+        b.display_category,
+        b.system_category,
+        b.google_primary_type,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      if (facet.alcohol || detectedIntent.categories.includes('bar')) {
+        if (isAlcoholCapableCategory(blob)) return true
+        if (/\b(bar|pub|lounge|tavern|night\s*club|cocktail|wine|brew|taproom)\b/i.test(blob)) return true
+      }
+
+      for (const cat of detectedIntent.categories) {
+        const c = cat.toLowerCase()
+        if (blob.includes(c)) return true
+        if (c === 'cafe' && /\b(cafe|coffee|espresso)\b/i.test(blob)) return true
+        if (c === 'restaurant' && /\b(restaurant|dining|bistro|eatery|grill)\b/i.test(blob)) return true
+        if (c === 'bakery' && /\b(bakery|baker|pastry)\b/i.test(blob)) return true
+        if (c === 'dessert' && /\b(dessert|ice\s*cream|gelato|sweet)\b/i.test(blob)) return true
+      }
+      return false
+    }
+
     if (relevantBusinesses.length > 0) {
       console.log(`🎯 ${relevantBusinesses.length} relevant of ${allBusinessesForContext.length} (threshold: ${contextThreshold}, topScore: ${topContextScore})`)
       sortedForContext = relevantBusinesses
     } else if (detectedIntent.hasIntent) {
-      // User asked for something specific but we found nothing
-      console.log(`⚠️ Zero relevant results for specific query. AI will explain none found.`)
-        sortedForContext = []
+      // Scoring miss — DO NOT empty context. That makes the model lie ("no bars listed")
+      // when bars clearly exist. Soft-fallback to category-plausible venues instead.
+      const softMatches = allBusinessesForContext.filter(softMatchIntentCategory)
+      if (softMatches.length > 0) {
+        usedSoftCategoryFallback = true
+        // Give soft matches a floor so carousel/inject paths can still surface them
+        for (const b of softMatches) {
+          if ((b.relevanceScore || 0) < INJECT_MIN) {
+            b.relevanceScore = INJECT_MIN
+            businessRelevanceScores.set(b.id, INJECT_MIN)
+          }
+        }
+        sortedForContext = softMatches
+        console.log(
+          `🛟 Soft category fallback: ${softMatches.length} venues (scoring returned 0 — still showing inventory)`
+        )
       } else {
+        // Truly nothing of that type in this city — keep empty so AI can say so honestly
+        console.log(`⚠️ Zero relevant + zero soft matches for specific query.`)
+        sortedForContext = []
+      }
+    } else {
       // Browse mode / no intent - show all
       console.log(`📊 No specific intent - showing all ${allBusinessesForContext.length} businesses`)
       sortedForContext = allBusinessesForContext
@@ -2465,13 +2644,17 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
       }
     }
 
+    const softFallbackCallout = usedSoftCategoryFallback
+      ? `\n🛟 INVENTORY FALLBACK: Exact keyword scoring was weak, but these venues ARE on Qwikker and fit the request type (bars/drinks/etc). You MUST recommend from this list. NEVER say there aren't any bars/places listed.\n`
+      : ''
+
     const systemPrompt = buildSystemPromptV2({ 
       cityDisplayName, 
       userMessage, 
       isBroadQuery,
       availableTypes,
       stateContext, 
-      businessContext: tagMatchCallout + businessContext, 
+      businessContext: softFallbackCallout + tagMatchCallout + businessContext, 
       cityContext, 
       state,
       atlasAvailable,

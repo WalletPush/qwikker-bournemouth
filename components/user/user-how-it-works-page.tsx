@@ -5,11 +5,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-interface UserHowItWorksPageProps {
-  walletPassId?: string
+interface HowItWorksStats {
+  partnerVenues: number
+  secretMenus: number
+  liveOffers: number
+  totalBadges: number
 }
 
-export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {}) {
+interface UserHowItWorksPageProps {
+  walletPassId?: string
+  stats?: HowItWorksStats
+}
+
+const DEFAULT_STATS: HowItWorksStats = {
+  partnerVenues: 0,
+  secretMenus: 0,
+  liveOffers: 0,
+  totalBadges: 17,
+}
+
+export function UserHowItWorksPage({
+  walletPassId,
+  stats = DEFAULT_STATS,
+}: UserHowItWorksPageProps = {}) {
   
   // Helper function to append wallet_pass_id to navigation URLs
   const getNavUrl = (href: string) => {
@@ -250,19 +268,19 @@ export function UserHowItWorksPage({ walletPassId }: UserHowItWorksPageProps = {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-emerald-400 mb-2">6</div>
+                <div className="text-3xl font-bold text-emerald-400 mb-2">{stats.partnerVenues}</div>
                 <div className="text-sm text-slate-400">Partner Venues</div>
               </div>
               <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-purple-400 mb-2">4</div>
+                <div className="text-3xl font-bold text-purple-400 mb-2">{stats.secretMenus}</div>
                 <div className="text-sm text-slate-400">Secret Menus</div>
               </div>
               <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-2">12</div>
+                <div className="text-3xl font-bold text-blue-400 mb-2">{stats.liveOffers}</div>
                 <div className="text-sm text-slate-400">Live Offers</div>
               </div>
               <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-orange-400 mb-2">17</div>
+                <div className="text-3xl font-bold text-orange-400 mb-2">{stats.totalBadges}</div>
                 <div className="text-sm text-slate-400">Total Badges</div>
               </div>
             </div>

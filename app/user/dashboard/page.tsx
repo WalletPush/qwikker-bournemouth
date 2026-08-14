@@ -29,7 +29,7 @@ export default async function UserDashboardPage({ searchParams }: UserDashboardP
   } catch (error) {
     console.error('Invalid franchise access:', error)
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
           <p className="text-slate-400">Invalid franchise location detected.</p>

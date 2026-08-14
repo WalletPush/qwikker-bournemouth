@@ -67,6 +67,10 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [availablePrograms, setAvailablePrograms] = useState<DiscoverProgram[]>([])
   const [showWizard, setShowWizard] = useState(false)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [badgeCount, setBadgeCount] = useState(0)
+  const [savedItemsCount, setSavedItemsCount] = useState(0)
+  const [secretsUnlockedCount, setSecretsUnlockedCount] = useState(0)
   const locationFeedFetched = useRef(false)
 
   useEffect(() => {
@@ -134,7 +138,53 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
   }, [feed, walletPassId])
 
   useEffect(() => {
+    if (!walletPassId) return
+    let cancelled = false
+    const loadUnread = async () => {
+      try {
+        const res = await fetch(
+          `/api/user/notifications?countOnly=true&wallet_pass_id=${walletPassId}`
+        )
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        if (!cancelled) setUnreadNotifications(data.unreadCount || 0)
+      } catch {
+        /* non-critical */
+      }
+    }
+    void loadUnread()
+    const interval = setInterval(loadUnread, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [walletPassId])
+
+  useEffect(() => {
     const loadData = async () => {
+      if (walletPassId) {
+        try {
+          const { getUserSavedItems } = await import('@/lib/actions/user-saved-actions')
+          const savedResult = await getUserSavedItems(walletPassId)
+          if (savedResult.success) setSavedItemsCount(savedResult.count || 0)
+        } catch { /* ignore */ }
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
+          const tracker = getBadgeTracker(walletPassId)
+          const progress = tracker.getBadgeProgress()
+          setBadgeCount(progress.filter((b: { earned?: boolean }) => b.earned).length)
+        } catch { /* ignore */ }
+
+        try {
+          const userId = walletPassId || 'anonymous-user'
+          const saved = localStorage.getItem(`qwikker-unlocked-secrets-${userId}`)
+          if (saved) setSecretsUnlockedCount(JSON.parse(saved).length)
+        } catch { /* ignore */ }
+      }
+
       try {
         const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
         const businessActivity = await getRecentBusinessActivity(currentCity)
@@ -238,7 +288,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
     )
   }
 
-  const { meta, tonight, dishes, deals, personalized, rewards, secretTeaser } = feed
+  const { meta, tonight, dishes, deals, personalized, rewards, secretTeaser, stats } = feed
   const hasRewards = rewards.length > 0
   const joinedPublicIds = new Set(rewards.map(r => r.programPublicId).filter(Boolean))
   const unjoinedPrograms = availablePrograms.filter(p => !joinedPublicIds.has(p.public_id))
@@ -276,6 +326,13 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
       <WalletInstallBanner />
 
+      {unreadNotifications > 0 && (
+        <NotificationsHomeCard
+          count={unreadNotifications}
+          href={getNavUrl('/user/notifications')}
+        />
+      )}
+
       <HeroSection
         userName={userName}
         greeting={displayGreeting}
@@ -287,6 +344,17 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
         onSearch={handleSearch}
         placeholderText={PLACEHOLDER_TEXTS[placeholderIndex]}
         getChatUrl={getChatUrl}
+        getNavUrl={getNavUrl}
+      />
+
+      <NavigationCards
+        businessCount={stats?.totalBusinesses ?? 0}
+        offerCount={stats?.totalOffers ?? 0}
+        secretMenuCount={stats?.totalSecretMenus ?? 0}
+        secretsUnlockedCount={secretsUnlockedCount}
+        eventCount={stats?.totalEvents ?? 0}
+        savedItemsCount={savedItemsCount}
+        badgeCount={badgeCount}
         getNavUrl={getNavUrl}
       />
 
@@ -522,6 +590,63 @@ function CardRail({ children }: { children: React.ReactNode }) {
 }
 
 // =============================================================================
+// Coloured section shortcuts — full-width 3×2 grid (not skinny scroll chips)
+// =============================================================================
+
+function NavigationCards({
+  businessCount,
+  offerCount,
+  secretMenuCount,
+  secretsUnlockedCount,
+  eventCount,
+  savedItemsCount,
+  badgeCount,
+  getNavUrl,
+}: {
+  businessCount: number
+  offerCount: number
+  secretMenuCount: number
+  secretsUnlockedCount: number
+  eventCount: number
+  savedItemsCount: number
+  badgeCount: number
+  getNavUrl: (href: string) => string
+}) {
+  const cards = [
+    { href: '/user/discover', label: 'Discover', count: businessCount, sub: 'places', card: 'from-emerald-500/15 to-emerald-500/5 border-emerald-500/30', text: 'text-emerald-300', iconBg: 'from-emerald-500/40 to-teal-500/30 border-emerald-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> },
+    { href: '/user/offers', label: 'Offers', count: offerCount, sub: 'live', card: 'from-orange-500/15 to-amber-500/5 border-orange-500/30', text: 'text-orange-300', iconBg: 'from-orange-500/40 to-amber-500/30 border-orange-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /> },
+    { href: '/user/secret-menu', label: 'Secrets', count: `${secretsUnlockedCount}/${secretMenuCount}`, sub: 'unlocked', card: 'from-purple-500/15 to-fuchsia-500/5 border-purple-500/30', text: 'text-purple-300', iconBg: 'from-purple-500/40 to-pink-500/30 border-purple-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /> },
+    { href: '/user/events', label: 'Events', count: eventCount, sub: 'upcoming', card: 'from-sky-500/15 to-blue-500/5 border-sky-500/30', text: 'text-sky-300', iconBg: 'from-sky-500/40 to-blue-500/30 border-sky-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> },
+    { href: '/user/saved', label: 'Saved', count: savedItemsCount, sub: 'items', card: 'from-rose-500/15 to-pink-500/5 border-rose-500/30', text: 'text-rose-300', iconBg: 'from-rose-500/40 to-pink-500/30 border-rose-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /> },
+    { href: '/user/badges', label: 'Badges', count: badgeCount, sub: 'earned', card: 'from-amber-500/15 to-yellow-500/5 border-amber-500/30', text: 'text-amber-300', iconBg: 'from-amber-500/40 to-yellow-500/30 border-amber-400/40', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /> },
+  ]
+
+  return (
+    <div className="grid grid-cols-3 gap-2.5">
+      {cards.map((c) => (
+        <PendingLink
+          key={c.label}
+          href={getNavUrl(c.href)}
+          pendingLabel={c.label}
+          className="block min-w-0"
+        >
+          <div className={`rounded-xl border bg-gradient-to-br ${c.card} px-2.5 py-3 text-center transition-colors active:scale-[0.98] h-full`}>
+            <div className={`w-9 h-9 mx-auto mb-2 rounded-lg bg-gradient-to-br ${c.iconBg} border flex items-center justify-center`}>
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {c.icon}
+              </svg>
+            </div>
+            <p className="text-[11px] font-semibold text-zinc-100 leading-tight truncate">{c.label}</p>
+            <p className={`text-lg font-bold tabular-nums leading-none mt-1 ${c.text}`}>{c.count}</p>
+            <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{c.sub}</p>
+          </div>
+        </PendingLink>
+      ))}
+    </div>
+  )
+}
+
+// =============================================================================
 // Card Components
 // =============================================================================
 
@@ -542,27 +667,32 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
   const bgImage = card.eventImage || card.businessImage
 
   return (
-    <PendingLink href={href} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-72 block">
+    <PendingLink
+      href={href}
+      pendingLabel={card.businessName || 'listing'}
+      className="snap-start shrink-0 block"
+      style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}
+    >
       <div
-        className="relative h-64 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
+        className="relative h-56 sm:h-60 rounded-xl overflow-hidden border border-zinc-700/60 hover:border-zinc-500 transition-colors group bg-cover bg-center bg-zinc-800"
         style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
       >
-        <span className="absolute top-4 left-4 text-[10px] uppercase tracking-wider text-white bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+        <span className="absolute top-3 left-3 text-[10px] uppercase tracking-wider text-white bg-black/45 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
           {labelText[card.label]}
         </span>
         {formatDistanceLabel(card.distanceMiles) && (
-          <span className="absolute top-4 right-4 text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+          <span className="absolute top-3 right-3 text-[10px] font-medium text-white bg-black/45 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
             {formatDistanceLabel(card.distanceMiles)}
           </span>
         )}
-        <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
+        <div className="absolute bottom-0 left-0 right-0 bg-black/45 backdrop-blur-sm px-3.5 py-3 z-10">
           {card.offerName && (
-            <p className="text-white font-medium text-sm mb-0.5">{card.offerName}</p>
+            <p className="text-white font-medium text-sm mb-0.5 line-clamp-1">{card.offerName}</p>
           )}
           {card.eventName && (
-            <p className="text-white font-medium text-sm mb-0.5">{card.eventName}</p>
+            <p className="text-white font-medium text-sm mb-0.5 line-clamp-1">{card.eventName}</p>
           )}
-          <p className="text-white/90 text-xs">{card.businessName}</p>
+          <p className="text-white/90 text-xs truncate">{card.businessName}</p>
         </div>
       </div>
     </PendingLink>
@@ -572,7 +702,7 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
 function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (href: string) => string }) {
   const bgImage = card.dishImage || card.businessImage
   return (
-    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
@@ -598,7 +728,7 @@ function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (hr
 
 function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (href: string) => string }) {
   return (
-    <PendingLink href={getNavUrl('/user/offers')} pendingLabel="Offers" className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl('/user/offers')} pendingLabel="Offers" className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div
         className="relative h-44 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
@@ -622,7 +752,7 @@ function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (hr
 
 function PersonalizedCardComponent({ card, getNavUrl }: { card: PersonalizedCard; getNavUrl: (href: string) => string }) {
   return (
-    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 w-[78vw] sm:w-64 block">
+    <PendingLink href={getNavUrl(`/user/business/${card.businessSlug}`)} pendingLabel={card.businessName || 'listing'} className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={card.businessImage ? { backgroundImage: `url(${card.businessImage})` } : undefined}
@@ -650,7 +780,7 @@ function RewardCardComponent({ card, getNavUrl }: { card: RewardCard; getNavUrl:
   const isReady = card.currentBalance >= card.threshold
 
   return (
-    <PendingLink href={getNavUrl('/user/rewards')} pendingLabel="Rewards" className="snap-start shrink-0 w-[78vw] sm:w-64">
+    <PendingLink href={getNavUrl('/user/rewards')} pendingLabel="Rewards" className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div className="rounded-xl bg-slate-800 border border-slate-700/50 p-4 space-y-3">
         <div className="flex items-center gap-3">
           {card.businessLogo ? (
@@ -704,7 +834,7 @@ function AvailableLoyaltyCard({ program }: { program: DiscoverProgram }) {
   const stampIconName = STAMP_ICONS[program.stamp_icon as StampIconKey]?.icon || 'Stamp'
 
   return (
-    <PendingLink href={`/loyalty/join/${program.public_id}`} pendingLabel={program.business.business_name || 'loyalty'} className="snap-start shrink-0 w-[78vw] sm:w-64">
+    <PendingLink href={`/loyalty/join/${program.public_id}`} pendingLabel={program.business.business_name || 'loyalty'} className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div className="rounded-xl bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-colors p-4 space-y-3">
         <div className="flex items-center gap-3">
           {program.business.logo ? (
@@ -749,7 +879,7 @@ function SecretVenueTeaserCard({
     <PendingLink
       href={getNavUrl(`/user/secret-menu?highlight=${item.businessSlug}`)}
       pendingLabel={item.businessName}
-      className="snap-start shrink-0 w-[78vw] sm:w-64 block"
+      className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}
     >
       <div className="relative h-48 rounded-xl overflow-hidden border border-zinc-700/60 bg-zinc-900">
         {item.businessImage ? (
@@ -778,7 +908,7 @@ function SecretVenueTeaserCard({
 
 function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (href: string) => string }) {
   return (
-    <PendingLink href={getNavUrl('/user/secret-menu')} pendingLabel="Secret Menu" className="snap-start shrink-0 w-[70vw] sm:w-56">
+    <PendingLink href={getNavUrl('/user/secret-menu')} pendingLabel="Secret Menu" className="snap-start shrink-0 block" style={{ width: 'min(22rem, calc(100vw - 2.5rem))' }}>
       <div className="relative h-48 rounded-xl overflow-hidden border border-zinc-700/60 flex flex-col items-center justify-center gap-2 bg-zinc-950 group">
         <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center">
           <LockIcon />
@@ -807,12 +937,12 @@ interface ActivityItem {
 }
 
 const ACTIVITY_COLORS: Record<string, { bg: string; text: string }> = {
-  orange: { bg: 'bg-orange-500/20', text: 'text-orange-400' },
-  purple: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
-  green: { bg: 'bg-green-500/20', text: 'text-green-400' },
-  yellow: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
-  blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  red: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  orange: { bg: 'bg-orange-500/25', text: 'text-orange-300' },
+  purple: { bg: 'bg-purple-500/25', text: 'text-purple-300' },
+  green: { bg: 'bg-[#00d083]/20', text: 'text-[#00d083]' },
+  yellow: { bg: 'bg-yellow-500/25', text: 'text-yellow-300' },
+  blue: { bg: 'bg-sky-500/25', text: 'text-sky-300' },
+  red: { bg: 'bg-rose-500/25', text: 'text-rose-300' },
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -823,42 +953,69 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />,
 }
 
+function NotificationsHomeCard({ count, href }: { count: number; href: string }) {
+  const label = count === 1 ? '1 notification' : `${count} notifications`
+  return (
+    <PendingLink href={href} pendingLabel="Notifications" className="block">
+      <div className="flex items-center gap-3 rounded-2xl border border-[#00d083]/35 bg-gradient-to-r from-[#00d083]/20 via-[#00d083]/10 to-zinc-800/80 px-4 py-3.5 shadow-sm shadow-[#00d083]/10">
+        <div className="relative shrink-0 w-10 h-10 rounded-full bg-[#00d083]/25 border border-[#00d083]/40 flex items-center justify-center">
+          <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <span className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-[#00d083] text-black text-[10px] font-bold flex items-center justify-center">
+            {count > 99 ? '99+' : count}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">You have {label}</p>
+          <p className="text-xs text-[#9dffc0]/90 mt-0.5">Tap to view</p>
+        </div>
+        <svg className="w-4 h-4 text-[#00d083] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </PendingLink>
+  )
+}
+
 function ActivityFeed({ activity, getNavUrl, getChatUrl }: { activity: ActivityItem[]; getNavUrl: (href: string) => string; getChatUrl: (msg: string) => string }) {
   return (
-    <Card className="bg-slate-800/40 border border-slate-700/50">
+    <Card className="bg-gradient-to-br from-zinc-800 via-zinc-800 to-[#00d083]/10 border border-[#00d083]/25 shadow-md shadow-black/30 ring-1 ring-white/5">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+            <span className="w-8 h-8 rounded-full bg-[#00d083]/20 border border-[#00d083]/35 flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </span>
             Recent Activity
           </CardTitle>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-[#00d083] rounded-full animate-pulse" />
-            <span className="text-xs text-[#00d083] font-medium">LIVE</span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00d083]/15 border border-[#00d083]/30">
+            <div className="w-1.5 h-1.5 bg-[#00d083] rounded-full animate-pulse" />
+            <span className="text-[10px] text-[#9dffc0] font-semibold tracking-wide">LIVE</span>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {activity.map((item) => {
             const colors = ACTIVITY_COLORS[item.color] || ACTIVITY_COLORS.green
             const iconPath = ACTIVITY_ICONS[item.icon] || ACTIVITY_ICONS.sparkles
 
             return (
               <PendingLink key={item.id} href={getNavUrl(item.href)} className="group">
-                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30 hover:bg-slate-700/50 transition-all duration-200 cursor-pointer">
-                  <div className={`w-8 h-8 ${colors.bg} rounded-full flex items-center justify-center shrink-0`}>
+                <div className="flex items-center gap-3 p-3 bg-zinc-700/50 rounded-xl border border-zinc-600/50 hover:bg-zinc-700/80 hover:border-[#00d083]/30 transition-all duration-200 cursor-pointer">
+                  <div className={`w-9 h-9 ${colors.bg} rounded-full flex items-center justify-center shrink-0 border border-white/5`}>
                     <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       {iconPath}
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-200 truncate">{item.text}</p>
-                    <p className="text-xs text-slate-400 truncate">{item.subtext} {item.time && `· ${item.time}`}</p>
+                    <p className="text-sm text-zinc-100 truncate font-medium">{item.text}</p>
+                    <p className="text-xs text-zinc-400 truncate mt-0.5">{item.subtext} {item.time && `· ${item.time}`}</p>
                   </div>
-                  <svg className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-[#00d083]/70 opacity-70 group-hover:opacity-100 transition-opacity shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -866,15 +1023,15 @@ function ActivityFeed({ activity, getNavUrl, getChatUrl }: { activity: ActivityI
             )
           })}
         </div>
-        <div className="mt-4 pt-3 border-t border-slate-600/30">
+        <div className="mt-4 pt-3 border-t border-[#00d083]/15">
           <Link
             href={getChatUrl('What happened recently?')}
-            className="flex items-center justify-center gap-2 w-full py-2 text-sm text-slate-400 hover:text-slate-300 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 text-sm text-[#9dffc0]/90 hover:text-[#00d083] transition-colors rounded-xl hover:bg-[#00d083]/10"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Ask AI about recent updates
+            Ask about recent updates
           </Link>
         </div>
       </CardContent>

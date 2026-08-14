@@ -87,7 +87,13 @@ export function detectIntent(query: string): IntentResult {
     seafood: ['seafood', 'fish', 'oyster', 'lobster', 'crab', 'shrimp'],
     bakery: ['bakery', 'bakeries', 'bread', 'pastry', 'pastries', 'bake'],
     cafe: ['cafe', 'coffee', 'espresso', 'cappuccino', 'latte'],
-    bar: ['bar', 'bars', 'pub', 'pubs', 'nightclub', 'nightlife', 'night out', 'wine bar', 'cocktail bar', 'sports bar', 'lounge'],
+    bar: [
+      'bar', 'bars', 'pub', 'pubs', 'nightclub', 'nightlife', 'night out',
+      'wine bar', 'cocktail bar', 'sports bar', 'lounge',
+      // Drink intents should surface bars even when the user never says "bar"
+      'beer', 'beers', 'pint', 'pints', 'drink', 'drinks', 'drinking',
+      'cocktail', 'cocktails', 'wine', 'wines', 'spirits', 'cheers',
+    ],
     dessert: ['dessert', 'desserts', 'ice cream', 'gelato', 'frozen yogurt', 'bubble tea', 'boba'],
   }
   
@@ -122,6 +128,13 @@ export function detectIntent(query: string): IntentResult {
     if (q.includes(term)) {
       keywords.push(term)
     }
+  }
+
+  // Drink keywords without "bar" still need the bar venue intent
+  const drinkTerms = ['beer', 'beers', 'pint', 'pints', 'cocktail', 'cocktails', 'wine', 'wines', 'drinks', 'drink', 'spirits']
+  if (drinkTerms.some((t) => q.includes(t)) && !categories.includes('bar')) {
+    categories.push('bar')
+    cuisineTerms.push(...cuisineMap.bar)
   }
   
   // Negation detection: "not italian", "no pizza", "except sushi", "besides greek"

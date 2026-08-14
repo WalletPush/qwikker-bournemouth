@@ -23,10 +23,10 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
   } catch (error) {
     console.error('❌ Invalid franchise access:', error)
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-slate-400">Invalid franchise location detected.</p>
+          <p className="text-zinc-500">Invalid franchise location detected.</p>
         </div>
       </div>
     )
@@ -168,7 +168,7 @@ export default async function SecretMenuPage({ searchParams }: SecretMenuPagePro
     >
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-slate-400">Loading secret menu...</div>
+          <div className="text-zinc-500">Loading secret menu...</div>
         </div>
       }>
         <UserSecretMenuPage 

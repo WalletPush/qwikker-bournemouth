@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShareButton } from '@/components/ui/share-button'
 import { AiCompanionCard } from '@/components/ui/ai-companion-card'
@@ -88,16 +88,6 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
   const savedEventsList = upcomingEvents.filter(e => savedEvents.has(e.id))
   const interestedEventsList = upcomingEvents.filter(e => interestedEvents.has(e.id))
   
-  // Filter counts
-  const getFilters = () => [
-    { id: 'upcoming', label: 'All Events', count: upcomingEvents.length },
-    { id: 'today', label: 'Today', count: todayEvents.length },
-    { id: 'this_week', label: 'This Week', count: thisWeekEvents.length },
-    { id: 'saved', label: 'My Saved', count: savedEventsList.length },
-    { id: 'interested', label: "I'm Interested", count: interestedEventsList.length },
-    { id: 'free', label: 'Free Events', count: upcomingEvents.filter(e => e.price_info?.toLowerCase().includes('free')).length },
-  ]
-
   const toggleSaved = (eventId: string, eventName?: string) => {
     const userId = walletPassId || 'anonymous-user'
 
@@ -446,111 +436,53 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header with Icon */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">
-            Upcoming Events
-          </h1>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Discover live music, workshops, tastings, and special occasions around {city}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-violet-500/10 px-4 py-5">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
+            What&apos;s on
           </p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Events</h1>
+          <p className="text-sm text-zinc-300 mt-1.5">
+            Live music, tastings, workshops &amp; more around {city}
+          </p>
+          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9dffc0] bg-[#00d083]/10 border border-[#00d083]/25 px-2.5 py-1 rounded-full">
+            <Calendar className="w-3.5 h-3.5" />
+            {upcomingEvents.length} upcoming
+          </div>
         </div>
 
-        {/* Clickable Filter Cards - Mobile First */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'upcoming' 
-                ? 'bg-gradient-to-br from-purple-600/30 to-purple-500/30 border-purple-400/50 ring-2 ring-purple-400/30' 
-                : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('upcoming')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-purple-300 mb-1">All Events</p>
-            <p className="text-lg font-bold text-purple-400">{upcomingEvents.length}</p>
-          </Card>
-          
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'today' 
-                ? 'bg-gradient-to-br from-blue-600/30 to-blue-500/30 border-blue-400/50 ring-2 ring-blue-400/30' 
-                : 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-700/30 hover:border-blue-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('today')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-blue-300 mb-1">Today</p>
-            <p className="text-lg font-bold text-blue-400">{todayEvents.length}</p>
-          </Card>
-          
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'this_week' 
-                ? 'bg-gradient-to-br from-cyan-600/30 to-cyan-500/30 border-cyan-400/50 ring-2 ring-cyan-400/30' 
-                : 'bg-gradient-to-br from-cyan-900/20 to-cyan-800/20 border-cyan-700/30 hover:border-cyan-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('this_week')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-cyan-300 mb-1">This Week</p>
-            <p className="text-lg font-bold text-cyan-400">{thisWeekEvents.length}</p>
-          </Card>
-          
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'free' 
-                ? 'bg-gradient-to-br from-green-600/30 to-green-500/30 border-green-400/50 ring-2 ring-green-400/30' 
-                : 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-700/30 hover:border-green-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('free')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-green-300 mb-1">Free Events</p>
-            <p className="text-lg font-bold text-green-400">{events.filter(e => e.price_info?.toLowerCase().includes('free')).length}</p>
-          </Card>
-          
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'saved' 
-                ? 'bg-gradient-to-br from-amber-600/30 to-amber-500/30 border-amber-400/50 ring-2 ring-amber-400/30' 
-                : 'bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-700/30 hover:border-amber-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('saved')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-amber-300 mb-1">My Saved</p>
-            <p className="text-lg font-bold text-amber-400">{savedEventsList.length}</p>
-          </Card>
-          
-          <Card 
-            className={`cursor-pointer transition-colors duration-200 text-center p-3 sm:p-4 ${
-              selectedFilter === 'interested' 
-                ? 'bg-gradient-to-br from-pink-600/30 to-pink-500/30 border-pink-400/50 ring-2 ring-pink-400/30' 
-                : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
-            }`}
-            onClick={() => {
-              setSelectedFilter('interested')
-              scrollToResults()
-            }}
-          >
-            <p className="text-base sm:text-lg font-semibold text-pink-300 mb-1">Interested</p>
-            <p className="text-lg font-bold text-pink-400">{interestedEventsList.length}</p>
-          </Card>
+        {/* Filter chips — not neon count tiles */}
+        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5 -mx-1 px-1">
+          {[
+            { id: 'upcoming', label: 'All', count: upcomingEvents.length, active: 'bg-violet-500/20 text-violet-200 border-violet-400/40' },
+            { id: 'today', label: 'Today', count: todayEvents.length, active: 'bg-sky-500/20 text-sky-200 border-sky-400/40' },
+            { id: 'this_week', label: 'This week', count: thisWeekEvents.length, active: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40' },
+            { id: 'free', label: 'Free', count: upcomingEvents.filter(e => e.price_info?.toLowerCase().includes('free')).length, active: 'bg-[#00d083]/20 text-[#9dffc0] border-[#00d083]/40' },
+            { id: 'saved', label: 'Saved', count: savedEventsList.length, active: 'bg-amber-500/20 text-amber-200 border-amber-400/40' },
+            { id: 'interested', label: 'Interested', count: interestedEventsList.length, active: 'bg-rose-500/20 text-rose-200 border-rose-400/40' },
+          ].map((tab) => {
+            const isActive = selectedFilter === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setSelectedFilter(tab.id)
+                  scrollToResults()
+                }}
+                className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+                  isActive
+                    ? tab.active
+                    : 'bg-zinc-900/80 text-zinc-400 border-zinc-700 hover:text-zinc-200'
+                }`}
+              >
+                {tab.label}
+                <span className="ml-1 opacity-80">{tab.count}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* AI Companion Card */}
         <AiCompanionCard
           title="Ask Qwikker"
           prompts={[
@@ -559,82 +491,94 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
             'Show me food and drink events',
           ]}
           walletPassId={walletPassId}
+          className="border-[#00d083]/25 bg-gradient-to-r from-[#00d083]/10 via-zinc-900 to-zinc-800"
         />
 
-        {/* Category Filter */}
         {eventTypes.length > 2 && (
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2 justify-center">
-              {eventTypes.map(type => (
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hidden pb-0.5">
+            {eventTypes.map((type, i) => {
+              const tints = [
+                'bg-teal-500/15 text-teal-200 border-teal-400/30',
+                'bg-indigo-500/15 text-indigo-200 border-indigo-400/30',
+                'bg-orange-500/15 text-orange-200 border-orange-400/30',
+                'bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30',
+              ]
+              const isActive = selectedCategory === type
+              return (
                 <button
                   key={type}
+                  type="button"
                   onClick={() => setSelectedCategory(type)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    selectedCategory === type
-                      ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30'
-                      : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 border border-slate-700/50'
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    isActive
+                      ? type === 'all'
+                        ? 'bg-white text-black border-white'
+                        : tints[i % tints.length]
+                      : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
                   }`}
                 >
-                  {type === 'all' ? 'All Types' : getEventTypeLabel(type)}
+                  {type === 'all' ? 'All types' : getEventTypeLabel(type)}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
         )}
 
         {/* Events Grid */}
-        <div data-events-results className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div data-events-results className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {filteredEvents.length === 0 ? (
-            <div className="col-span-full">
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="py-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  {selectedFilter === 'saved' ? (
-                    <>
-                      <h3 className="text-xl font-semibold text-white mb-2">You haven't saved any events yet</h3>
-                      <p className="text-slate-400">
-                        Bookmark events you're interested in to see them here
-                      </p>
-                    </>
-                  ) : selectedFilter === 'interested' ? (
-                    <>
-                      <h3 className="text-xl font-semibold text-white mb-2">You haven't marked any events as interested yet</h3>
-                      <p className="text-slate-400">
-                        Tap "I'm Interested" on events to see them here
-                      </p>
-                    </>
-                  ) : events.length === 0 && selectedFilter === 'upcoming' ? (
-                    <>
-                      <h3 className="text-xl font-semibold text-white mb-2">Events will appear here</h3>
-                      <p className="text-slate-400">
-                        Live events and exclusives show up as partners activate them
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="text-xl font-semibold text-white mb-2">No {selectedFilter} events at the moment</h3>
-                      <p className="text-slate-400">
-                        Check back soon for new events!
-                      </p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+            <div className="col-span-full rounded-2xl border border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-900 px-4 py-12 text-center shadow-md shadow-black/30">
+              <div className="w-14 h-14 rounded-full bg-[#00d083]/15 border border-[#00d083]/30 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-7 h-7 text-[#00d083]" />
+              </div>
+              {selectedFilter === 'saved' ? (
+                <>
+                  <h3 className="text-lg font-semibold text-white mb-1">No saved events yet</h3>
+                  <p className="text-sm text-zinc-400">
+                    Bookmark events you like and they&apos;ll show up here
+                  </p>
+                </>
+              ) : selectedFilter === 'interested' ? (
+                <>
+                  <h3 className="text-lg font-semibold text-white mb-1">Nothing marked interested</h3>
+                  <p className="text-sm text-zinc-400">
+                    Tap Interested on an event to keep track of it
+                  </p>
+                </>
+              ) : events.length === 0 && selectedFilter === 'upcoming' ? (
+                <>
+                  <h3 className="text-lg font-semibold text-white mb-1">Events coming soon</h3>
+                  <p className="text-sm text-zinc-400">
+                    Live gigs and exclusives appear as partners activate them
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold text-white mb-1">No matches for this filter</h3>
+                  <p className="text-sm text-zinc-400">Try another chip or check back soon</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFilter('upcoming')
+                      setSelectedCategory('all')
+                    }}
+                    className="mt-4 text-xs font-semibold text-[#00d083] border border-[#00d083]/40 bg-[#00d083]/10 px-4 py-2 rounded-full"
+                  >
+                    Show all events
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             filteredEvents.map((event) => (
               <Card 
                 key={event.id}
-                className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-all duration-300 overflow-hidden group cursor-pointer"
+                className="bg-gradient-to-br from-zinc-800 via-zinc-800 to-zinc-800/95 border-zinc-600/90 shadow-md shadow-black/30 ring-1 ring-white/5 hover:border-[#00d083]/45 transition-all duration-300 overflow-hidden group cursor-pointer p-0 gap-0"
                 onClick={() => handleOpenHeroCard(event.id)}
               >
                 {/* Event Image */}
                 {event.event_image && (
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-44 overflow-hidden">
                     <img
                       src={event.event_image}
                       alt={event.event_name}
@@ -648,7 +592,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                         }}
                         className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
                           savedEvents.has(event.id)
-                            ? 'bg-blue-500 text-white'
+                            ? 'bg-[#00d083] text-black'
                             : 'bg-black/50 text-white hover:bg-black/70'
                         }`}
                       >
@@ -659,53 +603,49 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                 )}
 
                 <CardContent className="p-4">
-                  {/* Event Type Badge */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-violet-500/20 text-violet-200 border border-violet-400/30">
                       {getEventTypeLabel(event.event_type)}
                     </span>
                     {event.is_today && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-                        Today!
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-[#00d083]/20 text-[#9dffc0] border border-[#00d083]/35">
+                        Today
                       </span>
                     )}
                     {event.is_happening_soon && !event.is_today && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 border border-orange-400/30">
                         Soon
                       </span>
                     )}
                   </div>
 
-                  {/* Event Name */}
-                  <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">
+                  <h3 className="text-lg font-bold text-white mb-1.5 line-clamp-2 tracking-tight">
                     {event.event_name}
                   </h3>
 
-                  {/* Business Name */}
                   <Link 
                     href={`/user/business/${event.business_name?.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-                    className="text-sm text-blue-400 hover:text-blue-300 mb-3 block"
+                    className="text-sm text-[#00d083] hover:text-[#9dffc0] mb-3 block"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     @ {event.business_name}
                   </Link>
 
-                  {/* Short Description */}
                   {event.event_short_description && (
-                    <p className="text-sm text-slate-400 mb-3 line-clamp-2">
+                    <p className="text-sm text-zinc-400 mb-3 line-clamp-2">
                       {event.event_short_description}
                     </p>
                   )}
 
-                  {/* Event Details */}
                   <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
-                      <Calendar className="w-4 h-4 text-blue-400" />
+                    <div className="flex items-center gap-2 text-sm text-zinc-300">
+                      <Calendar className="w-4 h-4 text-[#00d083]" />
                       <span>{formatDate(event.event_date)}</span>
                     </div>
                     
                     {event.event_start_time && (
-                      <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <Clock className="w-4 h-4 text-purple-400" />
+                      <div className="flex items-center gap-2 text-sm text-zinc-300">
+                        <Clock className="w-4 h-4 text-violet-300" />
                         <span>
                           {formatTime(event.event_start_time)}
                           {event.event_end_time && ` - ${formatTime(event.event_end_time)}`}
@@ -714,27 +654,26 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                     )}
 
                     {event.custom_location && (
-                      <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <MapPin className="w-4 h-4 text-red-400" />
+                      <div className="flex items-center gap-2 text-sm text-zinc-300">
+                        <MapPin className="w-4 h-4 text-rose-300" />
                         <span className="line-clamp-1">{event.custom_location}</span>
                       </div>
                     )}
 
                     {event.price_info && (
-                      <div className="flex items-center gap-2 text-sm font-medium text-green-400">
-                        💰 {event.price_info}
+                      <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200 bg-amber-500/15 border border-amber-400/30 px-2 py-0.5 rounded-full">
+                        {event.price_info}
                       </div>
                     )}
 
                     {event.requires_booking && event.max_attendees && (
-                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <div className="flex items-center gap-2 text-sm text-zinc-400">
                         <Users className="w-4 h-4" />
                         <span>Limited to {event.max_attendees} attendees</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <Button
                       onClick={(e) => {
@@ -745,8 +684,8 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       size="sm"
                       className={`flex-1 ${
                         interestedEvents.has(event.id)
-                          ? 'bg-emerald-500 hover:bg-emerald-600'
-                          : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          ? 'bg-[#00d083] hover:bg-[#00b86f] text-black'
+                          : 'border-zinc-600 text-zinc-300 hover:bg-zinc-800'
                       }`}
                     >
                       <Heart 
@@ -767,7 +706,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                           window.open(url, '_blank')
                         }}
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-[#00d083] hover:bg-[#00b86f] text-black"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </Button>
@@ -777,7 +716,7 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
                       <ShareButton
                         size="sm"
                         variant="outline"
-                        className="border-slate-700"
+                        className="border-zinc-600"
                         title={`${event.event_name} at ${event.business_name}`}
                         text={`Check out this event: ${event.event_name} at ${event.business_name} on ${formatDate(event.event_date)}`}
                         url={typeof window !== 'undefined' ? window.location.href : ''}

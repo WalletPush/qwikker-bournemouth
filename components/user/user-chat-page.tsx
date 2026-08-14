@@ -1429,7 +1429,11 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
             
             return (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] sm:max-w-[75%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+              <div className={`${
+                message.type === 'user'
+                  ? 'max-w-[85%] sm:max-w-[75%] order-2'
+                  : 'w-full max-w-[95%] sm:max-w-[90%] order-1'
+              }`}>
                 
                 {/* Message Bubble */}
                 <div className={`rounded-2xl px-4 py-3 ${
@@ -1529,7 +1533,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 {message.walletActions &&
                   message.walletActions.length > 0 &&
                   streamingComplete.has(message.id) && (
-                  <div className="mt-3 space-y-2 animate-in fade-in duration-200">
+                  <div className="mt-3 space-y-2.5 w-full animate-in fade-in duration-200">
                     {message.walletActions.slice(0, 3).map((action) => {
                       const isActive = isOfferOnWallet(action.offerId)
                       const isSaved = savedOfferIds.has(action.offerId) || isActive
@@ -1538,23 +1542,23 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                       return (
                         <div
                           key={action.offerId}
-                          className="rounded-xl border border-zinc-700/70 bg-zinc-950 overflow-hidden"
+                          className="w-full rounded-xl border border-zinc-700/70 bg-zinc-900 overflow-hidden"
                         >
-                          <div className="flex gap-3 p-3">
+                          <div className="flex gap-3 p-3.5">
                             {action.offerImage ? (
                               <img
                                 src={action.offerImage}
                                 alt=""
-                                className="w-14 h-14 rounded-lg object-cover border border-zinc-700 shrink-0"
+                                className="w-16 h-16 rounded-lg object-cover border border-zinc-700 shrink-0"
                               />
                             ) : (
-                              <div className="w-14 h-14 rounded-lg bg-zinc-900 border border-zinc-700 shrink-0 flex items-center justify-center text-zinc-500 text-xs">
+                              <div className="w-16 h-16 rounded-lg bg-zinc-800 border border-zinc-700 shrink-0 flex items-center justify-center text-zinc-500 text-xs">
                                 Deal
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-zinc-100 line-clamp-2">{action.offerName}</p>
-                              <p className="text-xs text-zinc-500 truncate">{action.businessName}</p>
+                              <p className="text-xs text-zinc-400 truncate mt-0.5">{action.businessName}</p>
                               {action.offerValue && (
                                 <p className="text-xs text-[#00d083] mt-0.5">{action.offerValue}</p>
                               )}
@@ -1563,7 +1567,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 px-3 pb-3">
+                          <div className="flex flex-wrap gap-2 px-3.5 pb-3.5">
                             {isActive ? (
                               <button
                                 type="button"
@@ -1699,7 +1703,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
               className="h-12 w-12 shrink-0 rounded-full bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#7dffa8] border border-[#00d083]/40 p-0 font-semibold transition-colors disabled:opacity-50"
             >
               {isTyping ? (
-                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[#7dffa8]/30 border-t-[#7dffa8] rounded-full animate-spin" />
               ) : (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

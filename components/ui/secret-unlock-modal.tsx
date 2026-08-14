@@ -55,7 +55,7 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-all duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={(e) => {
@@ -63,16 +63,16 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
       }}
     >
       <Card 
-        className={`modal-content max-w-md w-full bg-slate-800/95 border border-slate-700/50 shadow-2xl transition-all duration-300 ${
+        className={`modal-content max-w-md w-full bg-zinc-800 border border-fuchsia-500/30 shadow-2xl ring-1 ring-white/5 transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
       >
         <CardContent className="p-0">
           {/* Clean Header */}
-          <div className="relative p-6 pb-4 border-b border-slate-700/50">
+          <div className="relative p-6 pb-4 border-b border-zinc-700/60">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-full flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>

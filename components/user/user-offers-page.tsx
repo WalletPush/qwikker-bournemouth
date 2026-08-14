@@ -372,12 +372,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   
   // Count offers per category
   const getCategoryCount = (category: string) => {
-    return allOffers.filter(o => o.businessCategory === category && !claimedOffers.has(o.id)).length
+    return allOffers.filter(o => o.businessCategory === category).length
   }
   
   const activeOfferIds = Object.keys(activeByOfferId).filter((id) => isOfferActive(id))
 
-  const browseCount = allOffers.filter((o) => !claimedOffers.has(o.id)).length
+  const liveCount = allOffers.length
   const savedCount = Array.from(claimedOffers).filter((id) => !isOfferActive(id)).length
   const activeCount = activeOfferIds.length
   const favoritesCount = Array.from(favoriteOffers).filter((id) =>
@@ -452,34 +452,34 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     modalOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300'
     
     const modal = document.createElement('div')
-    modal.className = 'bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl'
+    modal.className = 'bg-zinc-800 border border-[#00d083]/30 rounded-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-300 shadow-2xl ring-1 ring-white/5'
     modal.innerHTML = `
       <div class="text-center">
-        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-16 h-16 bg-[#00d083] rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
-        <h3 class="text-xl font-bold text-slate-100 mb-2">Saved</h3>
-        <p class="text-slate-300 mb-1">"${offerTitle}"</p>
-        <p class="text-slate-400 text-sm mb-2">from ${businessName}</p>
-        <p class="text-slate-300 text-sm mb-6">Redeem when you're ready to show staff.</p>
+        <h3 class="text-xl font-bold text-white mb-2">Saved</h3>
+        <p class="text-zinc-300 mb-1">"${offerTitle}"</p>
+        <p class="text-zinc-400 text-sm mb-2">from ${businessName}</p>
+        <p class="text-zinc-300 text-sm mb-6">Redeem when you're ready to show staff.</p>
         
         <div class="space-y-3">
-          <button id="redeem-now" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
+          <button id="redeem-now" class="w-full bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
             Redeem now
           </button>
           
-          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mt-3 mb-2">
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mt-3 mb-2">
             <p class="text-amber-200 text-sm font-semibold text-center mb-1">About ${windowMins} minutes on your Wallet</p>
-            <p class="text-amber-100 text-xs text-center">Only redeem when you're ready to show staff. After that it clears from your pass.</p>
+            <p class="text-amber-100/90 text-xs text-center">Only redeem when you're ready to show staff. After that it clears from your pass.</p>
           </div>
 
-          <button id="view-saved" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
+          <button id="view-saved" class="w-full bg-zinc-700 hover:bg-zinc-600 text-zinc-100 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
             View saved
           </button>
           
-          <button id="modal-dismiss" class="w-full bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
+          <button id="modal-dismiss" class="w-full border border-zinc-600 text-zinc-300 hover:bg-zinc-700/50 font-medium py-2.5 px-6 rounded-xl transition-colors duration-200">
             Dismiss
           </button>
         </div>
@@ -663,9 +663,8 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
     } else if (listMode === 'redeemed') {
       filtered = filtered.filter((o) => isOfferActive(o.id))
     } else {
-      // Browse available — hide saved + single-use already activated
+      // All live offers — include saved; only hide single-use currently in activation window
       filtered = filtered.filter((o) => {
-        if (claimedOffers.has(o.id)) return false
         if (isOfferActive(o.id) && o.claimType === 'single') return false
         return true
       })
@@ -1226,24 +1225,27 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header - Simple and Clean */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">
-          Your Exclusive Offers
-        </h1>
-        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          Save money while discovering amazing local businesses
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-amber-500/10 px-4 py-5">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
+          Deals
         </p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Offers</h1>
+        <p className="text-sm text-zinc-300 mt-1.5">
+          Local deals you can save and redeem
+        </p>
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9dffc0] bg-[#00d083]/10 border border-[#00d083]/25 px-2.5 py-1 rounded-full">
+          {liveCount} live
+        </div>
       </div>
 
       {/* Primary: All / Saved / Active */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {(
           [
-            { id: 'all' as const, label: 'All Offers', count: browseCount },
-            { id: 'claimed' as const, label: 'Saved', count: savedCount },
-            { id: 'redeemed' as const, label: 'Active', count: activeCount },
+            { id: 'all' as const, label: 'All', count: liveCount, active: 'border-[#00d083]/40 bg-[#00d083]/15 text-[#9dffc0]' },
+            { id: 'claimed' as const, label: 'Saved', count: savedCount, active: 'border-rose-400/40 bg-rose-500/15 text-rose-200' },
+            { id: 'redeemed' as const, label: 'Active', count: activeCount, active: 'border-amber-400/40 bg-amber-500/15 text-amber-200' },
           ]
         ).map((tab) => {
           const isSelected = listMode === tab.id
@@ -1256,16 +1258,16 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                 resetRefineFilters()
                 scrollToResults()
               }}
-              className={`rounded-xl border px-2 py-3 sm:px-4 sm:py-3.5 text-center transition-colors ${
+              className={`rounded-2xl border px-2 py-3.5 sm:px-4 text-center transition-colors shadow-sm shadow-black/20 ${
                 isSelected
-                  ? 'border-[#00d083]/50 bg-[#00d083]/10 ring-1 ring-[#00d083]/25'
-                  : 'border-slate-700/60 bg-slate-800/40 hover:border-slate-600 hover:bg-slate-800/70'
+                  ? tab.active
+                  : 'border-zinc-700/80 bg-zinc-800/90 text-zinc-400 hover:border-zinc-600'
               }`}
             >
-              <p className={`text-xs sm:text-sm font-medium mb-0.5 ${isSelected ? 'text-[#00d083]' : 'text-slate-400'}`}>
+              <p className={`text-xs font-semibold mb-0.5 ${isSelected ? '' : 'text-zinc-500'}`}>
                 {tab.label}
               </p>
-              <p className={`text-xl sm:text-2xl font-semibold tabular-nums ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+              <p className={`text-xl sm:text-2xl font-bold tabular-nums ${isSelected ? 'text-white' : 'text-zinc-200'}`}>
                 {tab.count}
               </p>
             </button>
@@ -1274,15 +1276,15 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
       </div>
 
       {/* Sticky type + category filters */}
-      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-slate-950/92 backdrop-blur-md border-b border-slate-800/80">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-black/90 backdrop-blur-md border-b border-zinc-800/80">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {(
             [
-              { id: 'all' as const, label: 'All types' },
-              { id: 'percentage_off' as const, label: '% Off' },
-              { id: 'two_for_one' as const, label: '2-for-1' },
-              { id: 'ending_soon' as const, label: 'Ending soon' },
-              { id: 'favorites' as const, label: favoritesCount > 0 ? `Favourites (${favoritesCount})` : 'Favourites' },
+              { id: 'all' as const, label: 'All types', active: 'bg-[#00d083]/20 text-[#9dffc0] border-[#00d083]/40' },
+              { id: 'percentage_off' as const, label: '% Off', active: 'bg-orange-500/20 text-orange-200 border-orange-400/40' },
+              { id: 'two_for_one' as const, label: '2-for-1', active: 'bg-violet-500/20 text-violet-200 border-violet-400/40' },
+              { id: 'ending_soon' as const, label: 'Ending soon', active: 'bg-rose-500/20 text-rose-200 border-rose-400/40' },
+              { id: 'favorites' as const, label: favoritesCount > 0 ? `Favourites (${favoritesCount})` : 'Favourites', active: 'bg-pink-500/20 text-pink-200 border-pink-400/40' },
             ]
           ).map((chip) => {
             const isSelected = typeFilter === chip.id
@@ -1294,10 +1296,10 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   setTypeFilter(chip.id)
                   scrollToResults()
                 }}
-                className={`shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                   isSelected
-                    ? 'bg-[#00d083] text-slate-950'
-                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/80'
+                    ? chip.active
+                    : 'bg-zinc-900/80 text-zinc-400 border-zinc-700 hover:text-zinc-200'
                 }`}
               >
                 {chip.label}
@@ -1307,22 +1309,29 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
         </div>
 
         {uniqueCategories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto mt-2 pt-2 border-t border-slate-800/60 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-2 overflow-x-auto mt-2 pt-2 border-t border-zinc-800/60 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => {
                 setSelectedCategory('all')
                 scrollToResults()
               }}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 selectedCategory === 'all'
-                  ? 'bg-slate-200 text-slate-900'
-                  : 'bg-transparent text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                  ? 'bg-white text-black border-white'
+                  : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
               }`}
             >
               All categories
             </button>
-            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 6)).map((cat) => (
+            {(showAllCategories ? uniqueCategories : uniqueCategories.slice(0, 6)).map((cat, i) => {
+              const tints = [
+                'bg-teal-500/15 text-teal-200 border-teal-400/30',
+                'bg-indigo-500/15 text-indigo-200 border-indigo-400/30',
+                'bg-orange-500/15 text-orange-200 border-orange-400/30',
+                'bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30',
+              ]
+              return (
               <button
                 key={cat}
                 type="button"
@@ -1330,21 +1339,21 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
                   setSelectedCategory(cat)
                   scrollToResults()
                 }}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                   selectedCategory === cat
-                    ? 'bg-slate-200 text-slate-900'
-                    : 'bg-transparent text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                    ? tints[i % tints.length]
+                    : 'bg-zinc-900/60 text-zinc-400 border-zinc-700'
                 }`}
               >
                 {cat}
-                <span className="ml-1 text-xs opacity-70 hidden sm:inline">({getCategoryCount(cat)})</span>
+                <span className="ml-1 text-[10px] opacity-70 hidden sm:inline">({getCategoryCount(cat)})</span>
               </button>
-            ))}
+            )})}
             {uniqueCategories.length > 6 && (
               <button
                 type="button"
                 onClick={() => setShowAllCategories(!showAllCategories)}
-                className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300"
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-zinc-300 border border-transparent"
               >
                 {showAllCategories ? 'Less' : `+${uniqueCategories.length - 6} more`}
               </button>
@@ -1363,6 +1372,7 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
             'Show me deals ending this week',
           ]}
           walletPassId={walletPassId || undefined}
+          className="border-[#00d083]/25 bg-gradient-to-r from-[#00d083]/10 via-zinc-900 to-zinc-800"
         />
       </div>
 
@@ -1476,19 +1486,19 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
           }}
         >
           <div
-            className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 text-center shadow-2xl"
+            className="bg-zinc-800 border border-[#00d083]/30 rounded-2xl p-6 max-w-sm w-full mx-4 text-center shadow-2xl ring-1 ring-white/5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 bg-[#00d083] rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-100 mb-1">
+            <h3 className="text-xl font-bold text-white mb-1">
               {activateSuccess.walletSynced ? 'Activated' : 'Activated (in-app)'}
             </h3>
-            <p className="text-slate-300 text-sm mb-1">&ldquo;{activateSuccess.offerTitle}&rdquo;</p>
-            <p className="text-slate-400 text-xs mb-4">at {activateSuccess.businessName}</p>
+            <p className="text-zinc-300 text-sm mb-1">&ldquo;{activateSuccess.offerTitle}&rdquo;</p>
+            <p className="text-zinc-400 text-xs mb-4">at {activateSuccess.businessName}</p>
 
             <ActivationCountdownPanel
               activeUntil={activateSuccess.activeUntil}

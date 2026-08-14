@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface SimpleBadgesPageProps {
   walletPassId?: string
@@ -318,218 +317,198 @@ export function SimpleBadgesPage({ walletPassId }: SimpleBadgesPageProps) {
     }
   }
 
-  const getRarityColor = (rarity: string) => {
+  const getRarityStyles = (rarity: string) => {
     switch (rarity) {
-      case 'common': return 'from-gray-500 to-gray-600'
-      case 'rare': return 'from-blue-500 to-blue-600' 
-      case 'epic': return 'from-purple-500 to-purple-600'
-      case 'legendary': return 'from-yellow-400 to-orange-500'
-      default: return 'from-gray-500 to-gray-600'
+      case 'common':
+        return {
+          label: 'Common',
+          bar: 'from-[#00d083] to-teal-400',
+          stamp: 'from-zinc-500 to-zinc-600',
+          border: 'border-zinc-400/40',
+          ink: 'text-zinc-100',
+          glow: 'shadow-[#00d083]/20',
+          header: 'border-[#00d083]/30 bg-[#00d083]/10',
+        }
+      case 'rare':
+        return {
+          label: 'Rare',
+          bar: 'from-sky-400 to-blue-500',
+          stamp: 'from-sky-500 to-blue-600',
+          border: 'border-sky-400/50',
+          ink: 'text-sky-100',
+          glow: 'shadow-sky-500/25',
+          header: 'border-sky-500/30 bg-sky-500/10',
+        }
+      case 'epic':
+        return {
+          label: 'Epic',
+          bar: 'from-violet-400 to-purple-600',
+          stamp: 'from-violet-500 to-purple-600',
+          border: 'border-violet-400/50',
+          ink: 'text-violet-100',
+          glow: 'shadow-violet-500/25',
+          header: 'border-violet-500/30 bg-violet-500/10',
+        }
+      case 'legendary':
+        return {
+          label: 'Legendary',
+          bar: 'from-amber-400 to-orange-500',
+          stamp: 'from-amber-400 to-orange-500',
+          border: 'border-amber-400/50',
+          ink: 'text-amber-50',
+          glow: 'shadow-amber-500/30',
+          header: 'border-amber-500/30 bg-amber-500/10',
+        }
+      default:
+        return {
+          label: rarity,
+          bar: 'from-zinc-500 to-zinc-600',
+          stamp: 'from-zinc-500 to-zinc-600',
+          border: 'border-zinc-500/40',
+          ink: 'text-zinc-100',
+          glow: 'shadow-zinc-500/20',
+          header: 'border-zinc-600 bg-zinc-800/60',
+        }
     }
   }
 
-  const getRarityBorder = (rarity: string) => {
-    switch (rarity) {
-      case 'common': return 'border-gray-500/50'
-      case 'rare': return 'border-blue-500/50' 
-      case 'epic': return 'border-purple-500/50'
-      case 'legendary': return 'border-yellow-400/50'
-      default: return 'border-gray-500/50'
-    }
-  }
+  const percentComplete = Math.round((earnedCount / simpleBadges.length) * 100)
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      {/* Enhanced Header */}
-      <div className="relative">
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-blue-500/5 to-cyan-500/5 rounded-2xl blur-xl"></div>
-        
-        <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 text-center">
-          {/* Trophy icon with animation */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-yellow-400/20 hover:scale-110 transition-transform duration-300">
-                <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-              </div>
-              {/* Floating particles */}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-ping"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-            </div>
+    <div className="max-w-3xl mx-auto space-y-5 pb-8 px-1">
+      {/* Compact branded header */}
+      <div className="rounded-2xl border border-[#00d083]/30 bg-gradient-to-br from-[#00d083]/15 via-zinc-800 to-zinc-900 px-5 py-5 sm:px-6">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
+          Collectibles
+        </p>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Achievements</h1>
+        <p className="text-sm text-zinc-300 mt-1">
+          Stamp your card as you explore Qwikker
+        </p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold text-[#00d083]">{earnedCount}</span>
+            <span className="text-sm text-zinc-400">/ {simpleBadges.length} stamped</span>
           </div>
-          
-          <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-4">
-            Your Achievements
-          </h1>
-          <p className="text-xl text-slate-300 mb-6">Unlock your potential as you explore Qwikker</p>
-          
-          {/* Quick stats */}
-          <div className="flex justify-center items-center gap-6 sm:gap-8">
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-green-400">{earnedCount}</div>
-              <div className="text-xs sm:text-sm text-slate-400 uppercase tracking-wide">Earned</div>
-            </div>
-            <div className="w-px h-10 bg-slate-600"></div>
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-blue-400">{simpleBadges.length - earnedCount}</div>
-              <div className="text-xs sm:text-sm text-slate-400 uppercase tracking-wide">Remaining</div>
-            </div>
-            <div className="w-px h-10 bg-slate-600"></div>
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl font-bold text-purple-400">{Math.round((earnedCount / simpleBadges.length) * 100)}%</div>
-              <div className="text-xs sm:text-sm text-slate-400 uppercase tracking-wide">Complete</div>
-            </div>
-          </div>
+          <span className="text-xs font-semibold text-[#9dffc0] bg-[#00d083]/15 border border-[#00d083]/30 px-2.5 py-1 rounded-full">
+            {percentComplete}%
+          </span>
+        </div>
+        <div className="mt-3 w-full bg-zinc-900/80 rounded-full h-2 overflow-hidden border border-zinc-700/60">
+          <div
+            className="h-full bg-gradient-to-r from-[#00d083] to-teal-400 rounded-full transition-all duration-700"
+            style={{ width: `${percentComplete}%` }}
+          />
         </div>
       </div>
 
-      {/* Progress Summary */}
-      <Card className="bg-gradient-to-br from-slate-800/70 to-slate-900/70 border-slate-700/50">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-xl font-bold text-slate-100">Progress Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-slate-300 font-medium">Badges Earned</span>
-            <span className="text-slate-300 font-bold">{earnedBadges.length}/{simpleBadges.length}</span>
-          </div>
-          <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden border border-slate-600/50">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-700 ease-out shadow-lg shadow-blue-500/20"
-              style={{ width: `${(earnedBadges.length / simpleBadges.length) * 100}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Stamp cards by rarity */}
+      <div className="space-y-5">
+        {(['common', 'rare', 'epic', 'legendary'] as const).map((rarity) => {
+          const styles = getRarityStyles(rarity)
+          const categoryBadges = simpleBadges.filter((b) => b.rarity === rarity)
+          const categoryEarned = categoryBadges.filter((b) => earnedBadgeIds.includes(b.id)).length
+          const categoryPct = Math.round((categoryEarned / categoryBadges.length) * 100)
 
-      {/* Badges Grid */}
-      <div className="space-y-6">
-        {['common', 'rare', 'epic', 'legendary'].map(rarity => {
-          const categoryBadges = simpleBadges.filter(b => b.rarity === rarity)
-          const categoryEarned = categoryBadges.filter(b => earnedBadgeIds.includes(b.id)).length
-          
           return (
-            <div key={rarity} className="space-y-6">
-              <div className="relative">
-                {/* Category header with enhanced styling */}
-                <div className={`relative bg-gradient-to-r ${getRarityColor(rarity)} p-0.5 rounded-xl`}>
-                  <div className="bg-slate-900 rounded-xl px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${getRarityColor(rarity)} shadow-lg`}></div>
-                        <h3 className="text-2xl font-bold text-slate-100 capitalize">
-                          {rarity} {rarity === 'legendary' ? '✨' : ''} Achievements
-                        </h3>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold text-slate-300">
-                          {categoryEarned}/{categoryBadges.length}
-                        </div>
-                        <div className="text-xs text-slate-500 uppercase tracking-wide">
-                          {Math.round((categoryEarned / categoryBadges.length) * 100)}% Complete
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Progress bar */}
-                    <div className="mt-3 w-full bg-slate-800 rounded-full h-1.5">
-                      <div 
-                        className={`h-full bg-gradient-to-r ${getRarityColor(rarity)} rounded-full transition-all duration-700 ease-out`}
-                        style={{ width: `${(categoryEarned / categoryBadges.length) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+            <section
+              key={rarity}
+              className="rounded-2xl border border-zinc-700/80 bg-zinc-800/80 overflow-hidden shadow-md shadow-black/30"
+            >
+              <div className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-700/60 ${styles.header}`}>
+                <div>
+                  <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+                    {styles.label}
+                  </h2>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {categoryEarned}/{categoryBadges.length} stamped
+                  </p>
+                </div>
+                <div className="w-20 h-1.5 rounded-full bg-zinc-900/70 overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r ${styles.bar} rounded-full`}
+                    style={{ width: `${categoryPct}%` }}
+                  />
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+              {/* Stamp sheet — room around the grid */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 p-4 sm:p-5">
                 {categoryBadges.map((badge) => {
-                  const progressBadge = badgeProgress.find(b => b.id === badge.id)
+                  const progressBadge = badgeProgress.find((b) => b.id === badge.id)
                   const isEarned = progressBadge?.earned || false
-                  
+                  const hasProgress =
+                    !isEarned &&
+                    progressBadge?.progress &&
+                    progressBadge.progress.target > 0
+
                   return (
-                    <Card 
+                    <div
                       key={badge.id}
+                      title={badge.description}
                       className={`
-                        relative transition-all duration-300 hover:scale-[1.02] group cursor-pointer
-                        ${isEarned 
-                          ? `bg-gradient-to-br from-slate-800/90 to-slate-900/90 border ${getRarityBorder(badge.rarity)} shadow-lg hover:shadow-xl`
-                          : 'bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800/70 hover:border-slate-600/70'}
-                        h-full overflow-hidden
+                        relative flex flex-col items-center text-center rounded-xl px-2.5 pt-3.5 pb-3
+                        border transition-all duration-200
+                        ${isEarned
+                          ? `bg-zinc-900/40 border-transparent bg-gradient-to-b from-zinc-700/40 to-zinc-900/60 ${styles.border} shadow-md ${styles.glow}`
+                          : 'bg-zinc-900/50 border-dashed border-zinc-600/70 opacity-75'}
                       `}
                     >
-                      <CardContent className="p-6 text-center space-y-4">
-                        {/* Badge Icon */}
-                        <div className="relative flex justify-center">
-                          <div className={`
-                            relative w-16 h-16 rounded-full flex items-center justify-center
-                            bg-gradient-to-br ${getRarityColor(badge.rarity)}
-                            ${isEarned 
-                              ? `border-2 ${getRarityBorder(badge.rarity)} shadow-lg group-hover:shadow-xl group-hover:scale-110` 
-                              : 'border-2 border-slate-600/50 opacity-50 group-hover:opacity-70'}
-                            transition-all duration-300
-                          `}>
-                            <div className={`${isEarned ? 'text-white' : 'text-slate-400'} transition-colors duration-300`}>
-                              {renderBadgeIcon(badge.icon, "w-7 h-7")}
-                            </div>
-                            
-                            {/* Completion checkmark */}
-                            {isEarned && (
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-slate-800">
-                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
+                      {/* Stamp circle */}
+                      <div
+                        className={`
+                          relative w-14 h-14 rounded-full flex items-center justify-center
+                          ${isEarned
+                            ? `bg-gradient-to-br ${styles.stamp} border-2 ${styles.border} shadow-inner`
+                            : 'bg-zinc-800 border-2 border-dashed border-zinc-600'}
+                        `}
+                      >
+                        <div className={isEarned ? styles.ink : 'text-zinc-600'}>
+                          {renderBadgeIcon(badge.icon, 'w-6 h-6')}
                         </div>
-                        
-                        {/* Badge Info */}
-                        <div>
-                          <h4 className={`font-semibold text-lg ${isEarned ? 'text-slate-100' : 'text-slate-400'}`}>
-                            {badge.name}
-                          </h4>
-                          <p className={`text-sm mt-1 ${isEarned ? 'text-slate-300' : 'text-slate-500'}`}>
-                            {badge.description}
+                        {isEarned && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#00d083] rounded-full flex items-center justify-center border-2 border-zinc-900 shadow-sm">
+                            <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className={`mt-2 text-[11px] font-semibold leading-tight line-clamp-2 ${isEarned ? 'text-white' : 'text-zinc-500'}`}>
+                        {badge.name}
+                      </p>
+
+                      {isEarned ? (
+                        <p className="mt-1 text-[10px] font-medium text-[#00d083]">Stamped</p>
+                      ) : hasProgress ? (
+                        <div className="mt-1.5 w-full px-0.5">
+                          <div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
+                            <div
+                              className={`h-full bg-gradient-to-r ${styles.bar} rounded-full`}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  (progressBadge.progress.current / progressBadge.progress.target) * 100
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="mt-0.5 text-[9px] text-zinc-500">
+                            {progressBadge.progress.current}/{progressBadge.progress.target}
                           </p>
                         </div>
-
-                        {/* Status */}
-                        <div className="pt-2">
-                          {isEarned ? (
-                            <div className="text-green-400 text-sm font-medium">
-                              ✓ Earned
-                            </div>
-                          ) : progressBadge?.progress ? (
-                            <div className="space-y-1">
-                              <div className="text-slate-400 text-xs">
-                                {progressBadge.progress.current}/{progressBadge.progress.target}
-                              </div>
-                              <div className="w-full bg-slate-700 rounded-full h-1.5">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-300"
-                                  style={{ width: `${(progressBadge.progress.current / progressBadge.progress.target) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-slate-500 text-sm">
-                              Not yet earned
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                      ) : (
+                        <p className="mt-1 text-[10px] text-zinc-600">Locked</p>
+                      )}
+                    </div>
                   )
                 })}
               </div>
-            </div>
+            </section>
           )
         })}
       </div>
-
     </div>
   )
 }

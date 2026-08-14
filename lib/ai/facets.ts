@@ -27,15 +27,18 @@ export function detectFacet(message: string): QueryFacet {
 }
 
 /**
- * Check if business category can serve alcohol
- * 
- * Includes: bars, pubs, restaurants (restaurants are alcohol-capable to avoid empty results early)
- * Excludes: cafes, bakeries, etc.
+ * Check if a venue can plausibly serve alcohol.
+ * Accepts category OR name text — "Che Bar" must pass even if system_category is empty/odd.
+ * Excludes clear non-drink venues (cafes, bakeries) unless the name itself says bar/pub.
  */
 export function isAlcoholCapableCategory(categoryRaw: string): boolean {
-  const category = (categoryRaw || '').toLowerCase()
-  
-  // Check for alcohol-capable business types
+  const blob = (categoryRaw || '').toLowerCase()
+
+  // Explicit bar/pub naming always wins (covers mis-categorised venues)
+  if (/\b(bar|bars|pub|pubs|tavern|lounge|night\s*club|wine\s*bar|cocktail|speakeasy|taproom|brewery|brewpub)\b/i.test(blob)) {
+    return true
+  }
+
   const alcoholCapableTypes = [
     'bar',
     'pub',
@@ -49,10 +52,16 @@ export function isAlcoholCapableCategory(categoryRaw: string): boolean {
     'grill',
     'steakhouse',
     'diner',
-    'eatery'
+    'eatery',
+    'hotel',
+    'resort',
+    'club',
+    'lounge',
+    'nightlife',
+    'beach club',
   ]
-  
-  return alcoholCapableTypes.some(type => category.includes(type))
+
+  return alcoholCapableTypes.some((type) => blob.includes(type))
 }
 
 /**

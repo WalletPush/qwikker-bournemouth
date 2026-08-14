@@ -149,34 +149,39 @@ export function scoreBusinessRelevance(
 ): number {
   // 🔒 FACET GATE: Apply category-aware filtering for specialized queries
   // Prevents semantic search false positives (e.g., cafes matching "cocktails")
+  // IMPORTANT: include business_name — "Che Bar" must not die because category is blank.
   if (facet?.alcohol) {
-    const category = (
-      business.display_category || 
-      business.system_category || 
-      business.google_primary_type || 
-      ''
-    ).toLowerCase()
-    
-    const categoryOk = isAlcoholCapableCategory(category)
-    
-    // If business has KB content, check both category AND KB for alcohol signals
+    const venueBlob = [
+      business.business_name,
+      business.display_category,
+      business.system_category,
+      business.google_primary_type,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    const categoryOk = isAlcoholCapableCategory(venueBlob)
+
+    // If business has KB content, check both category/name AND KB for alcohol signals
     if (kbContent && kbContent.length > 0) {
       const kbOk = kbHasAlcoholSignal(kbContent)
-      
+
       if (!kbOk && !categoryOk) {
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🚫 FACET GATE (alcohol): filtered ${business.business_name} (category=${category}, categoryOk=${categoryOk}, kbOk=${kbOk})`)
+          console.log(
+            `🚫 FACET GATE (alcohol): filtered ${business.business_name} (blob=${venueBlob.slice(0, 80)}, categoryOk=${categoryOk}, kbOk=${kbOk})`
+          )
         }
         return 0
       }
-    } else {
-      // No KB content - rely on category only
-      if (!categoryOk) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`🚫 FACET GATE (alcohol): filtered ${business.business_name} (category=${category}, no KB)`)
-        }
-        return 0
+    } else if (!categoryOk) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `🚫 FACET GATE (alcohol): filtered ${business.business_name} (blob=${venueBlob.slice(0, 80)}, no KB)`
+        )
       }
+      return 0
     }
   }
   
@@ -293,21 +298,25 @@ export function scoreBusinessRelevance(
     dessert: ['ice_cream_shop', 'dessert_shop'],
   }
   
-  // +3 for category match (strongest signal)
+  // +3 for category match (strongest signal) — include business NAME
+  // so "Che Bar" counts as a bar even when system_category is empty/restaurant
   for (const category of intent.categories) {
     const cat = category.toLowerCase()
     const expandedTypes = intentTypeExpansion[cat] || []
+    const nameHasCategory =
+      cat.length >= 3 && new RegExp(`\\b${cat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(businessName)
     
     if (
       displayCategory.includes(cat) ||
       systemCategory.includes(cat) ||
+      nameHasCategory ||
       (systemCategory === 'pub' && cat === 'bar') ||
       (cat === 'restaurant' && ['restaurant', 'fast_food', 'takeaway'].includes(systemCategory)) ||
       googlePrimaryType.includes(cat) ||
       expandedTypes.some(t => googlePrimaryType === t || systemCategory === t)
     ) {
       score += 3
-      reasons.push(`category:${category}`)
+      reasons.push(`category:${category}${nameHasCategory ? '(name)' : ''}`)
       break // Only count once
     }
   }
@@ -336,6 +345,22 @@ export function scoreBusinessRelevance(
       score += 2
       reasons.push(`name:${category}`)
       break
+    }
+  }
+
+  // Drink / beer queries: boost venues that look like bars even without KB "beer" text
+  const drinkIntent =
+    intent.categories.includes('bar') ||
+    intent.keywords.some((k) =>
+      ['beer', 'beers', 'pint', 'cocktail', 'cocktails', 'drink', 'drinks', 'wine', 'spirits'].includes(
+        k.toLowerCase()
+      )
+    )
+  if (drinkIntent) {
+    const venueBlob = `${businessName} ${displayCategory} ${systemCategory} ${googlePrimaryType}`
+    if (/\b(bar|pub|lounge|tavern|night\s*club|wine\s*bar|cocktail)\b/i.test(venueBlob)) {
+      score += 2
+      reasons.push('drink-venue')
     }
   }
 
@@ -401,6 +426,32 @@ export function scoreBusinessRelevance(
     }
   }
   
+  // Soft area match: "beer in Nungwi" should prefer Nungwi venues over other towns
+  if (queryText && queryText.length >= 3) {
+    const qLower = queryText.toLowerCase()
+    const town = String(business.business_town || '').toLowerCase().trim()
+    const address = String(business.business_address || '').toLowerCase()
+    if (town.length >= 3 && qLower.includes(town)) {
+      score += 2
+      reasons.push(`area:${town}`)
+    } else if (town.length >= 3) {
+      // also match multi-word towns partially (e.g. "stone town")
+      const townWords = town.split(/\s+/).filter((w: string) => w.length >= 4)
+      if (townWords.some((w: string) => qLower.includes(w))) {
+        score += 1
+        reasons.push(`area-partial:${town}`)
+      }
+    }
+    // Address fallback when town field is empty/generic
+    if (!reasons.some((r) => r.startsWith('area')) && address.length >= 4) {
+      const addressTokens = address.split(/[\s,]+/).filter((w: string) => w.length >= 5)
+      if (addressTokens.some((w: string) => qLower.includes(w))) {
+        score += 1
+        reasons.push('area:address')
+      }
+    }
+  }
+
   // For priority queries, take the MAX of keyword and semantic scores.
   // This ensures businesses with "kids" in their KB score 4+ even if their
   // semantic similarity was moderate (0.65-0.75).

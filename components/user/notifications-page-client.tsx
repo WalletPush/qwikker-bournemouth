@@ -93,7 +93,6 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
 
   // Mark a single notification as read (optimistic)
   const markAsRead = useCallback(async (notificationId: string) => {
-    // Optimistic update
     setNotifications(prev =>
       prev.map(n => n.id === notificationId ? { ...n, readAt: new Date().toISOString() } : n)
     )
@@ -108,18 +107,17 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
           wallet_pass_id: currentUser?.wallet_pass_id,
         }),
       })
-    } catch (err) {
-      console.error('Failed to mark as read:', err)
+    } catch {
+      /* optimistic */
     }
   }, [currentUser?.wallet_pass_id])
 
   // Mark all notifications as read
-  const markAllAsRead = useCallback(async () => {
+  const markAllAsRead = async () => {
     setMarkingAll(true)
-
-    // Optimistic update
-    const now = new Date().toISOString()
-    setNotifications(prev => prev.map(n => ({ ...n, readAt: n.readAt || now })))
+    setNotifications(prev =>
+      prev.map(n => n.readAt ? n : { ...n, readAt: new Date().toISOString() })
+    )
     setUnreadCount(0)
 
     try {
@@ -131,30 +129,28 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
           wallet_pass_id: currentUser?.wallet_pass_id,
         }),
       })
-    } catch (err) {
-      console.error('Failed to mark all as read:', err)
+    } catch {
+      /* optimistic */
     } finally {
       setMarkingAll(false)
     }
-  }, [currentUser?.wallet_pass_id])
+  }
 
   const handleOpenNotification = (notification: Notification) => {
-    // Mark as read if unread
     if (!notification.readAt) {
       markAsRead(notification.id)
     }
-    // Use trackingUrl for cookie-free identity
     window.open(notification.trackingUrl, '_blank')
   }
 
   if (!currentUser) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-6 text-center">
-          <Bell className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">Sign In Required</h2>
-          <p className="text-slate-400">
-            Please sign in to view your notification history.
+      <div className="max-w-3xl mx-auto space-y-5">
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-10 text-center">
+          <Bell className="w-10 h-10 text-amber-300 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-white mb-1">Sign in required</h2>
+          <p className="text-sm text-zinc-400">
+            Open Qwikker from your wallet pass to see notifications.
           </p>
         </div>
       </div>
@@ -162,134 +158,134 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
   }
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+    <div className="max-w-3xl mx-auto space-y-5">
+      <div className="rounded-2xl border border-[#00d083]/25 bg-gradient-to-br from-[#00d083]/12 via-zinc-900 to-sky-500/10 px-4 py-5">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Bell className="w-8 h-8 text-blue-400" />
-              <h1 className="text-3xl font-bold text-white">Notifications</h1>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#00d083] font-semibold mb-1">
+              Inbox
+            </p>
+            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
+              Notifications
               {unreadCount > 0 && (
-                <span className="px-2.5 py-0.5 text-xs font-semibold bg-blue-500 text-white rounded-full">
+                <span className="text-xs font-bold text-black bg-[#00d083] px-2 py-0.5 rounded-full">
                   {unreadCount}
                 </span>
               )}
-            </div>
-            <p className="text-slate-400">
-              Your complete notification history from businesses in {cityDisplayName}
+            </h1>
+            <p className="text-sm text-zinc-300 mt-1.5">
+              Messages from businesses in {cityDisplayName}
             </p>
           </div>
-
-          {/* Mark all as read */}
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
               disabled={markingAll}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#9dffc0] border border-[#00d083]/35 bg-[#00d083]/10 rounded-full transition-colors disabled:opacity-50"
             >
-              <CheckCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">{markingAll ? 'Marking...' : 'Mark all as read'}</span>
+              <CheckCheck className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{markingAll ? 'Marking…' : 'Mark all read'}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Helper Text */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
-        <p className="text-sm text-blue-300">
-          💡 <strong>Tip:</strong> Your wallet pass shows only the latest message. 
-          This feed preserves your full notification history.
+      <div className="rounded-2xl border border-zinc-700/80 bg-zinc-800/80 px-3.5 py-3">
+        <p className="text-xs text-zinc-400">
+          Your wallet pass shows the latest message. This feed keeps the full history.
         </p>
       </div>
 
-      {/* Loading State */}
       {loading && page === 0 && (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-zinc-700/80 bg-zinc-800/60 p-4 animate-pulse"
+            >
+              <div className="flex gap-3">
+                <div className="w-12 h-12 rounded-xl bg-zinc-700/80" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 w-1/3 rounded bg-zinc-700/80" />
+                  <div className="h-3 w-full rounded bg-zinc-700/50" />
+                  <div className="h-3 w-2/3 rounded bg-zinc-700/40" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Error State */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-          <p className="text-red-300">{error}</p>
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3">
+          <p className="text-sm text-rose-200">{error}</p>
         </div>
       )}
 
-      {/* Notifications List */}
       {!loading && notifications.length === 0 && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-12 text-center">
-          <Bell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-300 mb-2">No Notifications Yet</h2>
-          <p className="text-slate-400 mb-4">
-            You haven't received any notifications from businesses yet.
-          </p>
-          <p className="text-sm text-slate-500">
-            Enable Wallet Pass Promotions in Settings to receive offers and updates.
+        <div className="rounded-2xl border border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-900 px-4 py-12 text-center shadow-md shadow-black/30">
+          <div className="w-14 h-14 rounded-full bg-[#00d083]/15 border border-[#00d083]/30 flex items-center justify-center mx-auto mb-4">
+            <Bell className="w-7 h-7 text-[#00d083]" />
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-1">No notifications yet</h2>
+          <p className="text-sm text-zinc-400">
+            When partners send updates, they&apos;ll show up here.
           </p>
         </div>
       )}
 
-      {/* Notifications Grid */}
-      <div className="space-y-4">
+      <div className="space-y-2.5">
         {notifications.map((notification) => {
           const isUnread = !notification.readAt
           return (
             <div
               key={notification.id}
-              className={`relative rounded-lg p-5 transition-all ${
+              className={`relative rounded-2xl p-4 transition-all border shadow-sm shadow-black/20 ${
                 isUnread
-                  ? 'bg-slate-800/70 border-l-4 border-l-blue-500 border border-blue-500/20 hover:bg-slate-800/90'
-                  : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-800/70 hover:border-slate-600'
+                  ? 'bg-zinc-800 border-[#00d083]/35 ring-1 ring-[#00d083]/15'
+                  : 'bg-zinc-800/70 border-zinc-700/80'
               }`}
             >
-              <div className="flex items-start gap-4">
-                {/* Business Logo + Unread Dot */}
+              <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 relative">
                   {notification.businessLogo ? (
                     <img
                       src={notification.businessLogo}
                       alt={notification.businessName}
-                      className="w-12 h-12 rounded-lg object-cover"
+                      className="w-11 h-11 rounded-xl object-cover"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-slate-400" />
+                    <div className="w-11 h-11 rounded-xl bg-zinc-700 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-zinc-400" />
                     </div>
                   )}
                   {isUnread && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-900" />
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#00d083] rounded-full border-2 border-zinc-900" />
                   )}
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <h3 className={`font-semibold mb-1 ${isUnread ? 'text-white' : 'text-slate-300'}`}>
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <div className="min-w-0">
+                      <h3 className={`font-semibold truncate ${isUnread ? 'text-white' : 'text-zinc-300'}`}>
                         {notification.businessName}
                       </h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5">
                         <Calendar className="w-3 h-3" />
-                        <span>
-                          {formatDistanceToNow(new Date(notification.sentAt))}
-                        </span>
+                        <span>{formatDistanceToNow(new Date(notification.sentAt))}</span>
                       </div>
                     </div>
                     
-                    {/* Open Button */}
                     <button
                       onClick={() => handleOpenNotification(notification)}
-                      className="flex-shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                      className="shrink-0 px-3 py-1.5 bg-[#00d083]/20 hover:bg-[#00d083]/30 text-[#9dffc0] text-xs font-semibold rounded-full border border-[#00d083]/35 transition-colors flex items-center gap-1.5"
                     >
                       <span>View</span>
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Message */}
-                  <p className={`text-sm whitespace-pre-wrap break-words ${isUnread ? 'text-slate-200' : 'text-slate-400'}`}>
+                  <p className={`text-sm whitespace-pre-wrap break-words ${isUnread ? 'text-zinc-200' : 'text-zinc-400'}`}>
                     {notification.message}
                   </p>
                 </div>
@@ -299,15 +295,14 @@ export function NotificationsPageClient({ currentUser, currentCity, cityDisplayN
         })}
       </div>
 
-      {/* Load More */}
       {hasMore && (
-        <div className="mt-6 text-center">
+        <div className="pt-1 text-center">
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={loading}
-            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+            className="px-5 py-2.5 text-xs font-semibold text-[#9dffc0] border border-[#00d083]/35 bg-[#00d083]/10 rounded-full transition-colors disabled:opacity-50"
           >
-            {loading ? 'Loading...' : 'Load More'}
+            {loading ? 'Loading…' : 'Load more'}
           </button>
         </div>
       )}
