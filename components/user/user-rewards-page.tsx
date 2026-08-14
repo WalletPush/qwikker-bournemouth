@@ -383,10 +383,16 @@ function EmptyRewardsState({ walletPassId }: { walletPassId: string }) {
         <div className="w-14 h-14 rounded-full bg-zinc-800/80 border border-zinc-700 flex items-center justify-center mx-auto mb-3">
           <Trophy className="w-6 h-6 text-zinc-600" />
         </div>
-        <p className="text-white font-semibold text-lg">Your Rewards</p>
-        <p className="text-zinc-500 text-sm mt-1">
-          Join a loyalty program and start earning rewards.
-        </p>
+        <p className="text-white font-semibold text-lg">Loyalty</p>
+        {!isLoading && picks.length === 0 ? (
+          <p className="text-zinc-400 text-sm mt-1">
+            No loyalty cards available yet.
+          </p>
+        ) : (
+          <p className="text-zinc-500 text-sm mt-1">
+            Collect stamps and unlock rewards from local places.
+          </p>
+        )}
       </div>
 
       {isLoading ? (
@@ -425,20 +431,15 @@ function EmptyRewardsState({ walletPassId }: { walletPassId: string }) {
                     Collect {p.reward_threshold} {p.stamp_label.toLowerCase()} for {p.reward_description}
                   </p>
                 </div>
-                <div className="text-emerald-400 text-xs font-medium shrink-0">Join</div>
+                <div className="text-[#00d083]/80 text-xs font-medium shrink-0">Join</div>
               </Link>
             )
           })}
         </div>
       ) : (
-        <div className="text-center py-4">
-          <Link
-            href="/user/discover"
-            className="text-emerald-400 text-sm font-medium hover:text-emerald-300 transition-colors"
-          >
-            Browse Discover
-          </Link>
-        </div>
+        <p className="text-center text-zinc-500 text-xs px-4">
+          When venues launch stamp cards, they&apos;ll show up here.
+        </p>
       )}
     </div>
   )
