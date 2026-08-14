@@ -23,6 +23,11 @@ const MENU_QUERY_STOPWORDS = new Set([
   // Conversational lead-ins — without these, "what about the best burgers"
   // becomes a multi-word query and skips cuisine/dish matching.
   'what', 'which', 'who', 'how', 'why', 'when',
+  // Opinion / filler adjectives — "Anywhere with a nice tiramisu" must still
+  // resolve to the featured item "Tiramisu" (single dish token).
+  'nice', 'lovely', 'delicious', 'tasty', 'amazing', 'great', 'awesome',
+  'yummy', 'fantastic', 'perfect', 'proper', 'real', 'really', 'very',
+  'looks', 'looking', 'sound', 'sounds', 'seem', 'seems', 'bit', 'little',
 ])
 
 /** Simple plural stem so "burgers" matches menu item "Mel's Burger". */
@@ -69,6 +74,7 @@ export function scoreMenuPreviewMatch(
   const dishPhrase = query
     .replace(/^(anywhere|anyone|any place|any places|looking for|find me|find|show me|got any|do you have|is there|are there)\s+/i, '')
     .replace(/\b(with|serving|that (has|have|serve|serves)|near me|nearby|around here)\b/gi, ' ')
+    .replace(/\b(nice|lovely|delicious|tasty|amazing|great|awesome|yummy|fantastic|perfect|proper|really|very)\b/gi, ' ')
     .replace(/[^a-z0-9\s]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -77,7 +83,7 @@ export function scoreMenuPreviewMatch(
   if (terms.size === 0 || words.length === 0) return 0
 
   // Multi-word dish queries ("shrimp soup", "beef sambosa") must not match
-  // every item that only shares a weak single token like "soup".
+  // every item that only shares a weak single token like "soup" in a description.
   const isMultiWordDishQuery = words.length >= 2
 
   let best = 0
@@ -87,6 +93,7 @@ export function scoreMenuPreviewMatch(
     const desc = String((item as any).description || '').toLowerCase().trim()
     if (!name && !desc) continue
     const hay = `${name} ${desc}`
+    const nameTokens = name.split(/[^a-z0-9]+/g).filter(Boolean)
 
     const matchedWords = words.filter(
       (w) => hay.includes(w) || hay.includes(stemMenuToken(w))
@@ -98,8 +105,23 @@ export function scoreMenuPreviewMatch(
       matchedWords.length >= 2
     )
 
+    // Exact featured-item name hit (e.g. query token "tiramisu" ↔ item "Tiramisu")
+    // even when fluff adjectives survived filtering. Require full-name equality
+    // or a distinctive token (≥5 chars) so "shrimp soup" does not match every
+    // item whose name merely contains "soup".
+    const exactNameHit = words.some((w) => {
+      const stem = stemMenuToken(w)
+      if (name === w || name === stem) return true
+      if (w.length >= 5 && (nameTokens.includes(w) || nameTokens.includes(stem))) return true
+      return false
+    })
+
     if (isMultiWordDishQuery) {
       if (phraseHit || matchedWords.length >= 2) {
+        best = Math.max(best, 5)
+        continue
+      }
+      if (exactNameHit) {
         best = Math.max(best, 5)
         continue
       }
