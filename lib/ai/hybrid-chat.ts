@@ -162,6 +162,7 @@ interface ChatResponse {
     coordsCandidateCount?: number // Number of candidates with valid coordinates
     currentBusinessId?: string | number | null // Current business ID for state-aware footer
     currentBusinessSlug?: string | null // Current business slug for detail-mode fetch
+    mode?: string
   }
 }
 
@@ -932,10 +933,11 @@ HARD RULES (DO NOT BREAK):
   ✅ If multiple matching items exist, list them with prices
   ❌ DO NOT use generic descriptions like "specializes in" when KB has specific items
 - 📋 GENERAL MENU QUERIES:
-  When user asks "what food/menu", "what do they serve":
+  When user asks "what food/menu", "what do they serve", "full menu", "their menu":
   ✅ CHECK for "Featured Menu Items:" OR any food/drink items with prices in the business's KB data
-  ✅ If present: list 3-5 items with names and prices. If user asks for more, list MORE from the data.
-  ❌ ABSOLUTE BAN: NEVER say "I don't have menu details", "I don't have the full menu", or "I can't provide more menu info" when ANY menu/food/drink data exists in that business's context. This is a CRITICAL UX failure.
+  ✅ If Featured Menu Items exist: list ALL of them with names (and prices/descriptions if present).
+  ✅ If they said "full menu" but you only have featured items: say so honestly — "I don't have their complete PDF menu, but here's what they've featured on Qwikker:" then LIST the items. Never stop at the apology.
+  ❌ ABSOLUTE BAN: NEVER say "I don't have menu details", "I don't have the full menu", or "I can't provide more menu info" when ANY menu/food/drink data OR Featured Menu Items exist in that business's context. This is a CRITICAL UX failure.
 - SHOW ALL UPFRONT: If you have 2+ relevant matches AND this is NOT a CLARIFY-FIRST turn, mention ALL matches in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses and the user asked for recommendations/top picks/a type, you MUST recommend from them — never claim you have no recommendations when businesses are listed. CLARIFY-FIRST turns are the exception: ask first, don't dump businesses.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
 - SAVE / REDEEM: Users CAN save and redeem offers in chat via Save/Redeem buttons on offer cards. NEVER say you cannot save, cannot redeem, cannot process redemption, cannot add to wallet, or that they should just mention the deal at the venue. If they ask to save/redeem, tell them to tap Save/Redeem on the offer card (the UI handles the Wallet update).
@@ -1141,7 +1143,7 @@ export async function generateHybridAIResponse(
       ? (isAnaphoricAbout || aboutMatchesLast || !aboutTarget)
       : false
     const isFollowUpDetailQuery =
-      /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|tell me more\b|their menu|their food|their kids menu|their dessert menu|their drink menu|their wine list)\b/i.test(lowerMessage) ||
+      /\b(what else|any more|anything else|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu|full menu|tell me more\b|their menu|their food|their kids menu|their dessert menu|their drink menu|their wine list)\b/i.test(lowerMessage) ||
       isTellMeAboutFollowUp
     const isAnaphoricQuery = /^(any more|anything else|what else|more|another|more places)[\?\!\.]*$/i.test(userMessage.trim())
     
@@ -1405,6 +1407,91 @@ export async function generateHybridAIResponse(
     const tier1 = tier1FilteredForDetail
     const tier2 = tier2FilteredForDetail
     const tier3 = tier3FilteredForDetail
+
+    // 📋 MENU HARD-PATH: "full menu" / "what's on their menu" must list featured items
+    // when we have them — never let the model claim "I don't have the full menu" while
+    // menu_preview is sitting in context (literal "full" = PDF hallucination).
+    const isMenuAsk =
+      /\b(full menu|their menu|the menu|menu items|on (the |their )?menu|what do they (sell|serve|have|offer)|what('?s| is) on (the |their )?menu)\b/i.test(
+        lowerMessage
+      ) ||
+      /^(show|see|list|pull up)\b.*\bmenu\b/i.test(lowerMessage)
+
+    if (isMenuAsk) {
+      const inventoryForMenu = [
+        ...tier1Businesses,
+        ...tier2Businesses,
+        ...tier3Businesses,
+      ]
+      const matchSlug = (b: any, slug: string) => {
+        const s = getBusinessSlug(b)
+        return (
+          s === slug ||
+          s.includes(slug) ||
+          slug.includes(s) ||
+          (b.business_name || '')
+            .toLowerCase()
+            .includes(slug.split('-').join(' '))
+        )
+      }
+      let menuBiz: any =
+        (tier1.length === 1 && tier1[0]) ||
+        (tier2.length === 1 && tier2[0]) ||
+        (tier3.length === 1 && tier3[0]) ||
+        null
+      if (!menuBiz && lastSlug) {
+        menuBiz = inventoryForMenu.find((b) => matchSlug(b, lastSlug)) || null
+      }
+      if (!menuBiz && state.currentBusiness?.id) {
+        menuBiz =
+          inventoryForMenu.find((b) => String(b.id) === String(state.currentBusiness?.id)) ||
+          null
+      }
+
+      const preview = Array.isArray(menuBiz?.menu_preview) ? menuBiz.menu_preview : []
+      if (menuBiz && preview.length > 0) {
+        const slug = getBusinessSlug(menuBiz)
+        const lines = preview.map((item: any) => {
+          const name = String(item?.name || '').trim()
+          if (!name) return null
+          const price = String(item?.price || '').trim()
+          const desc = String(item?.description || '').trim()
+          let line = `- **${name}**`
+          if (price) line += ` (${price})`
+          if (desc) line += ` — ${desc}`
+          return line
+        }).filter(Boolean)
+
+        if (lines.length > 0) {
+          const wantsFull = /\bfull menu\b/i.test(lowerMessage)
+          const opener = wantsFull
+            ? `I don't have their complete PDF menu on Qwikker, but here's what **[${menuBiz.business_name}](/user/business/${slug})** has featured:`
+            : `Here's what **[${menuBiz.business_name}](/user/business/${slug})** has on Qwikker right now:`
+          const response = `${opener}\n\n${lines.join('\n')}`
+          console.log(
+            `📋 [MENU HARD-PATH] Listed ${lines.length} featured items for ${menuBiz.business_name}`
+          )
+          return {
+            success: true,
+            response,
+            sources: [],
+            businessCarousel: [],
+            walletActions: [],
+            quickReplies: ['Any deals?', 'Opening hours', 'Directions'],
+            eventCards: [],
+            uiMode: 'conversational',
+            hasBusinessResults: true,
+            modelUsed: 'gpt-4o-mini',
+            classification,
+            metadata: {
+              mode: 'menu_featured',
+              currentBusinessId: menuBiz.id,
+              currentBusinessSlug: slug,
+            },
+          }
+        }
+      }
+    }
     
     // Build vocabulary from ALL tiers (dynamic, not hardcoded)
     const allInventoryBusinesses = [
