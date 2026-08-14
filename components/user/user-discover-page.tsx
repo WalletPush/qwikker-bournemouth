@@ -265,7 +265,7 @@ export function UserDiscoverPage({ businesses = [], walletPassId, currentCity: c
     })),
     ...availableGoogleCategories.map(cat => ({
       value: `google:${cat}`,
-      label: cat.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      label: (cat || '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
       count: businesses.filter(b => b.google_primary_type === cat).length,
       type: 'google' as const
     }))
