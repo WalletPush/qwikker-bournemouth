@@ -936,7 +936,7 @@ HARD RULES (DO NOT BREAK):
   When user asks "what food/menu", "what do they serve", "full menu", "their menu":
   ✅ CHECK for "Featured Menu Items:" OR any food/drink items with prices in the business's KB data
   ✅ If Featured Menu Items exist: list ALL of them with names (and prices/descriptions if present).
-  ✅ If they said "full menu" but you only have featured items: say so honestly — "I don't have their complete PDF menu, but here's what they've featured on Qwikker:" then LIST the items. Never stop at the apology.
+  ✅ If they asked for the full/entire menu but you only have featured items: say so honestly — "I don't have the entire menu for [Business] yet, but here are some of their most popular items:" then LIST the items. Suggest their website or phone if present. Never stop at the apology. Never mention PDFs.
   ❌ ABSOLUTE BAN: NEVER say "I don't have menu details", "I don't have the full menu", or "I can't provide more menu info" when ANY menu/food/drink data OR Featured Menu Items exist in that business's context. This is a CRITICAL UX failure.
 - SHOW ALL UPFRONT: If you have 2+ relevant matches AND this is NOT a CLARIFY-FIRST turn, mention ALL matches in your FIRST answer. Never drip-feed. If AVAILABLE BUSINESSES contains ANY businesses and the user asked for recommendations/top picks/a type, you MUST recommend from them — never claim you have no recommendations when businesses are listed. CLARIFY-FIRST turns are the exception: ask first, don't dump businesses.
 - NO HALLUCINATIONS: Never invent dishes, vibe, amenities, hours, or offers. Only mention specifics from AVAILABLE BUSINESSES.
@@ -1463,11 +1463,20 @@ export async function generateHybridAIResponse(
         }).filter(Boolean)
 
         if (lines.length > 0) {
-          const wantsFull = /\bfull menu\b/i.test(lowerMessage)
-          const opener = wantsFull
-            ? `I don't have their complete PDF menu on Qwikker, but here's what **[${menuBiz.business_name}](/user/business/${slug})** has featured:`
-            : `Here's what **[${menuBiz.business_name}](/user/business/${slug})** has on Qwikker right now:`
-          const response = `${opener}\n\n${lines.join('\n')}`
+          const nameLink = `**[${menuBiz.business_name}](/user/business/${slug})**`
+          const opener = `I don't have the entire menu for ${nameLink} yet, but here are some of their most popular items:`
+
+          const contactBits: string[] = []
+          const website = String(menuBiz.website_url || '').trim()
+          const phone = String(menuBiz.phone || '').trim()
+          if (website) contactBits.push(`[check their website](${website})`)
+          if (phone) contactBits.push(`give them a call on ${phone}`)
+          const closer =
+            contactBits.length > 0
+              ? `For everything else, ${contactBits.join(' or ')}.`
+              : `Check their website or give them a call if you want to see what else they have to offer.`
+
+          const response = `${opener}\n\n${lines.join('\n')}\n\n${closer}`
           console.log(
             `📋 [MENU HARD-PATH] Listed ${lines.length} featured items for ${menuBiz.business_name}`
           )
