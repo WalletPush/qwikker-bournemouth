@@ -25,6 +25,7 @@ App-like mobile chrome: bottom tabs (Nearby / Offers / Loyalty / Ask / More), no
 - Keep dynamic home learning / personalization  
 - Show Secret menus / Loyalty sections only when data exists  
 - Do not fake distance without real location  
+- **Chat (locked):** bottom nav stays visible; no Exit Chat / no hamburger; darker shell; rounder Ask input; leave via other tabs  
 
 ---
 
