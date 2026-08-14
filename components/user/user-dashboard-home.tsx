@@ -291,7 +291,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       />
 
       {tonight.length > 0 ? (
-        <FeedSection title={tonightTitle}>
+        <FeedSection title={tonightTitle} viewAllHref={getNavUrl('/user/offers')} viewAllLabel="View all">
           <CardRail>
             {tonight.map(card => (
               <TonightCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -307,7 +307,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
 
       {deals.length > 0 && (
-        <FeedSection title="Deals nearby">
+        <FeedSection title="Deals nearby" viewAllHref={getNavUrl('/user/offers')} viewAllLabel="View all">
           <CardRail>
             {deals.map(card => (
               <DealCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -317,7 +317,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
 
       {personalized.length > 0 && (
-        <FeedSection title="Based on what you like">
+        <FeedSection title="Based on what you like" viewAllHref={getNavUrl('/user/discover')} viewAllLabel="View all">
           <CardRail>
             {personalized.map(card => (
               <PersonalizedCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -327,7 +327,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
 
       {dishes.length > 0 && (
-        <FeedSection title="Popular picks">
+        <FeedSection title="Popular picks" viewAllHref={getNavUrl('/user/discover')} viewAllLabel="View all">
           <CardRail>
             {dishes.map(card => (
               <DishCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -337,7 +337,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
 
       {secretTeaser && secretTeaser.count > 0 && (
-        <FeedSection title="Secret menus nearby">
+        <FeedSection title="Secret menus nearby" viewAllHref={getNavUrl('/user/secret-menu')} viewAllLabel="View all">
           <CardRail>
             {(secretTeaser.items?.length ? secretTeaser.items : []).map((item) => (
               <SecretVenueTeaserCard key={item.businessId} item={item} getNavUrl={getNavUrl} />
@@ -348,7 +348,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
       )}
 
       {hasRewards && (
-        <FeedSection title="Your loyalty cards">
+        <FeedSection title="Your loyalty cards" viewAllHref={getNavUrl('/user/rewards')} viewAllLabel="View all">
           <CardRail>
             {rewards.map(card => (
               <RewardCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
@@ -357,7 +357,11 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
         </FeedSection>
       )}
       {unjoinedPrograms.length > 0 && (
-        <FeedSection title={hasRewards ? 'More loyalty cards' : 'Loyalty cards available'}>
+        <FeedSection
+          title={hasRewards ? 'More loyalty cards' : 'Loyalty cards available'}
+          viewAllHref={getNavUrl('/user/rewards')}
+          viewAllLabel="View all"
+        >
           <CardRail>
             {unjoinedPrograms.map(program => (
               <AvailableLoyaltyCard key={program.id} program={program} />
@@ -470,10 +474,31 @@ function HeroSection({
 // Feed Section & Card Rail
 // =============================================================================
 
-function FeedSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FeedSection({
+  title,
+  children,
+  viewAllHref,
+  viewAllLabel = 'View all',
+}: {
+  title: string
+  children: React.ReactNode
+  viewAllHref?: string
+  viewAllLabel?: string
+}) {
   return (
     <section>
-      <h2 className="text-2xl font-bold text-slate-100 mb-4 px-1">{title}</h2>
+      <div className="flex items-baseline justify-between gap-3 mb-3 px-1">
+        <h2 className="text-xl font-bold text-zinc-100">{title}</h2>
+        {viewAllHref && (
+          <PendingLink
+            href={viewAllHref}
+            pendingLabel={viewAllLabel}
+            className="shrink-0 text-xs font-medium text-zinc-400 hover:text-[#9dffc0] transition-colors"
+          >
+            {viewAllLabel}
+          </PendingLink>
+        )}
+      </div>
       {children}
     </section>
   )
