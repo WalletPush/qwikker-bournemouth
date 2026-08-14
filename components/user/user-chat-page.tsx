@@ -1416,7 +1416,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 flex flex-col overflow-hidden rounded-2xl border border-slate-800/60">
+      <div className="flex-1 flex flex-col overflow-hidden rounded-2xl border border-[#00d083]/25 bg-zinc-950/50">
         
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
           {processedMessages.map((message, messageIndex) => {
@@ -1434,14 +1434,15 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 {/* Message Bubble */}
                 <div className={`rounded-2xl px-4 py-3 ${
                   message.type === 'user' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-[#00d083]/20 text-slate-100 border border-[#00d083]/30'
+                    ? 'bg-[#00d083] text-black'
+                    : 'bg-zinc-900 text-zinc-50 border border-zinc-700/80'
                 }`}>
                   {message.type === 'ai' ? (
                     <div
                       onClick={handleMessageInteraction}
                       onPointerDown={handleMessageInteraction}
                       onMouseOver={handleMessageInteraction}
+                      className="text-[15px] leading-relaxed [&_a]:text-[#00d083] [&_strong]:text-white"
                     >
                       <StreamingText 
                         htmlContent={message.processedContent}
@@ -1677,7 +1678,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
         </div>
 
         {/* Input Area — pill composer; bottom nav stays visible on mobile */}
-        <div className="p-3 border-t border-zinc-800/60 bg-black/40">
+        <div className="p-3 border-t border-[#00d083]/15 bg-black/60">
           <div className="flex gap-2.5 items-center">
             <div className="flex-1">
               <input
@@ -1686,7 +1687,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask Qwikker..."
-                className="w-full h-12 box-border bg-zinc-900/90 border border-zinc-700/50 rounded-full px-5 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-[#00d083]/50 text-sm leading-none"
+                className="w-full h-12 box-border bg-zinc-900 border border-[#00d083]/35 rounded-full px-5 text-zinc-50 placeholder-zinc-400 focus:outline-none focus:border-[#00d083]/70 focus:ring-1 focus:ring-[#00d083]/25 text-sm leading-none"
                 disabled={isTyping}
                 enterKeyHint="send"
                 autoComplete="off"

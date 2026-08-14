@@ -405,20 +405,20 @@ function HeroSection({
   getNavUrl: (href: string) => string
 }) {
   return (
-    <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 space-y-6">
-      <div className="text-center space-y-3">
+    <div className="bg-zinc-950 border border-[#00d083]/25 rounded-2xl p-6 sm:p-8 space-y-5">
+      <div className="text-center space-y-2">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
           {greeting}
         </h1>
-        <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg text-zinc-300 max-w-2xl mx-auto">
           {greetingSubtitle}
         </p>
-        <p className="text-lg sm:text-xl text-slate-200 font-medium">
+        <p className="text-lg sm:text-xl text-zinc-100 font-medium">
           {fancyPrompt}
         </p>
       </div>
 
-      {/* Search bar */}
+      {/* Search bar — chat entry */}
       <div className="max-w-lg mx-auto">
         <form
           onSubmit={(e) => {
@@ -426,8 +426,8 @@ function HeroSection({
             onSearch()
           }}
         >
-          <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl overflow-hidden focus-within:border-white/20 transition-colors">
-            <div className="pl-4 text-slate-500">
+          <div className="flex items-center bg-zinc-900 border border-[#00d083]/35 rounded-2xl overflow-hidden focus-within:border-[#00d083]/70 focus-within:ring-1 focus-within:ring-[#00d083]/30 transition-colors">
+            <div className="pl-4 text-[#00d083]/80">
               <SearchIcon />
             </div>
             <input
@@ -435,14 +435,14 @@ function HeroSection({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder={placeholderText}
-              className="flex-1 bg-transparent text-white placeholder:text-slate-500 px-3 py-4 text-base outline-none"
+              className="flex-1 bg-transparent text-white placeholder:text-zinc-400 px-3 py-4 text-base outline-none"
               disabled={isSearching}
             />
             {isSearching && (
               <div className="pr-4 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse [animation-delay:300ms]" />
+                <span className="w-1.5 h-1.5 bg-[#00d083] rounded-full animate-pulse" />
+                <span className="w-1.5 h-1.5 bg-[#00d083]/70 rounded-full animate-pulse [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 bg-[#00d083]/40 rounded-full animate-pulse [animation-delay:300ms]" />
               </div>
             )}
           </div>
@@ -455,7 +455,7 @@ function HeroSection({
           <Link
             key={chip.label}
             href={getChatUrl(chip.prompt)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/8 rounded-full text-xs text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-full text-xs text-zinc-200 hover:text-white hover:border-[#00d083]/40 transition-all"
           >
             <ChipIcon name={chip.icon} />
             {chip.label}

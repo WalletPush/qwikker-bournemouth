@@ -59,6 +59,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
     business: any
   }>({ isOpen: false, item: null, business: null })
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
+  const [expandedBusinessIds, setExpandedBusinessIds] = useState<Set<string>>(new Set())
   const cardRefs = useRef<{ [key: string]: HTMLElement | null }>({})
   
   const searchParams = useSearchParams()
@@ -122,6 +123,15 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         const targetCard = cardRefs.current[businessSlug]
         
         if (targetCard) {
+          // Expand matching venue so deep links land on visible secrets
+          const match = allSecretMenus.find((menu) => {
+            const slug = menu.businessName?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
+            return slug === businessSlug
+          })
+          if (match) {
+            setExpandedBusinessIds((prev) => new Set([...prev, match.businessId]))
+          }
+
           targetCard.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'center',
@@ -452,7 +462,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-3">
           {getFilteredSecretMenus().map((menu) => {
             const business = {
               id: menu.businessId,
@@ -464,39 +474,71 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
             }
             const businessSlug = business?.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
             const isHighlighted = highlightedCard === businessSlug
+            const isExpanded = expandedBusinessIds.has(menu.businessId)
+            const secretCount = menu.items.length
 
             return (
               <section
                 key={menu.businessId}
                 ref={(el) => { cardRefs.current[businessSlug] = el }}
-                className={`space-y-3 ${isHighlighted ? 'ring-2 ring-[#00d083]/50 rounded-2xl p-2' : ''}`}
+                className={`rounded-2xl border overflow-hidden transition-colors ${
+                  isHighlighted
+                    ? 'border-[#00d083]/60 bg-zinc-950'
+                    : 'border-zinc-800 bg-zinc-950'
+                }`}
               >
-                <div className="flex items-center gap-3 px-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpandedBusinessIds((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(menu.businessId)) next.delete(menu.businessId)
+                      else next.add(menu.businessId)
+                      return next
+                    })
+                  }}
+                  className="w-full flex items-center gap-3 px-3.5 py-3.5 text-left active:bg-zinc-900/80 transition-colors touch-manipulation min-h-[64px]"
+                  aria-expanded={isExpanded}
+                >
                   {business.image ? (
                     <img
                       src={business.image}
                       alt=""
-                      className="w-10 h-10 rounded-full object-cover border border-zinc-700"
+                      className="w-11 h-11 rounded-xl object-cover border border-zinc-700 shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700" />
+                    <div className="w-11 h-11 rounded-xl bg-zinc-800 border border-zinc-700 shrink-0" />
                   )}
-                  <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-zinc-100 truncate">{business.name}</h2>
-                    <p className="text-xs text-zinc-500">{business.category} · {menu.items.length} secrets</p>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-semibold text-zinc-50 truncate">{business.name}</h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {secretCount} secret{secretCount === 1 ? '' : 's'}
+                      {business.category ? ` · ${business.category}` : ''}
+                    </p>
                   </div>
-                </div>
+                  <svg
+                    className={`w-4 h-4 text-zinc-500 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {menu.items.map((item: any, index: number) => (
-                    <SecretMenuItem
-                      key={`${menu.businessId}-${item.name}-${index}`}
-                      menu={menu}
-                      item={item}
-                      business={business}
-                    />
-                  ))}
-                </div>
+                {isExpanded && (
+                  <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-zinc-800/80 pt-3">
+                    {menu.items.map((item: any, index: number) => (
+                      <SecretMenuItem
+                        key={`${menu.businessId}-${item.name}-${index}`}
+                        menu={menu}
+                        item={item}
+                        business={business}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             )
           })}
