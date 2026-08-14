@@ -1355,13 +1355,12 @@ export function UserOffersPage({ realOffers = [], walletPassId: propWalletPassId
 
       {/* AI Companion Card */}
       <div className="mb-2">
-        <AiCompanionCard 
-          title="Find Your Perfect Deal"
-          description="Skip the searching - just tell our AI what you're craving! From specific cuisines to budget ranges, we'll find the perfect offers for you instantly."
+        <AiCompanionCard
+          title="Ask Qwikker"
           prompts={[
-            "Find me the best 2-for-1 deals",
-            "What pizza offers are available?", 
-            "Show me deals ending this week"
+            'Find me the best 2-for-1 deals',
+            'What pizza offers are available?',
+            'Show me deals ending this week',
           ]}
           walletPassId={walletPassId || undefined}
         />

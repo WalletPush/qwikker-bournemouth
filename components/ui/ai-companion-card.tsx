@@ -1,7 +1,5 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 interface AiCompanionCardProps {
@@ -12,60 +10,55 @@ interface AiCompanionCardProps {
   className?: string
 }
 
-export function AiCompanionCard({ 
-  title = "Ask Your AI Local Guide", 
-  description = "Get personalized recommendations from our AI that knows every venue, dish, and secret in the city",
+/**
+ * Compact “Ask Qwikker” entry — used on Offers / Events / etc.
+ * Keep it small; the chat tab is the primary surface.
+ */
+export function AiCompanionCard({
+  title = 'Ask Qwikker',
+  description,
   prompts,
   walletPassId,
-  className = ""
+  className = '',
 }: AiCompanionCardProps) {
-  
   const getNavUrl = (href: string) => {
     if (!walletPassId) return href
     return `${href}?wallet_pass_id=${walletPassId}`
   }
 
+  const prompt = prompts[0]
+  const href = prompt
+    ? `${getNavUrl('/user/chat')}${walletPassId ? '&' : '?'}message=${encodeURIComponent(prompt)}`
+    : getNavUrl('/user/chat')
+
+  const subtitle = description
+    ? description
+    : prompt
+      ? `Try “${prompt}”`
+      : 'Get local picks in chat'
+
   return (
-    <Card className={`bg-gradient-to-r from-[#00d083]/8 to-emerald-500/3 border-[#00d083]/30 hover:border-[#00d083]/50 transition-all duration-200 ${className}`}>
-      <CardContent className="p-4">
-        <div className="text-center">
-          {/* AI Avatar - Centered with subtle mint green */}
-          <div className="flex justify-center mb-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00d083]/80 to-emerald-400/70 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.847a4.5 4.5 0 003.09 3.09L15.75 12l-2.847.813a4.5 4.5 0 00-3.09 3.091z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          {/* Title - Clean and Centered */}
-          <div className="mb-2">
-            <h3 className="font-semibold text-slate-100 text-sm sm:text-base mb-2">{title}</h3>
-            <p className="text-slate-300 text-xs sm:text-sm mb-3 line-clamp-2">
-              {description}
-            </p>
-          </div>
-          
-          {/* Prompt and Button - All Centered */}
-          <p className="text-xs text-slate-400 italic mb-3">
-            Try: "{prompts[0]}"
-          </p>
-          
-          {/* Outlined Button - Doesn't compete with primary CTAs */}
-          <Button 
-            asChild
-            size="sm"
-            variant="outline"
-            className="border-[#00d083] text-[#00d083] hover:bg-[#00d083]/10 hover:text-[#00d083] font-semibold text-xs px-6 py-2 h-8 transition-colors duration-150"
-          >
-            <Link href={getNavUrl('/user/chat')}>
-              Ask AI
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/90 px-3.5 py-3 active:bg-zinc-900 transition-colors touch-manipulation ${className}`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00d083]/15 text-[#00d083]">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+      </span>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block text-sm font-semibold text-zinc-100">{title}</span>
+        <span className="block text-xs text-zinc-500 truncate mt-0.5">{subtitle}</span>
+      </span>
+      <svg className="w-4 h-4 text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
   )
 }

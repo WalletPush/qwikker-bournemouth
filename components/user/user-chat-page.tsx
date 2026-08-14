@@ -323,7 +323,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
       setChatHeight(
         isDesktop
           ? `calc(100dvh - ${top}px)`
-          : `calc(100dvh - ${top}px - 4.25rem - env(safe-area-inset-bottom, 0px))`
+          : `calc(100dvh - ${top}px - 4.75rem - env(safe-area-inset-bottom, 0px))`
       )
     }
     update()
@@ -1537,25 +1537,25 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                       return (
                         <div
                           key={action.offerId}
-                          className="rounded-xl border border-slate-600/50 bg-slate-800/70 overflow-hidden"
+                          className="rounded-xl border border-zinc-700/70 bg-zinc-950 overflow-hidden"
                         >
                           <div className="flex gap-3 p-3">
                             {action.offerImage ? (
                               <img
                                 src={action.offerImage}
                                 alt=""
-                                className="w-14 h-14 rounded-lg object-cover border border-slate-600/60 shrink-0"
+                                className="w-14 h-14 rounded-lg object-cover border border-zinc-700 shrink-0"
                               />
                             ) : (
-                              <div className="w-14 h-14 rounded-lg bg-slate-700/80 border border-slate-600/60 shrink-0 flex items-center justify-center text-slate-500 text-xs">
+                              <div className="w-14 h-14 rounded-lg bg-zinc-900 border border-zinc-700 shrink-0 flex items-center justify-center text-zinc-500 text-xs">
                                 Deal
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-slate-100 line-clamp-2">{action.offerName}</p>
-                              <p className="text-xs text-slate-400 truncate">{action.businessName}</p>
+                              <p className="text-sm font-semibold text-zinc-100 line-clamp-2">{action.offerName}</p>
+                              <p className="text-xs text-zinc-500 truncate">{action.businessName}</p>
                               {action.offerValue && (
-                                <p className="text-xs text-emerald-400 mt-0.5">{action.offerValue}</p>
+                                <p className="text-xs text-[#00d083] mt-0.5">{action.offerValue}</p>
                               )}
                               {isActive && (
                                 <p className="text-xs text-amber-300 mt-0.5">On your Wallet now</p>
@@ -1567,7 +1567,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               <button
                                 type="button"
                                 disabled
-                                className="flex-1 min-w-[5.5rem] bg-emerald-900/50 text-emerald-300 text-xs font-semibold py-2 px-3 rounded-lg cursor-default"
+                                className="flex-1 min-w-[5.5rem] bg-[#00d083]/15 text-[#00d083] text-xs font-semibold py-2 px-3 rounded-lg cursor-default"
                               >
                                 On Wallet
                               </button>
@@ -1576,7 +1576,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => void handleSaveOffer(action)}
-                                className="flex-1 min-w-[5.5rem] bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold py-2 px-3 rounded-lg"
+                                className="flex-1 min-w-[5.5rem] bg-[#00d083] hover:bg-[#00b86f] disabled:opacity-50 text-black text-xs font-semibold py-2 px-3 rounded-lg"
                               >
                                 {isBusy ? 'Saving…' : 'Save'}
                               </button>
@@ -1585,7 +1585,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                                 type="button"
                                 disabled={isBusy}
                                 onClick={() => handleStartRedeem(action)}
-                                className="flex-1 min-w-[5.5rem] bg-slate-600 hover:bg-slate-500 disabled:opacity-50 text-white text-xs font-semibold py-2 px-3 rounded-lg"
+                                className="flex-1 min-w-[5.5rem] bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-100 text-xs font-semibold py-2 px-3 rounded-lg"
                               >
                                 Redeem
                               </button>
@@ -1595,7 +1595,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               onClick={() =>
                                 router.push(withWalletPass(`/user/offers?highlight=${action.offerId}`))
                               }
-                              className="text-xs text-slate-300 hover:text-[#00d083] border border-slate-600/50 px-3 py-2 rounded-lg"
+                              className="text-xs text-zinc-300 hover:text-[#00d083] border border-zinc-700 px-3 py-2 rounded-lg"
                             >
                               View offer
                             </button>
@@ -1604,7 +1604,7 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                               onClick={() =>
                                 navigateToBusinessHref(`/user/business/${slug}`, action.businessName)
                               }
-                              className="text-xs text-slate-300 hover:text-[#00d083] border border-slate-600/50 px-3 py-2 rounded-lg"
+                              className="text-xs text-zinc-300 hover:text-[#00d083] border border-zinc-700 px-3 py-2 rounded-lg"
                             >
                               Business
                             </button>

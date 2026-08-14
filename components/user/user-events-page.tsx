@@ -551,13 +551,12 @@ export function UserEventsPage({ events = [], walletPassId: propWalletPassId, ci
         </div>
 
         {/* AI Companion Card */}
-        <AiCompanionCard 
-          title="Find Your Perfect Event"
-          description="Skip the searching - just tell our AI what you're looking for! From live music to workshops, tastings to special occasions, we'll find the perfect events for you instantly."
+        <AiCompanionCard
+          title="Ask Qwikker"
           prompts={[
-            "What events are happening this weekend?",
-            "Find me live music events",
-            "Show me food and drink events"
+            'What events are happening this weekend?',
+            'Find me live music events',
+            'Show me food and drink events',
           ]}
           walletPassId={walletPassId}
         />
