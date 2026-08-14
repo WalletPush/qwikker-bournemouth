@@ -313,13 +313,18 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }, [locationStatus, userLocation, pendingNearMeQuery])
   
-  // Measure exact position and fill to bottom of viewport
+  // Fill viewport below chat top, leaving room for mobile bottom tabs
   useEffect(() => {
     const el = chatWrapperRef.current
     if (!el) return
     const update = () => {
-      const top = el.getBoundingClientRect().top
-      setChatHeight(`calc(100dvh - ${Math.round(top)}px)`)
+      const top = Math.round(el.getBoundingClientRect().top)
+      const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+      setChatHeight(
+        isDesktop
+          ? `calc(100dvh - ${top}px)`
+          : `calc(100dvh - ${top}px - 4.25rem - env(safe-area-inset-bottom, 0px))`
+      )
     }
     update()
     window.addEventListener('resize', update)
@@ -1671,9 +1676,9 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-3 border-t border-slate-800/60">
-          <div className="flex gap-2 items-end">
+        {/* Input Area — pill composer; bottom nav stays visible on mobile */}
+        <div className="p-3 border-t border-zinc-800/60 bg-black/40">
+          <div className="flex gap-2.5 items-center">
             <div className="flex-1">
               <input
                 type="text"
@@ -1681,19 +1686,19 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask Qwikker..."
-                className="w-full h-12 box-border bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#00d083]/40 text-sm leading-none"
+                className="w-full h-12 box-border bg-zinc-900/90 border border-zinc-700/50 rounded-full px-5 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-[#00d083]/50 text-sm leading-none"
                 disabled={isTyping}
                 enterKeyHint="send"
                 autoComplete="off"
               />
             </div>
-            <Button 
+            <Button
               onClick={() => handleSendMessage(inputValue)}
               disabled={!inputValue.trim() || isTyping}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
+              className="h-12 w-12 shrink-0 rounded-full bg-[#00d083] hover:bg-[#00b86f] text-black p-0 font-semibold transition-colors disabled:opacity-50"
             >
               {isTyping ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
               ) : (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
