@@ -80,8 +80,8 @@ export class SimpleBadgeTracker {
     localStorage.setItem(this.storageKey, JSON.stringify(badges))
   }
 
-  // Award a badge
-  awardBadge(badgeId: string): boolean {
+  // Award a badge. Pass notify:false when the caller shows its own UI (e.g. secret unlock sheet).
+  awardBadge(badgeId: string, options?: { notify?: boolean }): boolean {
     const badges = this.getBadgeProgress()
     const badge = badges.find(b => b.id === badgeId)
     
@@ -91,13 +91,14 @@ export class SimpleBadgeTracker {
     badge.earnedDate = new Date().toISOString()
     this.saveBadges(badges)
     
-    // Show notification
-    this.showBadgeNotification(badge)
+    if (options?.notify !== false) {
+      this.showBadgeNotification(badge)
+    }
     return true
   }
 
   // Update progress for a badge
-  updateProgress(badgeId: string, increment: number = 1): boolean {
+  updateProgress(badgeId: string, increment: number = 1, options?: { notify?: boolean }): boolean {
     const badges = this.getBadgeProgress()
     const badge = badges.find(b => b.id === badgeId)
     
@@ -109,7 +110,9 @@ export class SimpleBadgeTracker {
     if (badge.progress.current >= badge.progress.target) {
       badge.earned = true
       badge.earnedDate = new Date().toISOString()
-      this.showBadgeNotification(badge)
+      if (options?.notify !== false) {
+        this.showBadgeNotification(badge)
+      }
     }
     
     this.saveBadges(badges)
@@ -150,40 +153,52 @@ export class SimpleBadgeTracker {
     }, 5000)
   }
 
-  // Track specific actions
-  trackAction(action: string, _data?: unknown) {
+  /**
+   * Track specific actions. Returns names of badges newly earned this call
+   * (useful when notify:false so the UI can surface them once).
+   */
+  trackAction(action: string, _data?: unknown, options?: { notify?: boolean }): string[] {
+    const notify = options?.notify !== false
+    const earned: string[] = []
+
     // Auto-check for time-based badges on any action
     this.checkTimeBadges()
     
     switch (action) {
       case 'offer_claimed':
-        this.awardBadge('first_offer')
-        this.updateProgress('offer_master')
-        this.updateProgress('deal_legend')
+        if (this.awardBadge('first_offer', { notify })) earned.push('Deal Hunter')
+        this.updateProgress('offer_master', 1, { notify })
+        this.updateProgress('deal_legend', 1, { notify })
         break
         
       case 'ai_chat_used':
-        this.awardBadge('chat_starter')
-        this.updateProgress('chat_enthusiast')
+        if (this.awardBadge('chat_starter', { notify })) earned.push('Chat Master')
+        this.updateProgress('chat_enthusiast', 1, { notify })
         break
         
       case 'discover_page_visited':
-        this.awardBadge('browser')
+        if (this.awardBadge('browser', { notify })) earned.push('Window Shopper')
         break
         
-      case 'secret_menu_unlocked':
-        this.awardBadge('secret_seeker')
-        this.updateProgress('secret_master')
+      case 'secret_menu_unlocked': {
+        if (this.awardBadge('secret_seeker', { notify })) earned.push('Secret Seeker')
+        const before = this.getBadgeProgress().find(b => b.id === 'secret_master')
+        this.updateProgress('secret_master', 1, { notify })
+        const after = this.getBadgeProgress().find(b => b.id === 'secret_master')
+        if (before && !before.earned && after?.earned) earned.push('Secret Master')
         break
+      }
         
       case 'business_visited':
-        this.updateProgress('local_expert')
+        this.updateProgress('local_expert', 1, { notify })
         break
         
       case 'share_completed':
-        this.updateProgress('social_sharer')
+        this.updateProgress('social_sharer', 1, { notify })
         break
     }
+
+    return earned
   }
   
   // Auto-check time-based badges

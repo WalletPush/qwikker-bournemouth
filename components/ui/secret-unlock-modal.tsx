@@ -18,9 +18,11 @@ interface SecretUnlockModalProps {
     phone?: string
     image?: string
   }
+  /** Optional badge name earned as part of this unlock — shown in-sheet, not as a second toast */
+  badgeEarned?: string | null
 }
 
-export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnlockModalProps) {
+export function SecretUnlockModal({ isOpen, onClose, item, business, badgeEarned }: SecretUnlockModalProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -130,6 +132,15 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
             <p className="text-center text-xs text-zinc-500">
               At <span className="text-zinc-200 font-medium">{business.name}</span>
             </p>
+          )}
+
+          {badgeEarned && (
+            <div className="rounded-xl border border-[#00d083]/25 bg-[#00d083]/10 px-3 py-2.5 text-center">
+              <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[#00d083]">
+                Badge earned
+              </p>
+              <p className="text-sm text-zinc-100 font-medium mt-0.5">{badgeEarned}</p>
+            </div>
           )}
 
           {/* Actions */}

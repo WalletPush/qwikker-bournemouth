@@ -3,11 +3,9 @@
 import { Button } from '@/components/ui/button'
 import { useState, useEffect, useRef } from 'react'
 import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
-import { useElegantModal } from '@/components/ui/elegant-modal'
 import { useSearchParams } from 'next/navigation'
 import { getBadgeTracker } from '@/lib/utils/simple-badge-tracker'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
-import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
 interface RealSecretMenu {
   businessId: string
@@ -44,8 +42,6 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
   const currentCity = currentCityProp || getClientCityFallback()
   const cityDisplayName = cityDisplayNameProp || getClientCityDisplayName(currentCity)
   
-  // Helper function to append wallet_pass_id to navigation URLs
-  const getNavUrl = (href: string) => withWalletPassId(href, walletPassId)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [unlockedItems, setUnlockedItems] = useState<Set<string>>(new Set())
@@ -53,14 +49,14 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
     isOpen: boolean
     item: any
     business: any
-  }>({ isOpen: false, item: null, business: null })
+    badgeEarned?: string | null
+  }>({ isOpen: false, item: null, business: null, badgeEarned: null })
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
   const [expandedBusinessIds, setExpandedBusinessIds] = useState<Set<string>>(new Set())
   const cardRefs = useRef<{ [key: string]: HTMLElement | null }>({})
   
   const searchParams = useSearchParams()
   const highlightBusiness = searchParams.get('highlight')
-  const { showSuccess, ModalComponent } = useElegantModal()
 
   // Load from localStorage after component mounts to avoid hydration mismatch
   useEffect(() => {
@@ -173,52 +169,13 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
     { id: 'legendary', label: 'Legendary Items', count: legendaryCount },
   ]
 
-  // Classy badge popup function
-  const showBadgeEarnedPopup = (badgeName: string, reward?: string) => {
-    const popup = document.createElement('div')
-    popup.className = 'fixed top-4 right-4 z-50 bg-gradient-to-r from-slate-800 to-slate-700 border border-[#00d083]/50 rounded-xl p-4 shadow-2xl max-w-sm animate-slide-in'
-    popup.innerHTML = `
-      <div class="flex items-start gap-3">
-        <div class="p-2 bg-gradient-to-r from-[#00d083] to-[#00b86f] rounded-lg">
-          <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        </div>
-        <div class="flex-1">
-          <h4 class="text-slate-100 font-semibold text-sm">Badge Earned!</h4>
-          <p class="text-slate-300 text-xs">${badgeName}</p>
-          ${reward ? `<p class="text-[#00d083] text-xs font-medium mt-1">${reward}</p>` : ''}
-          <a href="${getNavUrl("/user/badges")}" class="text-[#00d083] text-xs hover:underline">View Badges →</a>
-        </div>
-        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-300">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    `
-    document.body.appendChild(popup)
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      if (popup.parentElement) {
-        popup.remove()
-      }
-    }, 5000)
-    
-    // Add ESC key listener
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        popup.remove()
-        document.removeEventListener('keydown', handleEsc)
-      }
-    }
-    document.addEventListener('keydown', handleEsc)
-  }
-
-  const unlockSecretItem = async (businessId: string, itemName: string) => {
+  const unlockSecretItem = async (
+    businessId: string,
+    itemName: string,
+    item: any,
+    business: any
+  ) => {
     const itemKey = `${businessId}-${itemName}`
-    const newCount = unlockedItems.size + 1
     
     // Track in database if user is logged in
     if (walletPassId) {
@@ -239,28 +196,24 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         console.error('🤫 ❌ Error calling trackSecretUnlock:', error)
       }
     }
-    
-    setUnlockedItems(prev => {
-      const newUnlocked = new Set([...prev, itemKey])
-      if (typeof window !== 'undefined') {
-        const userId = walletPassId || 'anonymous-user'
-        localStorage.setItem(`qwikker-unlocked-secrets-${userId}`, JSON.stringify([...newUnlocked]))
-        
-        // Track badge progress
-        const badgeTracker = getBadgeTracker(walletPassId)
-        badgeTracker.trackAction('secret_menu_unlocked')
-      }
-      return newUnlocked
-    })
-    
-    // Check if this unlock triggers a badge (Secret Seeker badges are NOT paid rewards)
-    if (newCount === 5) {
-      showBadgeEarnedPopup('Secret Seeker', undefined) // No reward for secret menu badges
-    } else if (newCount === 15) {
-      showBadgeEarnedPopup('Secret Menu Explorer', undefined)
-    } else if (newCount === 25) {
-      showBadgeEarnedPopup('Secret Menu Master', undefined) // No paid reward
+
+    let badgeEarned: string | null = null
+    if (typeof window !== 'undefined') {
+      const userId = walletPassId || 'anonymous-user'
+      const next = new Set([...unlockedItems, itemKey])
+      localStorage.setItem(`qwikker-unlocked-secrets-${userId}`, JSON.stringify([...next]))
+      // Silent badge award — chip inside unlock sheet, not a second toast
+      const earned = getBadgeTracker(walletPassId).trackAction('secret_menu_unlocked', undefined, {
+        notify: false,
+      })
+      badgeEarned = earned[0] || null
+      setUnlockedItems(next)
+    } else {
+      setUnlockedItems(prev => new Set([...prev, itemKey]))
     }
+
+    // One surface: how-to-order sheet
+    setSecretModal({ isOpen: true, item, business, badgeEarned })
   }
 
   const getFilteredSecretMenus = () => {
@@ -372,11 +325,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
             <Button
               onClick={(e) => {
                 e.stopPropagation()
-                unlockSecretItem(menu.businessId, item.name)
-                showSuccess(
-                  'Secret Unlocked!',
-                  `"${item.name}" is in your collection. Tap the card for how to order.`
-                )
+                unlockSecretItem(menu.businessId, item.name, item, business)
               }}
               className="w-full h-11 text-sm bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
             >
@@ -541,13 +490,12 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
         </div>
       )}
 
-      <ModalComponent />
-
       <SecretUnlockModal
         isOpen={secretModal.isOpen}
-        onClose={() => setSecretModal({ isOpen: false, item: null, business: null })}
+        onClose={() => setSecretModal({ isOpen: false, item: null, business: null, badgeEarned: null })}
         item={secretModal.item || { name: '', description: '' }}
         business={secretModal.business || { name: '', address: '', phone: '' }}
+        badgeEarned={secretModal.badgeEarned}
       />
     </div>
   )
