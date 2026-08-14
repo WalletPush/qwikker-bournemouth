@@ -136,7 +136,7 @@ export function computeCompositeScore(params: {
 /**
  * Haversine distance between two coordinates in kilometers
  */
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371
   const dLat = toRad(lat2 - lat1)
   const dLng = toRad(lng2 - lng1)
@@ -146,6 +146,16 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.sin(dLng / 2) * Math.sin(dLng / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
+}
+
+/** Miles between two coordinates (Discover / home distance labels). */
+export function haversineDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  return haversineDistanceKm(lat1, lng1, lat2, lng2) * 0.621371
+}
+
+/** @deprecated use haversineDistanceKm */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  return haversineDistanceKm(lat1, lng1, lat2, lng2)
 }
 
 function toRad(deg: number): number {

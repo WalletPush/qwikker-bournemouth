@@ -33,7 +33,7 @@ interface CachedLocation {
   timestamp: number
 }
 
-function getCachedLocation(): Coordinates | null {
+export function getCachedLocation(): Coordinates | null {
   if (typeof window === 'undefined') return null
   
   try {
@@ -54,7 +54,7 @@ function getCachedLocation(): Coordinates | null {
   }
 }
 
-function setCachedLocation(coords: Coordinates): void {
+export function setCachedLocation(coords: Coordinates): void {
   if (typeof window === 'undefined') return
   
   try {

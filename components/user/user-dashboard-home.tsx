@@ -5,11 +5,25 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PendingLink } from '@/components/ui/nav-pending'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { HomeFeedResponse, TonightCard, DishCard, DealCard, PersonalizedCard, RewardCard, TonightLabel } from '@/lib/home-feed/types'
+import type {
+  HomeFeedResponse,
+  TonightCard,
+  DishCard,
+  DealCard,
+  PersonalizedCard,
+  RewardCard,
+  SecretTeaserItem,
+  TonightLabel,
+} from '@/lib/home-feed/types'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS, type StampIconKey } from '@/lib/loyalty/loyalty-utils'
 import { WalletInstallBanner } from '@/components/wallet/wallet-install-banner'
 import { PersonalizationWizard, shouldShowWizard } from '@/components/user/personalization-wizard'
+import {
+  getCachedLocation,
+  setCachedLocation,
+  primeLocationCache,
+} from '@/lib/location/useUserLocation'
 
 interface UserDashboardHomeProps {
   feed: HomeFeedResponse | null
@@ -19,7 +33,6 @@ interface UserDashboardHomeProps {
   userName?: string
 }
 
-// Prompt chips for the hero section
 const PROMPT_CHIPS = [
   { label: 'Burgers near you', icon: 'utensils', prompt: 'Best burgers nearby' },
   { label: 'Cocktails nearby', icon: 'glass', prompt: 'Best cocktail bars near me' },
@@ -37,20 +50,70 @@ const PLACEHOLDER_TEXTS = [
   'Where should I eat tonight?',
 ]
 
-export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplayName, userName: rawUserName = 'Guest' }: UserDashboardHomeProps) {
+function formatDistanceLabel(miles?: number | null): string | null {
+  if (miles == null || !Number.isFinite(miles)) return null
+  if (miles < 0.1) return 'Nearby'
+  if (miles < 10) return `${miles.toFixed(1)} mi`
+  return `${Math.round(miles)} mi`
+}
+
+export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity, cityDisplayName, userName: rawUserName = 'Guest' }: UserDashboardHomeProps) {
   const userName = rawUserName !== 'Guest' ? rawUserName.split(' ')[0] : 'Guest'
   const router = useRouter()
+  const [feed, setFeed] = useState<HomeFeedResponse | null>(initialFeed)
   const [searchValue, setSearchValue] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
-  const [badgeCount, setBadgeCount] = useState(0)
-  const [savedItemsCount, setSavedItemsCount] = useState(0)
-  const [secretsUnlockedCount, setSecretsUnlockedCount] = useState(0)
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [availablePrograms, setAvailablePrograms] = useState<DiscoverProgram[]>([])
   const [showWizard, setShowWizard] = useState(false)
+  const locationFeedFetched = useRef(false)
 
-  // Check if personalization wizard should show (cold users only)
+  useEffect(() => {
+    setFeed(initialFeed)
+  }, [initialFeed])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const refreshWithCoords = async (lat: number, lng: number) => {
+      if (locationFeedFetched.current || cancelled) return
+      locationFeedFetched.current = true
+      try {
+        const res = await fetch(`/api/user/home-feed?lat=${lat}&lng=${lng}`)
+        if (!res.ok || cancelled) return
+        const next = (await res.json()) as HomeFeedResponse
+        if (!cancelled && next?.meta) setFeed(next)
+      } catch {
+        locationFeedFetched.current = false
+      }
+    }
+
+    const run = async () => {
+      await primeLocationCache()
+      const cached = getCachedLocation()
+      if (cached) {
+        await refreshWithCoords(cached.lat, cached.lng)
+        return
+      }
+      if (!('geolocation' in navigator)) return
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          setCachedLocation(coords)
+          void refreshWithCoords(coords.lat, coords.lng)
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 }
+      )
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     if (!feed || !walletPassId) return
     const hasEngagement = feed.personalized.length > 0
@@ -65,45 +128,16 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
           hasEngagement,
         })
         setShowWizard(show)
-      } catch {
-        // If fetch fails, don't show wizard
-      }
+      } catch {}
     }
     checkPrefs()
   }, [feed, walletPassId])
 
   useEffect(() => {
     const loadData = async () => {
-      // Saved items
-      if (walletPassId) {
-        try {
-          const { getUserSavedItems } = await import('@/lib/actions/user-saved-actions')
-          const savedResult = await getUserSavedItems(walletPassId)
-          if (savedResult.success) setSavedItemsCount(savedResult.count || 0)
-        } catch { /* safe to ignore */ }
-      }
-
-      // Badges (works with or without walletPassId -- tracker falls back to anonymous)
-      if (typeof window !== 'undefined') {
-        try {
-          const { getBadgeTracker } = require('@/lib/utils/simple-badge-tracker')
-          const tracker = getBadgeTracker(walletPassId)
-          const progress = tracker.getBadgeProgress()
-          setBadgeCount(progress.filter((b: any) => b.earned).length)
-        } catch { /* safe to ignore */ }
-
-        try {
-          const userId = walletPassId || 'anonymous-user'
-          const saved = localStorage.getItem(`qwikker-unlocked-secrets-${userId}`)
-          if (saved) setSecretsUnlockedCount(JSON.parse(saved).length)
-        } catch { /* safe to ignore */ }
-      }
-
-      // Activity feed
       try {
         const { getRecentBusinessActivity } = await import('@/lib/actions/recent-activity-actions')
         const businessActivity = await getRecentBusinessActivity(currentCity)
-        console.log('[activity] Business activity:', businessActivity?.length || 0, 'items')
         const allActivity: ActivityItem[] = (businessActivity || []).map((a: any) => ({
           id: a.id,
           icon: a.icon || 'sparkles',
@@ -118,7 +152,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
           try {
             const { getUserActivity } = await import('@/lib/actions/user-activity-actions')
             const userActivity = await getUserActivity(walletPassId, 4)
-            console.log('[activity] User activity:', userActivity?.length || 0, 'items')
             for (const ua of userActivity) {
               allActivity.push({
                 id: ua.id,
@@ -130,9 +163,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
                 time: ua.time || '',
               })
             }
-          } catch (err) {
-            console.error('[activity] User activity error:', err)
-          }
+          } catch {}
         }
 
         if (allActivity.length === 0) {
@@ -148,20 +179,15 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         }
 
         setRecentActivity(allActivity.slice(0, 4))
-      } catch (err) {
-        console.error('[activity] Failed to load activity:', err)
-      }
+      } catch {}
 
-      // Available loyalty programs (for users with no memberships)
       try {
         const res = await fetch('/api/loyalty/discover')
         if (res.ok) {
           const data = await res.json()
-          if (data.programs?.length > 0) {
-            setAvailablePrograms(data.programs)
-          }
+          if (data.programs?.length > 0) setAvailablePrograms(data.programs)
         }
-      } catch { /* safe to ignore */ }
+      } catch {}
     }
     loadData()
   }, [walletPassId, currentCity])
@@ -177,7 +203,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
     return `${base}${separator}message=${encodeURIComponent(message)}`
   }, [getNavUrl, walletPassId])
 
-  // Rotating placeholder text
   useEffect(() => {
     const timer = setInterval(() => {
       setPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length)
@@ -185,7 +210,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
     return () => clearInterval(timer)
   }, [])
 
-  // Search submit handler
   const handleSearch = useCallback((query?: string) => {
     const text = query || searchValue.trim()
     if (!text) return
@@ -195,7 +219,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
     }, 400)
   }, [searchValue, router, getChatUrl])
 
-  // Error fallback: if feed failed, show hero only
   if (!feed) {
     return (
       <div className="space-y-6 px-1">
@@ -215,15 +238,11 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
     )
   }
 
-  const { meta, tonight, dishes, deals, personalized, rewards, secretTeaser, stats } = feed
+  const { meta, tonight, dishes, deals, personalized, rewards, secretTeaser } = feed
   const hasRewards = rewards.length > 0
-  const showRewardsEmpty = !!walletPassId && rewards.length === 0
-  const isNewUser = personalized.length === 0
-
   const joinedPublicIds = new Set(rewards.map(r => r.programPublicId).filter(Boolean))
   const unjoinedPrograms = availablePrograms.filter(p => !joinedPublicIds.has(p.public_id))
 
-  // Build greeting client-side so the user name is always correct
   const greetingMap: Record<string, string> = {
     morning: `Good morning, ${userName}`,
     lunch: `Good afternoon, ${userName}`,
@@ -233,7 +252,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   }
   const displayGreeting = greetingMap[meta.timeOfDay] || meta.greeting
 
-  // Dynamic Tonight title based on content type
   const tonightTitle = tonight.some(c => c.label === 'happening_tonight' || c.label === 'tonights_deal')
     ? `Tonight in ${meta.cityDisplayName}`
     : `What's hot in ${meta.cityDisplayName}`
@@ -248,7 +266,7 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
   const fancyPrompt = fancyPromptMap[meta.timeOfDay] || 'What do you fancy today?'
 
   return (
-    <div className="space-y-10 sm:space-y-12 pb-8">
+    <div className="space-y-8 sm:space-y-10 pb-8">
       {showWizard && walletPassId && (
         <PersonalizationWizard
           walletPassId={walletPassId}
@@ -258,7 +276,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
       )}
       <WalletInstallBanner />
 
-      {/* Hero Section */}
       <HeroSection
         userName={userName}
         greeting={displayGreeting}
@@ -273,19 +290,6 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         getNavUrl={getNavUrl}
       />
 
-      {/* Navigation Stat Cards */}
-      <NavigationCards
-        businessCount={stats.totalBusinesses}
-        offerCount={stats.totalOffers}
-        secretMenuCount={stats.totalSecretMenus}
-        secretsUnlockedCount={secretsUnlockedCount}
-        eventCount={stats.totalEvents}
-        savedItemsCount={savedItemsCount}
-        badgeCount={badgeCount}
-        getNavUrl={getNavUrl}
-      />
-
-      {/* Tonight / Discover */}
       {tonight.length > 0 ? (
         <FeedSection title={tonightTitle}>
           <CardRail>
@@ -296,38 +300,12 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         </FeedSection>
       ) : (
         <div className="text-center py-4">
-          <Link href={getChatUrl("What's good tonight?")} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-            Ask Qwikker what's good tonight →
+          <Link href={getChatUrl("What's good tonight?")} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+            Ask Qwikker what&apos;s good tonight →
           </Link>
         </div>
       )}
 
-      {/* Based on What You Like */}
-      {personalized.length > 0 && (
-        <FeedSection title="Based on what you like">
-          <CardRail>
-            {personalized.map(card => (
-              <PersonalizedCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
-            ))}
-          </CardRail>
-        </FeedSection>
-      )}
-
-      {/* Popular items across businesses (food, services, rentals...) */}
-      {dishes.length > 0 && (
-        <FeedSection title="Popular picks">
-          <CardRail>
-            {dishes.map(card => (
-              <DishCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
-            ))}
-            {secretTeaser && secretTeaser.count > 0 && (
-              <SecretTeaserCard count={secretTeaser.count} getNavUrl={getNavUrl} />
-            )}
-          </CardRail>
-        </FeedSection>
-      )}
-
-      {/* Deals */}
       {deals.length > 0 && (
         <FeedSection title="Deals nearby">
           <CardRail>
@@ -338,7 +316,37 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         </FeedSection>
       )}
 
-      {/* Your Loyalty Cards */}
+      {personalized.length > 0 && (
+        <FeedSection title="Based on what you like">
+          <CardRail>
+            {personalized.map(card => (
+              <PersonalizedCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
+            ))}
+          </CardRail>
+        </FeedSection>
+      )}
+
+      {dishes.length > 0 && (
+        <FeedSection title="Popular picks">
+          <CardRail>
+            {dishes.map(card => (
+              <DishCardComponent key={card.id} card={card} getNavUrl={getNavUrl} />
+            ))}
+          </CardRail>
+        </FeedSection>
+      )}
+
+      {secretTeaser && secretTeaser.count > 0 && (
+        <FeedSection title="Secret menus nearby">
+          <CardRail>
+            {(secretTeaser.items?.length ? secretTeaser.items : []).map((item) => (
+              <SecretVenueTeaserCard key={item.businessId} item={item} getNavUrl={getNavUrl} />
+            ))}
+            <SecretTeaserCard count={secretTeaser.count} getNavUrl={getNavUrl} />
+          </CardRail>
+        </FeedSection>
+      )}
+
       {hasRewards && (
         <FeedSection title="Your loyalty cards">
           <CardRail>
@@ -358,14 +366,10 @@ export function UserDashboardHome({ feed, walletPassId, currentCity, cityDisplay
         </FeedSection>
       )}
 
-      {/* Recent Activity Feed */}
       {recentActivity.length > 0 && (
         <ActivityFeed activity={recentActivity} getNavUrl={getNavUrl} getChatUrl={getChatUrl} />
       )}
 
-      {/* Personalization wizard replaces the old PreferencesCard */}
-
-      {/* How Qwikker Works -- collapsible */}
       <HowItWorksSection cityDisplayName={cityDisplayName} getNavUrl={getNavUrl} />
     </div>
   )
@@ -401,9 +405,9 @@ function HeroSection({
   getNavUrl: (href: string) => string
 }) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-3xl p-8 sm:p-12 space-y-8">
+    <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 space-y-6">
       <div className="text-center space-y-3">
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
           {greeting}
         </h1>
         <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto">
@@ -521,6 +525,11 @@ function TonightCardComponent({ card, getNavUrl }: { card: TonightCard; getNavUr
         <span className="absolute top-4 left-4 text-[10px] uppercase tracking-wider text-white bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
           {labelText[card.label]}
         </span>
+        {formatDistanceLabel(card.distanceMiles) && (
+          <span className="absolute top-4 right-4 text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+            {formatDistanceLabel(card.distanceMiles)}
+          </span>
+        )}
         <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
           {card.offerName && (
             <p className="text-white font-medium text-sm mb-0.5">{card.offerName}</p>
@@ -543,12 +552,17 @@ function DishCardComponent({ card, getNavUrl }: { card: DishCard; getNavUrl: (hr
         className="relative h-48 rounded-xl overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors group bg-cover bg-center bg-slate-800"
         style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
       >
+        {formatDistanceLabel(card.distanceMiles) && (
+          <span className="absolute top-3 right-3 text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+            {formatDistanceLabel(card.distanceMiles)}
+          </span>
+        )}
         <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
           <p className="text-white font-medium text-sm">{card.dishName}</p>
-          <div className="flex items-center justify-between">
-            <p className="text-white/90 text-xs">{card.businessName}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-white/90 text-xs truncate">{card.businessName}</p>
             {card.dishPrice && (
-              <span className="text-white/90 text-xs">{card.dishPrice}</span>
+              <span className="text-white/90 text-xs shrink-0">{card.dishPrice}</span>
             )}
           </div>
         </div>
@@ -567,6 +581,11 @@ function DealCardComponent({ card, getNavUrl }: { card: DealCard; getNavUrl: (hr
         <span className="absolute top-4 left-4 text-[10px] uppercase tracking-wider text-white bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
           {formatOfferType(card.offerType)}
         </span>
+        {formatDistanceLabel(card.distanceMiles) && (
+          <span className="absolute top-4 right-4 text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+            {formatDistanceLabel(card.distanceMiles)}
+          </span>
+        )}
         <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
           <p className="text-white font-medium text-sm">{card.offerName}</p>
           <p className="text-white/90 text-xs">{card.businessName}</p>
@@ -586,6 +605,11 @@ function PersonalizedCardComponent({ card, getNavUrl }: { card: PersonalizedCard
         <span className="absolute top-4 left-4 text-[10px] uppercase tracking-wider text-white bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
           {card.reason}
         </span>
+        {formatDistanceLabel(card.distanceMiles) && (
+          <span className="absolute top-4 right-4 text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full z-10">
+            {formatDistanceLabel(card.distanceMiles)}
+          </span>
+        )}
         <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm px-4 py-3 z-10">
           <p className="text-white font-medium text-sm">{card.businessName}</p>
           {card.offerName && <p className="text-white/90 text-xs">{card.offerName}</p>}
@@ -689,150 +713,59 @@ function AvailableLoyaltyCard({ program }: { program: DiscoverProgram }) {
   )
 }
 
-function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (href: string) => string }) {
+function SecretVenueTeaserCard({
+  item,
+  getNavUrl,
+}: {
+  item: SecretTeaserItem
+  getNavUrl: (href: string) => string
+}) {
   return (
-    <PendingLink href={getNavUrl('/user/secret-menu')} pendingLabel="Secret Menu" className="snap-start shrink-0 w-[78vw] sm:w-64">
-      <div className="relative h-48 rounded-xl overflow-hidden border border-purple-500/30 flex flex-col items-center justify-center gap-3 group hover:border-purple-500/50 transition-colors">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-slate-900/80 to-slate-900" />
-        <div className="relative flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <LockIcon />
-          </div>
-          <div className="text-center">
-            <p className="text-white text-sm font-semibold">{count} secret items nearby</p>
-            <p className="text-purple-300/70 text-xs mt-1">Tap to unlock hidden menus</p>
-          </div>
+    <PendingLink
+      href={getNavUrl(`/user/secret-menu?highlight=${item.businessSlug}`)}
+      pendingLabel={item.businessName}
+      className="snap-start shrink-0 w-[78vw] sm:w-64 block"
+    >
+      <div className="relative h-48 rounded-xl overflow-hidden border border-zinc-700/60 bg-zinc-900">
+        {item.businessImage ? (
+          <img
+            src={item.businessImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-md brightness-50"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-zinc-800" />
+        )}
+        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute top-3 right-3 z-10 rounded-full bg-black/50 p-2 border border-white/10">
+          <LockIcon />
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+          <p className="text-white font-semibold text-sm">{item.businessName}</p>
+          <p className="text-zinc-300 text-xs mt-0.5">
+            {item.itemCount} secret{item.itemCount === 1 ? '' : 's'} · Unlock
+          </p>
         </div>
       </div>
     </PendingLink>
   )
 }
 
-// PreferencesCard removed — replaced by PersonalizationWizard
-
-// =============================================================================
-// Navigation Stat Cards
-// =============================================================================
-
-function NavigationCards({
-  businessCount,
-  offerCount,
-  secretMenuCount,
-  secretsUnlockedCount,
-  eventCount,
-  savedItemsCount,
-  badgeCount,
-  getNavUrl,
-}: {
-  businessCount: number
-  offerCount: number
-  secretMenuCount: number
-  secretsUnlockedCount: number
-  eventCount: number
-  savedItemsCount: number
-  badgeCount: number
-  getNavUrl: (href: string) => string
-}) {
-  const cards = [
-    { href: '/user/discover', label: 'Discover', count: businessCount, sub: 'places', color: 'emerald', gradient: 'from-emerald-500/30 to-teal-500/30', border: 'border-emerald-500/30', card: 'from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40', text: 'text-emerald-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /> },
-    { href: '/user/offers', label: 'Offers', count: offerCount, sub: 'available', color: 'orange', gradient: 'from-orange-500/30 to-amber-500/30', border: 'border-orange-500/30', card: 'from-orange-500/10 to-orange-500/5 border-orange-500/20 hover:border-orange-500/40', text: 'text-orange-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /> },
-    { href: '/user/secret-menu', label: 'Secrets', count: `${secretsUnlockedCount} / ${secretMenuCount}`, sub: 'unlocked', color: 'purple', gradient: 'from-purple-500/30 to-pink-500/30', border: 'border-purple-500/30', card: 'from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/40', text: 'text-purple-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /> },
-    { href: '/user/events', label: 'Events', count: eventCount, sub: 'upcoming', color: 'blue', gradient: 'from-blue-500/30 to-cyan-500/30', border: 'border-blue-500/30', card: 'from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/40', text: 'text-blue-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /> },
-    { href: '/user/saved', label: 'Saved', count: savedItemsCount, sub: 'saved', color: 'pink', gradient: 'from-pink-500/30 to-rose-500/30', border: 'border-pink-500/30', card: 'from-pink-500/10 to-pink-500/5 border-pink-500/20 hover:border-pink-500/40', text: 'text-pink-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /> },
-    { href: '/user/badges', label: 'Badges', count: badgeCount, sub: 'earned', color: 'yellow', gradient: 'from-yellow-500/30 to-amber-500/30', border: 'border-yellow-500/30', card: 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40', text: 'text-yellow-400', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /> },
-  ]
-
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [showRightFade, setShowRightFade] = useState(true)
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const maxScroll = el.scrollWidth - el.clientWidth
-    const progress = maxScroll > 0 ? el.scrollLeft / maxScroll : 0
-    setActiveIndex(progress > 0.4 ? 1 : 0)
-    setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
-  }, [])
-
-  const scrollToCard = useCallback((idx: number) => {
-    const el = scrollRef.current
-    if (!el) return
-    const cardWidth = 128 + 12
-    el.scrollTo({ left: idx * cardWidth, behavior: 'smooth' })
-  }, [])
-
+function SecretTeaserCard({ count, getNavUrl }: { count: number; getNavUrl: (href: string) => string }) {
   return (
-    <>
-      {/* Mobile: horizontal scroll with indicators */}
-      <div className="sm:hidden">
-        <div className="relative">
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="-mx-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hidden"
-            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain', scrollPaddingInlineStart: '1rem' }}
-          >
-            <div className="flex gap-3 px-4">
-              {cards.map(c => (
-                <PendingLink key={c.label} href={getNavUrl(c.href)} pendingLabel={c.label} className="snap-start shrink-0 w-32">
-                  <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
-                    <CardContent className="p-5 text-center">
-                      <div className={`w-14 h-14 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-3 flex items-center justify-center border ${c.border}`}>
-                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          {c.icon}
-                        </svg>
-                      </div>
-                      <h3 className="font-semibold text-slate-100 text-sm mb-1">{c.label}</h3>
-                      <p className={`${c.text} font-bold text-2xl`}>{c.count}</p>
-                      <p className="text-xs text-slate-400">{c.sub}</p>
-                    </CardContent>
-                  </Card>
-                </PendingLink>
-              ))}
-            </div>
-          </div>
-          {showRightFade && (
-            <div className="absolute top-0 right-0 bottom-2 w-8 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none" />
-          )}
+    <PendingLink href={getNavUrl('/user/secret-menu')} pendingLabel="Secret Menu" className="snap-start shrink-0 w-[70vw] sm:w-56">
+      <div className="relative h-48 rounded-xl overflow-hidden border border-zinc-700/60 flex flex-col items-center justify-center gap-2 bg-zinc-950 group">
+        <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center">
+          <LockIcon />
         </div>
-        <div className="flex justify-center gap-1.5 pt-3">
-          {[0, 1].map(i => {
-            const isActive = (activeIndex === i)
-            return (
-              <div
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  isActive ? 'w-4 h-1.5 bg-white/90' : 'w-1.5 h-1.5 bg-slate-600'
-                }`}
-              />
-            )
-          })}
-        </div>
+        <p className="text-white text-sm font-semibold">See all {count}</p>
+        <p className="text-zinc-500 text-xs">Secret menus</p>
       </div>
-
-      {/* Desktop: grid */}
-      <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {cards.map(c => (
-          <PendingLink key={c.label} href={getNavUrl(c.href)} className="group">
-            <Card className={`bg-gradient-to-br ${c.card} transition-colors duration-200 cursor-pointer`}>
-              <CardContent className="p-6 text-center">
-                <div className={`w-16 h-16 bg-gradient-to-br ${c.gradient} rounded-xl mx-auto mb-4 flex items-center justify-center border ${c.border}`}>
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {c.icon}
-                  </svg>
-                </div>
-                <h3 className="font-semibold text-slate-100 text-base mb-2">{c.label}</h3>
-                <p className={`${c.text} font-bold text-2xl`}>{c.count}</p>
-                <p className="text-sm text-slate-400">{c.sub}</p>
-              </CardContent>
-            </Card>
-          </PendingLink>
-        ))}
-      </div>
-    </>
+    </PendingLink>
   )
 }
+
+// PreferencesCard removed — replaced by PersonalizationWizard
 
 // =============================================================================
 // Activity Feed
@@ -857,7 +790,7 @@ const ACTIVITY_COLORS: Record<string, { bg: string; text: string }> = {
   red: { bg: 'bg-red-500/20', text: 'text-red-400' },
 }
 
-const ACTIVITY_ICONS: Record<string, JSX.Element> = {
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />,
   lock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />,
   badge: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />,
@@ -1036,7 +969,7 @@ function LockIcon() {
 }
 
 function ChipIcon({ name }: { name: string }) {
-  const paths: Record<string, JSX.Element> = {
+  const paths: Record<string, React.ReactNode> = {
     utensils: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 8l-1.5 7.5M7 13L5.4 5M17 13l1.5 7.5M9 21h6" />,
     glass: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 2l-2 9h12L16 2m-4 9v9m-4 0h8" />,
     tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />,

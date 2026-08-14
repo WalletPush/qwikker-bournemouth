@@ -22,6 +22,7 @@ import {
   getGreetingSubtitle,
   getBusinessImage,
   normaliseTier,
+  haversineDistanceMiles,
 } from './ranking'
 import { CATEGORY_MAP, normalize } from '@/lib/constants/user-preferences'
 import type {
@@ -31,6 +32,8 @@ import type {
   DealCard,
   PersonalizedCard,
   RewardCard,
+  SecretTeaser,
+  SecretTeaserItem,
   TonightLabel,
   MenuPreviewItem,
   UserFeedProfile,
@@ -128,17 +131,36 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   }
 
   // Build all sections with personalization context
-  const tonight = buildTonightSection(businesses, offers, events, hybridMode, dedup, userLat, userLng, mappedTokens, loyaltyMap)
-  const dishes = buildDishesSection(businesses, hybridMode, dedup, userProfile.dietaryRestrictions, mappedTokens, loyaltyMap)
-  const deals = buildDealsSection(offers, businesses, dedup, userLat, userLng, mappedTokens, loyaltyMap)
-  const personalized = interactionsResult
-    ? buildPersonalizedSection(interactionsResult, businesses, offers, hybridMode, dedup, userProfile.preferredCategories, loyaltyMap)
-    : []
+  const tonight = attachDistanceMiles(
+    buildTonightSection(businesses, offers, events, hybridMode, dedup, userLat, userLng, mappedTokens, loyaltyMap),
+    businesses,
+    userLat,
+    userLng
+  )
+  const dishes = attachDistanceMiles(
+    buildDishesSection(businesses, hybridMode, dedup, userProfile.dietaryRestrictions, mappedTokens, loyaltyMap),
+    businesses,
+    userLat,
+    userLng
+  )
+  const deals = attachDistanceMiles(
+    buildDealsSection(offers, businesses, dedup, userLat, userLng, mappedTokens, loyaltyMap),
+    businesses,
+    userLat,
+    userLng
+  )
+  const personalized = attachDistanceMiles(
+    interactionsResult
+      ? buildPersonalizedSection(interactionsResult, businesses, offers, hybridMode, dedup, userProfile.preferredCategories, loyaltyMap)
+      : [],
+    businesses,
+    userLat,
+    userLng
+  )
   const rewards = loyaltyResult
 
-  // Secret menu teaser
-  const secretMenuCount = countSecretMenuItems(businesses)
-  const secretTeaser = secretMenuCount > 0 ? { count: secretMenuCount } : null
+  // Secret menu teaser (count + up to 2 venue cards for home)
+  const secretTeaser = buildSecretTeaser(businesses)
 
   // Count upcoming events (today + future)
   const today = new Date().toISOString().split('T')[0]
@@ -153,7 +175,7 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   const stats = {
     totalBusinesses: businesses.length,
     totalOffers: offers.length,
-    totalSecretMenus: secretMenuCount,
+    totalSecretMenus: secretTeaser?.count ?? 0,
     totalEvents: upcomingEventCount ?? 0,
     badgeCount: 0, // populated client-side from badge tracker
   }
@@ -994,11 +1016,74 @@ function countSecretMenuItems(businesses: any[]): number {
   return businesses.reduce((total: number, b: any) => {
     if (!b.additional_notes) return total
     try {
-      const notes = JSON.parse(b.additional_notes)
+      const notes = typeof b.additional_notes === 'string'
+        ? JSON.parse(b.additional_notes)
+        : b.additional_notes
       const items = notes.secret_menu_items || []
       return total + items.length
     } catch {
       return total
     }
   }, 0)
+}
+
+function buildSecretTeaser(businesses: any[]): SecretTeaser | null {
+  const count = countSecretMenuItems(businesses)
+  if (count <= 0) return null
+
+  const items: SecretTeaserItem[] = []
+  for (const b of businesses) {
+    if (items.length >= 2) break
+    if (!b.additional_notes) continue
+    try {
+      const notes = typeof b.additional_notes === 'string'
+        ? JSON.parse(b.additional_notes)
+        : b.additional_notes
+      const secretItems = notes.secret_menu_items || []
+      if (!Array.isArray(secretItems) || secretItems.length === 0) continue
+      const { image } = getBusinessImage(
+        b.business_images,
+        b.logo,
+        b.system_category,
+        b.id,
+        b.placeholder_variant,
+        b.placeholder_custom_url
+      )
+      items.push({
+        businessId: b.id,
+        businessName: b.business_name,
+        businessSlug: generateSlug(b.business_name, b.id),
+        businessImage: image,
+        itemCount: secretItems.length,
+      })
+    } catch {
+      /* skip bad notes */
+    }
+  }
+
+  return { count, items }
+}
+
+function attachDistanceMiles<T extends { businessId: string; distanceMiles?: number | null }>(
+  cards: T[],
+  businesses: any[],
+  userLat?: number | null,
+  userLng?: number | null
+): T[] {
+  if (userLat == null || userLng == null || !Number.isFinite(userLat) || !Number.isFinite(userLng)) {
+    return cards
+  }
+  const byId = new Map(businesses.map((b: any) => [b.id, b]))
+  return cards.map((card) => {
+    const biz = byId.get(card.businessId)
+    const lat = biz?.latitude != null ? Number(biz.latitude) : null
+    const lng = biz?.longitude != null ? Number(biz.longitude) : null
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return { ...card, distanceMiles: null }
+    }
+    return {
+      ...card,
+      distanceMiles: Math.round(haversineDistanceMiles(userLat, userLng, lat, lng) * 10) / 10,
+    }
+  })
 }

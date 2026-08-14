@@ -1,12 +1,9 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { SecretUnlockModal } from '@/components/ui/secret-unlock-modal'
 import { useElegantModal } from '@/components/ui/elegant-modal'
-import { AiCompanionCard } from '@/components/ui/ai-companion-card'
 import { useSearchParams } from 'next/navigation'
 import { getBadgeTracker } from '@/lib/utils/simple-badge-tracker'
 import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName } from '@/lib/utils/client-city-detection'
@@ -62,7 +59,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
     business: any
   }>({ isOpen: false, item: null, business: null })
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null)
-  const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const cardRefs = useRef<{ [key: string]: HTMLElement | null }>({})
   
   const searchParams = useSearchParams()
   const highlightBusiness = searchParams.get('highlight')
@@ -185,7 +182,7 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
           <h4 class="text-slate-100 font-semibold text-sm">Badge Earned!</h4>
           <p class="text-slate-300 text-xs">${badgeName}</p>
           ${reward ? `<p class="text-[#00d083] text-xs font-medium mt-1">${reward}</p>` : ''}
-          <Link href={getNavUrl("/user/badges")} className="text-[#00d083] text-xs hover:underline">View Badges →</Link>
+          <a href="${getNavUrl("/user/badges")}" class="text-[#00d083] text-xs hover:underline">View Badges →</a>
         </div>
         <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-slate-300">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,372 +291,220 @@ export function UserSecretMenuPage({ realSecretMenus = [], walletPassId, current
   const SecretMenuItem = ({ menu, item, business }: { menu: any, item: any, business: any }) => {
     const itemKey = `${menu.businessId}-${item.name}`
     const isUnlocked = unlockedItems.has(itemKey)
-    
-    // Check if item requires specific badge
-    const requiredBadge = item.requiredBadge // e.g., "secret_seeker", "deal_hunter"
-    // For now, assume no badge requirements (can be updated later with real user data)
-    const userBadges = []
+    const requiredBadge = item.requiredBadge
+    const userBadges: string[] = []
     const canUnlock = !requiredBadge || userBadges.includes(requiredBadge)
     const isLocked = !canUnlock && !isUnlocked
-    
-    // Determine if this is a real business item
-    const isRealItem = item.isReal || false
-    
+    const coverImage = item.image_url || business?.image || null
+
     return (
-      <Card 
-        className={`relative overflow-hidden transition-all duration-500 hover:scale-105 cursor-pointer ${
-          isUnlocked 
-            ? 'bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/50 shadow-purple-500/20' 
-            : isLocked
-            ? 'bg-gradient-to-br from-red-900/20 to-red-800/20 border-red-700/50'
-            : 'bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-slate-700/50'
-        } ${showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      <div
+        className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+          isUnlocked
+            ? 'border-[#00d083]/40 bg-zinc-950'
+            : 'border-zinc-800 bg-zinc-950'
+        } ${showSecrets ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
         onClick={() => {
-          if (!isLocked) {
-            setSecretModal({
-              isOpen: true,
-              item,
-              business
-            })
+          if (!isLocked && isUnlocked) {
+            setSecretModal({ isOpen: true, item, business })
           }
         }}
       >
-        
-        {/* Mysterious Glow Effect */}
-        {isUnlocked && (
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 animate-pulse"></div>
-        )}
-        
-        {/* Top badges row */}
-        <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-start z-10">
-          {/* Rarity Badge - Only for Legendary (Spotlight) items */}
-          {(item.rarity || 0) >= 5 && (
-            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-bold shadow-lg">
-              LEGENDARY
-            </span>
+        <div className="relative h-44 sm:h-52 overflow-hidden">
+          {coverImage ? (
+            <img
+              src={coverImage}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+                isUnlocked ? '' : 'scale-110 blur-md brightness-[0.45]'
+              }`}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-950" />
           )}
-          
-          {/* Lock/Unlock Status */}
-          <div className="ml-auto">
-            {isUnlocked ? (
-              <div className="p-1.5 sm:p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
-                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {!isUnlocked && <div className="absolute inset-0 bg-black/30" />}
+
+          <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
+            {(item.rarity || 0) >= 5 && (
+              <span className="bg-amber-400 text-black text-[10px] px-2 py-0.5 rounded-full font-bold">
+                LEGENDARY
+              </span>
+            )}
+            <div className="ml-auto rounded-full bg-black/55 border border-white/10 p-2">
+              {isUnlocked ? (
+                <svg className="w-3.5 h-3.5 text-[#00d083]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
-              </div>
-            ) : (
-              <div className="p-1.5 sm:p-2 bg-slate-700/80 rounded-full">
-                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              ) : (
+                <svg className="w-3.5 h-3.5 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/80 to-transparent">
+            <p className={`font-semibold text-sm ${isUnlocked ? 'text-white' : 'text-zinc-200 tracking-widest'}`}>
+              {isUnlocked ? item.name : '••••••••'}
+            </p>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {isUnlocked ? (item.price || 'Ask for price') : '£??'}
+            </p>
           </div>
         </div>
 
+        <div className="p-3 space-y-3">
+          <p className={`text-xs leading-relaxed line-clamp-2 ${isUnlocked ? 'text-zinc-300' : 'text-zinc-500'}`}>
+            {isUnlocked ? item.description : 'Unlock to reveal this off-menu item.'}
+          </p>
 
-        {isUnlocked && item.image_url && (
-          <div className="mx-3 mt-8 sm:mx-6 sm:mt-12">
-            <img
-              src={item.image_url}
-              alt={item.name}
-              className="w-full h-28 sm:h-36 object-cover rounded-lg border border-purple-500/30"
-            />
-          </div>
-        )}
-
-        <CardHeader className={`pb-2 px-3 sm:px-6 ${isUnlocked && item.image_url ? 'pt-3' : 'pt-8 sm:pt-12'}`}>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className={`text-base font-bold sm:text-lg mb-1.5 transition-all duration-300 leading-tight ${
-                isUnlocked 
-                  ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
-                  : 'text-slate-300'
-              }`}>
-                {isUnlocked ? item.name : '• • • • • • • •'}
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium mb-0.5">{business?.name}</p>
-              <p className="text-[10px] sm:text-xs text-slate-400">{business?.category}</p>
+          {isLocked ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-950/30 px-3 py-2 text-center">
+              <p className="text-red-300 text-xs font-medium">Badge required to unlock</p>
             </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-2.5 sm:space-y-3 px-3 sm:px-6 pb-3 sm:pb-6">
-          {/* Item Description */}
-          <div className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-30'}`}>
-            <p className={`text-xs sm:text-sm leading-relaxed line-clamp-3 sm:line-clamp-none ${isUnlocked ? 'text-slate-300' : 'text-gray-500 blur-sm'}`}>
-              {isUnlocked ? item.description : 'Unlock this secret to reveal the mysterious description...'}
-            </p>
-          </div>
-
-          {/* Price - bigger and bolder */}
-          <div className="py-1">
-            <span className={`font-bold text-xl sm:text-2xl ${
-              isUnlocked 
-                ? 'text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text' 
-                : 'text-gray-500'
-            }`}>
-              {isUnlocked ? item.price : '£??'}
-            </span>
-          </div>
-
-          {/* Status and Action */}
-          <div>
-            {isLocked ? (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-2.5 sm:p-3 text-center">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="text-red-300 font-semibold text-xs sm:text-sm">Badge Required</span>
-                </div>
-                <p className="text-red-200 text-xs sm:text-sm">
-                  Earn the "{requiredBadge?.replace('_', ' ')}" badge to unlock this secret
-                </p>
-              </div>
-            ) : !isUnlocked ? (
-              <Button 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  unlockSecretItem(menu.businessId, item.name)
-                  showSuccess(
-                    'Secret Unlocked!',
-                    `"${item.name}" has been added to your collection. Click the card to see how to order it.`
-                  )
-                }}
-                className="w-full h-[44px] sm:h-[48px] text-sm sm:text-base bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-bold shadow-lg"
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-                Unlock Secret
-              </Button>
-            ) : (
-              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg p-2.5 sm:p-3 text-center">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-purple-300 font-semibold text-xs sm:text-sm">Unlocked!</span>
-                </div>
-                <p className="text-purple-200 text-xs sm:text-sm">Click card for ordering info</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          ) : !isUnlocked ? (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                unlockSecretItem(menu.businessId, item.name)
+                showSuccess(
+                  'Secret Unlocked!',
+                  `"${item.name}" is in your collection. Tap the card for how to order.`
+                )
+              }}
+              className="w-full h-11 text-sm bg-[#00d083] hover:bg-[#00b86f] text-black font-semibold"
+            >
+              Unlock secret
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className="w-full h-11 text-sm rounded-xl border border-zinc-700 text-zinc-200 font-medium hover:bg-zinc-900"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSecretModal({ isOpen: true, item, business })
+              }}
+            >
+              How to order
+            </button>
+          )}
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6 relative">
-      {/* Mysterious Background Effects */}
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/5 via-transparent to-pink-900/5 pointer-events-none"></div>
-      <div className="fixed top-20 left-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
-      <div className="fixed bottom-20 right-10 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl animate-pulse pointer-events-none"></div>
-
-      {/* Page Header - Clean and Aligned */}
-      <div className="text-center relative">
-        <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">
-          Secret Menu Club
-        </h1>
-        <p className="text-xl text-slate-300 mb-2">
-          Unlock {cityDisplayName}'s most guarded culinary secrets
-        </p>
-        <p className="text-slate-400 max-w-2xl mx-auto">
-          These exclusive off-menu items are known only to insiders. Each secret tells a story, 
-          each dish holds mystery. Start your culinary adventure!
+    <div className="space-y-5 relative max-w-3xl mx-auto">
+      <div>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Secret Menu</h1>
+        <p className="text-sm text-zinc-500 mt-1">
+          {totalSecretItems} off-menu item{totalSecretItems === 1 ? '' : 's'} in {cityDisplayName}
+          {validUnlockedItems.length > 0 ? ` · ${validUnlockedItems.length} unlocked` : ''}
         </p>
       </div>
 
-      {/* Stats Dashboard - Dark & Mysterious */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
-            selectedFilter === 'all' 
-              ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40 border-purple-500/50 ring-2 ring-purple-400/30' 
-              : 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-700/30 hover:border-purple-600/50'
-          }`}
-          onClick={() => setSelectedFilter('all')}
-        >
-          <div className="flex flex-col items-center">
-            <div className="mb-2">
-              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-purple-400 mb-1">{totalSecretItems}</p>
-            <p className="text-sm text-slate-400">All Secrets</p>
-          </div>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
-            selectedFilter === 'unlocked' 
-              ? 'bg-gradient-to-br from-pink-900/40 to-pink-800/40 border-pink-500/50 ring-2 ring-pink-400/30' 
-              : 'bg-gradient-to-br from-pink-900/20 to-pink-800/20 border-pink-700/30 hover:border-pink-600/50'
-          }`}
-          onClick={() => setSelectedFilter('unlocked')}
-        >
-          <div className="flex flex-col items-center">
-            <div className="mb-2">
-              <svg className="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414A6 6 0 0121 9z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-pink-400 mb-1">{Array.from(unlockedItems).length}</p>
-            <p className="text-sm text-slate-400">My Unlocked</p>
-          </div>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 text-center p-4 hover:scale-105 ${
-            selectedFilter === 'legendary' 
-              ? 'bg-gradient-to-br from-yellow-900/40 to-yellow-800/40 border-yellow-500/50 ring-2 ring-yellow-400/30' 
-              : 'bg-gradient-to-br from-yellow-900/20 to-yellow-800/20 border-yellow-700/30 hover:border-yellow-600/50'
-          }`}
-          onClick={() => setSelectedFilter('legendary')}
-        >
-          <div className="flex flex-col items-center">
-            <div className="mb-2">
-              <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-yellow-400 mb-1">{legendaryCount}</p>
-            <p className="text-sm text-slate-400">Legendary Items</p>
-          </div>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/20 border-emerald-700/30 text-center p-4">
-          <div className="flex flex-col items-center">
-            <div className="mb-2">
-              <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-bold text-emerald-400 mb-1">
-              {Array.from(unlockedItems).length} / {totalSecretItems}
-            </p>
-            <p className="text-sm text-slate-400">Secrets Unlocked</p>
-          </div>
-        </Card>
-      </div>
-
-      {/* AI Companion Card - Replace Category Filter */}
-      <div className="mb-4">
-        <AiCompanionCard 
-          title="Unlock Hidden Culinary Secrets"
-          description="Our AI knows every secret menu item in the city! Ask about off-menu dishes, hidden specialties, or get personalized recommendations based on your taste."
-          prompts={[
-            "What secret items does The Seaside Bistro have?",
-            "Find me hidden desserts I can unlock", 
-            "Show me legendary secret menu items"
-          ]}
-          walletPassId={walletPassId}
-        />
-      </div>
-
-      {/* Category Filter */}
-      <div className="flex flex-wrap justify-center gap-2">
-        <span className="text-slate-400 text-sm mr-2">Filter by venue type:</span>
-        {categories.map((category) => (
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden -mx-1 px-1">
+        {filters.map((filter) => (
           <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={`px-3 py-1 rounded-full text-xs transition-all duration-200 ${
-              selectedCategory === category
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-slate-100'
-                : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600 border border-slate-600'
+            key={filter.id}
+            type="button"
+            onClick={() => setSelectedFilter(filter.id)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              selectedFilter === filter.id
+                ? 'bg-[#00d083] text-black'
+                : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
             }`}
           >
-            {category === 'all' ? 'All Venues' : category}
+            {filter.label}
+            <span className="ml-1 opacity-70">{filter.count}</span>
           </button>
         ))}
       </div>
 
-      {/* Secret Menu Items - Grouped by Business */}
+      {categories.length > 2 && (
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setSelectedCategory(category)}
+              className={`px-2.5 py-1 rounded-full text-[11px] transition-colors ${
+                selectedCategory === category
+                  ? 'bg-zinc-100 text-black'
+                  : 'bg-zinc-900/80 text-zinc-500 border border-zinc-800'
+              }`}
+            >
+              {category === 'all' ? 'All venues' : category}
+            </button>
+          ))}
+        </div>
+      )}
+
       {getFilteredSecretMenus().length === 0 ? (
-        <Card className="bg-slate-800/50 border-slate-700 text-center p-12">
-          <div className="text-6xl mb-4">🔒</div>
-          {realSecretMenus.length === 0 ? (
-            <>
-              <h3 className="text-xl font-bold text-slate-100 mb-2">Secret menus are coming online</h3>
-              <p className="text-slate-400">Off-menu dishes appear once venues confirm what's available.</p>
-            </>
-          ) : (
-            <>
-              <h3 className="text-xl font-bold text-slate-100 mb-2">No secret menus match your filters</h3>
-              <p className="text-slate-400">Try adjusting your filters or check back later!</p>
-            </>
-          )}
-        </Card>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-6 py-12 text-center">
+          <p className="text-zinc-200 font-medium">
+            {realSecretMenus.length === 0 ? 'Secret menus coming soon' : 'No secrets match these filters'}
+          </p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {realSecretMenus.length === 0
+              ? 'Off-menu dishes appear once venues confirm what\'s available.'
+              : 'Try another filter.'}
+          </p>
+        </div>
       ) : (
         <div className="space-y-8">
           {getFilteredSecretMenus().map((menu) => {
-          // Create business object from menu data
-          const business = {
-            id: menu.businessId,
-            name: menu.businessName,
-            category: menu.businessCategory,
-            address: menu.businessAddress,
-            phone: menu.businessPhone,
-            image: menu.businessImage
-          }
-          
-          const businessSlug = business?.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
-          const isHighlighted = highlightedCard === businessSlug
-          
-          return (
-            <Card 
-              key={menu.businessId}
-              ref={(el) => { cardRefs.current[businessSlug] = el }}
-              className={`bg-gradient-to-br from-slate-900/60 to-slate-800/40 border-slate-700/50 transition-all duration-300 ${
-                isHighlighted 
-                  ? 'qr-highlight ring-4 ring-[#00d083]/60 shadow-2xl shadow-[#00d083]/20 scale-105 border-[#00d083]/50' 
-                  : ''
-              }`}
-            >
-              {/* Business Header */}
-              <CardHeader className="pb-3 sm:pb-4 pt-3 sm:pt-6 px-3 sm:px-6">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  {business?.image && (
-                    <img 
-                      src={business.image} 
-                      alt={business.name}
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-purple-500/30"
+            const business = {
+              id: menu.businessId,
+              name: menu.businessName,
+              category: menu.businessCategory,
+              address: menu.businessAddress,
+              phone: menu.businessPhone,
+              image: menu.businessImage,
+            }
+            const businessSlug = business?.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') || menu.businessId
+            const isHighlighted = highlightedCard === businessSlug
+
+            return (
+              <section
+                key={menu.businessId}
+                ref={(el) => { cardRefs.current[businessSlug] = el }}
+                className={`space-y-3 ${isHighlighted ? 'ring-2 ring-[#00d083]/50 rounded-2xl p-2' : ''}`}
+              >
+                <div className="flex items-center gap-3 px-0.5">
+                  {business.image ? (
+                    <img
+                      src={business.image}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover border border-zinc-700"
                     />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700" />
                   )}
-                  <div>
-                    <CardTitle className="text-base sm:text-xl text-slate-100 mb-1">
-                      {business?.name || 'Unknown Business'}
-                    </CardTitle>
-                    <p className="text-slate-400 text-xs sm:text-sm">
-                      {business?.category} • Secret Menu Collection
-                    </p>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold text-zinc-100 truncate">{business.name}</h2>
+                    <p className="text-xs text-zinc-500">{business.category} · {menu.items.length} secrets</p>
                   </div>
                 </div>
-              </CardHeader>
-              
-              {/* Secret Items Grid */}
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {menu.items.map((item: any, index: number) => (
-                    <SecretMenuItem 
-                      key={`${menu.businessId}-${item.name}-${index}`} 
-                      menu={menu} 
-                      item={item} 
+                    <SecretMenuItem
+                      key={`${menu.businessId}-${item.name}-${index}`}
+                      menu={menu}
+                      item={item}
                       business={business}
                     />
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+              </section>
+            )
+          })}
+        </div>
       )}
 
-      {/* Elegant Modals */}
       <ModalComponent />
-      
+
       <SecretUnlockModal
         isOpen={secretModal.isOpen}
         onClose={() => setSecretModal({ isOpen: false, item: null, business: null })}

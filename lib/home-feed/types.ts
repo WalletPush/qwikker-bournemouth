@@ -41,6 +41,8 @@ export interface TonightCard {
   eventTime?: string
   eventType?: string
   eventImage?: string | null
+  /** Miles from user when GPS was available at feed build time */
+  distanceMiles?: number | null
 }
 
 export interface DishCard {
@@ -56,6 +58,7 @@ export interface DishCard {
   businessLogo: string | null
   tier: BusinessTier | null
   reason?: string
+  distanceMiles?: number | null
 }
 
 export interface DealCard {
@@ -71,6 +74,7 @@ export interface DealCard {
   businessLogo: string | null
   tier: BusinessTier | null
   reason?: string
+  distanceMiles?: number | null
 }
 
 export interface PersonalizedCard {
@@ -85,6 +89,7 @@ export interface PersonalizedCard {
   offerName?: string
   offerValue?: string
   dishName?: string
+  distanceMiles?: number | null
 }
 
 export interface RewardCard {
@@ -100,8 +105,18 @@ export interface RewardCard {
   stampIcon?: string
 }
 
+export interface SecretTeaserItem {
+  businessId: string
+  businessName: string
+  businessSlug: string
+  businessImage: string | null
+  itemCount: number
+}
+
 export interface SecretTeaser {
   count: number
+  /** Up to 2 venues for home teaser cards */
+  items: SecretTeaserItem[]
 }
 
 export interface HomeFeedResponse {
