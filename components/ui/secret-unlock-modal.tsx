@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
 interface SecretUnlockModalProps {
   isOpen: boolean
@@ -27,23 +25,29 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => setIsVisible(true), 50)
+      const t = setTimeout(() => setIsVisible(true), 50)
       document.body.style.overflow = 'hidden'
-    } else {
-      setIsVisible(false)
-      document.body.style.overflow = 'unset'
+      return () => {
+        clearTimeout(t)
+        document.body.style.overflow = 'unset'
+      }
     }
-    
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
+    setIsVisible(false)
+    document.body.style.overflow = 'unset'
   }, [isOpen])
 
   if (!isOpen) return null
 
+  const orderLine =
+    item.ordering_instructions?.trim() ||
+    `Ask your server for “${item.name}”, or show them this screen.`
+
   const handleDirections = () => {
     if (business.name && business.address) {
-      window.open(`https://maps.google.com/search/${business.name} ${business.address}`, '_blank')
+      window.open(
+        `https://maps.google.com/search/${encodeURIComponent(`${business.name} ${business.address}`)}`,
+        '_blank'
+      )
     }
   }
 
@@ -54,119 +58,112 @@ export function SecretUnlockModal({ isOpen, onClose, item, business }: SecretUnl
   }
 
   return (
-    <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-all duration-300 ${
+    <div
+      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <Card 
-        className={`modal-content max-w-md w-full bg-zinc-800 border border-fuchsia-500/30 shadow-2xl ring-1 ring-white/5 transition-all duration-300 ${
-          isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+      <div
+        className={`w-full sm:max-w-md sm:mx-4 max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-[#00d083]/30 bg-zinc-950 shadow-2xl shadow-black/60 transition-transform duration-300 ${
+          isVisible ? 'translate-y-0 scale-100' : 'translate-y-6 sm:translate-y-4 scale-[0.98]'
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="secret-unlock-title"
       >
-        <CardContent className="p-0">
-          {/* Clean Header */}
-          <div className="relative p-6 pb-4 border-b border-zinc-700/60">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Secret Unlocked!</h3>
-                  <p className="text-slate-400 text-sm">You've discovered a hidden gem</p>
-                </div>
-              </div>
-              <button 
-                onClick={onClose}
-                className="text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        {/* Handle + header */}
+        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/80 px-5 pt-3 pb-4">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-700 sm:hidden" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[#00d083] mb-1">
+                Secret unlocked
+              </p>
+              <h3 id="secret-unlock-title" className="text-lg font-semibold text-white leading-snug">
+                Qwikker exclusive
+              </h3>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 w-9 h-9 rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 flex items-center justify-center active:bg-zinc-800"
+              aria-label="Close"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-5 space-y-4">
+          {/* Item */}
+          <div className="rounded-2xl border border-zinc-700/80 bg-zinc-900/80 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <h4 className="text-base sm:text-lg font-semibold text-white leading-snug flex-1 min-w-0">
+                {item.name}
+              </h4>
+              {item.price && (
+                <span className="shrink-0 text-base font-bold tabular-nums text-[#00d083]">
+                  {item.price}
+                </span>
+              )}
+            </div>
+            {item.description && (
+              <p className="text-sm text-zinc-300 mt-2.5 leading-relaxed">{item.description}</p>
+            )}
           </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-4">
-            {/* Item Details */}
-            <div className="bg-slate-700/30 rounded-lg p-4 border border-slate-600/30">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="text-lg font-medium text-white mb-1">{item.name}</h4>
-                  <p className="text-slate-300 text-sm">{item.description}</p>
-                </div>
-                {item.price && (
-                  <span className="text-purple-400 font-semibold text-lg ml-4">{item.price}</span>
-                )}
-              </div>
-            </div>
+          {/* How to order — brand green, roomy */}
+          <div className="rounded-2xl border border-[#00d083]/35 bg-[#00d083]/10 p-4 sm:p-5">
+            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[#00d083] mb-2">
+              How to order
+            </p>
+            <p className="text-sm sm:text-[15px] text-zinc-100 leading-relaxed">{orderLine}</p>
+          </div>
 
-            {/* How to Order */}
-            <div className="bg-slate-700/20 rounded-lg p-4 border border-slate-600/20">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h4 className="font-medium text-white text-sm">How to Order</h4>
-              </div>
-              <p className="text-slate-300 text-sm">
-                {item.ordering_instructions || `Simply ask your server for "${item.name}" or show them this screen!`}
-              </p>
-            </div>
+          {business.name && (
+            <p className="text-center text-xs text-zinc-500">
+              At <span className="text-zinc-200 font-medium">{business.name}</span>
+            </p>
+          )}
 
-            {/* Business Info */}
-            {business.name && (
-              <div className="text-center py-2 border-t border-slate-700/50">
-                <p className="text-slate-400 text-xs">Available at</p>
-                <p className="text-white font-medium text-sm">{business.name}</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
+          {/* Actions */}
+          <div className="flex flex-col gap-2.5 pt-1 pb-2">
+            <div className="flex gap-2.5">
               {business.address && (
-                <Button
+                <button
+                  type="button"
                   onClick={handleDirections}
-                  size="sm"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                  className="flex-1 h-11 rounded-xl border border-zinc-600 bg-zinc-900 text-sm font-semibold text-zinc-100 active:bg-zinc-800"
                 >
-                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
                   Directions
-                </Button>
+                </button>
               )}
               {business.phone && (
-                <Button
+                <button
+                  type="button"
                   onClick={handleCall}
-                  size="sm"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+                  className="flex-1 h-11 rounded-xl border border-zinc-600 bg-zinc-900 text-sm font-semibold text-zinc-100 active:bg-zinc-800"
                 >
-                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
                   Call
-                </Button>
+                </button>
               )}
-              <Button
-                onClick={onClose}
-                size="sm"
-                variant="outline"
-                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700/50 text-xs"
-              >
-                Close
-              </Button>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full h-12 rounded-xl bg-[#00d083] text-black text-sm font-bold active:brightness-95"
+            >
+              Got it
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
