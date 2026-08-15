@@ -1185,16 +1185,18 @@ export async function generateHybridAIResponse(
 
     const lastAssistantText =
       [...conversationHistory].reverse().find((m) => m.role === 'assistant')?.content || ''
-    // Don't treat "Kids Meal Deal" / menu copy as an offers turn — that made
-    // "Anywhere else with kids menu?" falsely hard-path into Save/Redeem cards.
+    // Don't treat "Kids Meal Deal" / "they offer a …" menu copy as an offers turn —
+    // that made "Anywhere else with kids menu?" falsely hard-path into Save/Redeem cards.
     const scrubbedPrevForOffers = lastAssistantText
       .replace(/\b(kids?\s+)?meal\s+deals?\b/gi, ' ')
       .replace(/\bkids?\s+(menu|food|meals?)\b/gi, ' ')
+      .replace(/\b(they|we|it)\s+offer\b/gi, ' ')
     const prevTurnWasOffers =
       /\b(live deals?|save one|redeem when|walletActions|full Offers page|active offers?|tap \*\*Save\*\*)\b/i.test(
         lastAssistantText
       ) ||
-      /\b(offers?|discounts?|promos?|%\s*off)\b/i.test(scrubbedPrevForOffers) ||
+      /\b(discounts?|promos?|%\s*off)\b/i.test(scrubbedPrevForOffers) ||
+      /\b(special|exclusive|current|active|live)\s+offers?\b/i.test(scrubbedPrevForOffers) ||
       (/\bdeals?\b/i.test(scrubbedPrevForOffers) &&
         /\b(save|redeem|live deals?|Offers page)\b/i.test(lastAssistantText))
 
