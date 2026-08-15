@@ -1185,22 +1185,37 @@ export async function generateHybridAIResponse(
 
     const lastAssistantText =
       [...conversationHistory].reverse().find((m) => m.role === 'assistant')?.content || ''
+    // Don't treat "Kids Meal Deal" / menu copy as an offers turn — that made
+    // "Anywhere else with kids menu?" falsely hard-path into Save/Redeem cards.
+    const scrubbedPrevForOffers = lastAssistantText
+      .replace(/\b(kids?\s+)?meal\s+deals?\b/gi, ' ')
+      .replace(/\bkids?\s+(menu|food|meals?)\b/gi, ' ')
     const prevTurnWasOffers =
-      /\b(live deals?|save one|redeem when|walletActions|full Offers page|active offers?)\b/i.test(
+      /\b(live deals?|save one|redeem when|walletActions|full Offers page|active offers?|tap \*\*Save\*\*)\b/i.test(
         lastAssistantText
-      ) || /\b(offer|deal)\b/i.test(lastAssistantText)
+      ) ||
+      /\b(offers?|discounts?|promos?|%\s*off)\b/i.test(scrubbedPrevForOffers) ||
+      (/\bdeals?\b/i.test(scrubbedPrevForOffers) &&
+        /\b(save|redeem|live deals?|Offers page)\b/i.test(lastAssistantText))
 
     const wantsSaveFollowUp =
       /\b(save (it|this|that)|can i save|how (do i|to) save|save (the )?offer)\b/i.test(
         userMessage
+      )
+    // Discovery follow-ups ("anywhere else with kids menu") must NOT inherit offer mode
+    // just because the user said "else" / "more".
+    const isDiscoveryElseAsk =
+      /\b(kids?|menu|food|restaurants?|cafes?|bars?|places?|venues?|anywhere|with)\b/i.test(
+        offerNormalized
       )
     const wantsOfferSample =
       wantsSaveFollowUp ||
       /\b(list a few|show a few|show me a few|list some|a few deals|sample deals|show some|show more deals|more deals|more offers|list a few deals|current deals|live deals|any deals|any offers)\b/i.test(
         offerNormalized
       ) ||
-      // "more ofers" / "any more?" right after an offers reply
+      // "more ofers" / "any more?" right after a real offers reply
       (prevTurnWasOffers &&
+        !isDiscoveryElseAsk &&
         /\b(more|any more|another|else|again|keep going)\b/i.test(offerNormalized))
 
     // Specific deal claims ("Roma has a free tiramisu", "10% off at X") → offers DB, not KB waffle
