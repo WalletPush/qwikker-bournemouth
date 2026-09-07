@@ -106,7 +106,16 @@ export async function GET(request: NextRequest) {
     change_rejection: () =>
       createChangeRejectionEmail({ firstName: 'Test User', businessName: 'Test Restaurant', changeType: 'offer', changeName: 'Free Drinks For Everyone', rejectionReason: 'Please add specific terms.', city, dashboardUrl, supportEmail }),
     consumer_welcome: () =>
-      createConsumerWelcomeEmail({ firstName: 'Test User', city, dashboardUrl: `${baseUrl}/user/dashboard?wallet_pass_id=TEST-PASS-123`, chatUrl: `${baseUrl}/user/chat?wallet_pass_id=TEST-PASS-123`, offersUrl: `${baseUrl}/user/offers?wallet_pass_id=TEST-PASS-123`, supportEmail }),
+      createConsumerWelcomeEmail({
+        firstName: 'Test User',
+        city,
+        dashboardUrl: `${baseUrl}/user/dashboard?wallet_pass_id=TEST-PASS-123`,
+        chatUrl: `${baseUrl}/user/chat?wallet_pass_id=TEST-PASS-123`,
+        offersUrl: `${baseUrl}/user/offers?wallet_pass_id=TEST-PASS-123`,
+        supportEmail,
+        appleWalletUrl: 'https://example.com/api/apple-pass/TEST-PASS-123/download',
+        googleWalletUrl: 'https://pay.google.com/gp/v/save/TEST',
+      }),
     city_live: () =>
       createCityLiveEmail({ cityName: city.charAt(0).toUpperCase() + city.slice(1), cityUrl: `https://${city}.qwikker.com` }),
   }

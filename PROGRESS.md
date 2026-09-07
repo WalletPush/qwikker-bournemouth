@@ -4,6 +4,41 @@
 >
 > Start any new chat with: "Read PROGRESS.md and the plan file, then continue with the next pending item."
 
+## 🔧 IN PROGRESS — Dennis / Kefalonia prod quick edits (Sep 7, 2026)
+
+**Branch:** `fix/prod-quick-edits` (from clean `main` @ `0e475f39`)  
+**Do NOT merge:** Curate my city / Concierge — parked on `feat/research-business-package` (WIP `6a1609eb`).
+
+### Backlog (one at a time)
+| # | Item | Status |
+|---|---|---|
+| 1 | User welcome email: Apple/Google Wallet re-add links (same serial) | **DONE (code)** — needs smoke test |
+| 2 | Opening hours: morning + afternoon (two ranges/day) | pending |
+| 3 | Logo/photo upload confirmation + less spammy approval emails | pending |
+| 4 | Featured/Highlights/offers photos in editor + profile | pending |
+| 5 | Vibe tags for service businesses | pending |
+| 6 | Booking: show Book by Email when email booking enabled | pending |
+
+### #1 — Consumer welcome email Wallet CTAs (what changed)
+
+**Goal:** After join, welcome email includes **Add to Apple Wallet** / **Add to Google Wallet** for the pass just created, so deleting the pass from the phone is recoverable without signing up again (which would mint a new serial and orphan progress).
+
+**Why this is safe:** Progress is keyed by `wallet_pass_id` (WalletPush serial). Re-adding via the same install URL keeps that serial. We do **not** send “join again” / create-new-pass links.
+
+**Files touched (only these):**
+1. `lib/email/templates/consumer-notifications.ts` — optional `appleWalletUrl` / `googleWalletUrl` on `ConsumerWelcomeEmailData`; buttons + copy when present; dashboard CTA becomes secondary outline when wallet CTAs exist.
+2. `app/api/walletpass/create-main-pass/route.ts` — passes existing in-memory `passUrl` (Apple, already normalized to `/api/apple-pass/{serial}/download`) and `googleWalletUrl` (`result.google?.saveUrl` / `shortUrl`) into the welcome template. No DB schema change; no new WalletPush create.
+3. `app/api/admin/preview-email/route.ts` + `app/api/admin/test-emails/route.ts` — sample wallet URLs so admin preview/test show the new buttons.
+
+**Explicitly NOT done in this change:**
+- Persisting Google/Apple URLs on `app_users` (Google save URLs can expire; Apple path is reconstructible from serial).
+- Resend-welcome / “lost my pass” admin tool (can add later using stored serial → Apple download URL).
+- Changing join / create-main-pass identity or consent logic.
+
+**Smoke test before merge:** Join as a new user (or with marketing email consent) → open welcome email → Apple button hits same serial download; Google button present when WalletPush returned a save URL; re-add after delete should keep the same `wallet_pass_id` in dashboard links.
+
+---
+
 ## 📋 PLANNED — Consumer App Shell (bottom nav + darker UX) — Aug 14, 2026
 
 **Branch:** `feat/consumer-app-shell` (from clean `8dc7ce9b`)  

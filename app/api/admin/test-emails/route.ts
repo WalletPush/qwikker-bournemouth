@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
           chatUrl: `${dashboardUrl}/user/chat?wallet_pass_id=TEST-PASS-123`,
           offersUrl: `${dashboardUrl}/user/offers?wallet_pass_id=TEST-PASS-123`,
           supportEmail,
+          appleWalletUrl: 'https://example.com/api/apple-pass/TEST-PASS-123/download',
+          googleWalletUrl: 'https://pay.google.com/gp/v/save/TEST',
         }),
       },
       {

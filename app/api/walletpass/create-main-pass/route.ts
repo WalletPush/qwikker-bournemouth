@@ -234,6 +234,9 @@ export async function POST(request: NextRequest) {
             chatUrl,
             offersUrl,
             supportEmail,
+            // Same WalletPush serial just created — re-add after delete keeps progress.
+            appleWalletUrl: passUrl || null,
+            googleWalletUrl: googleWalletUrl || null,
           })
 
           sendFranchiseEmail({ city, to: email, template }).catch(err =>

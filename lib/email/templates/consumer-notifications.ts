@@ -40,11 +40,46 @@ export interface ConsumerWelcomeEmailData {
   chatUrl: string
   offersUrl: string
   supportEmail: string
+  /**
+   * Same WalletPush pass that was just created (Apple .pkpass / install URL).
+   * Re-opening this URL after deleting the pass re-adds the SAME serial —
+   * progress stays keyed to wallet_pass_id.
+   */
+  appleWalletUrl?: string | null
+  /** Google Wallet save URL for the same serial (when WalletPush returns one). */
+  googleWalletUrl?: string | null
 }
 
 export function createConsumerWelcomeEmail(data: ConsumerWelcomeEmailData): EmailTemplate {
   const cityDisplay = data.city.charAt(0).toUpperCase() + data.city.slice(1)
   const subject = `Welcome to QWIKKER ${cityDisplay}, ${data.firstName}`
+  const appleUrl = (data.appleWalletUrl || '').trim()
+  const googleUrl = (data.googleWalletUrl || '').trim()
+  const hasApple = appleUrl.length > 0
+  const hasGoogle = googleUrl.length > 0
+  const hasWalletCtas = hasApple || hasGoogle
+
+  const walletButtonsHtml = hasWalletCtas
+    ? `
+      <div style="margin:28px 0 8px;text-align:center;">
+        <p style="font-size:15px;font-weight:600;color:#ffffff;margin:0 0 14px;">Add your pass to Wallet</p>
+        <p style="font-size:13px;line-height:1.6;color:#999;margin:0 0 16px;max-width:420px;margin-left:auto;margin-right:auto;">
+          This is <strong style="color:#ccc;">your</strong> QWIKKER pass. If you delete it by mistake, tap the same button(s) below anytime to add it again — your progress stays with you.
+        </p>
+        <div style="margin:0 0 8px;">
+          ${
+            hasApple
+              ? `<a href="${appleUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:12px 22px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin:4px;">Add to Apple Wallet</a>`
+              : ''
+          }
+          ${
+            hasGoogle
+              ? `<a href="${googleUrl}" style="display:inline-block;background:#ffffff;color:#000000;padding:12px 22px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin:4px;border:1px solid #333;">Add to Google Wallet</a>`
+              : ''
+          }
+        </div>
+      </div>`
+    : ''
 
   const html = wrapInLayout(`
     <div style="padding:36px 30px;">
@@ -84,8 +119,10 @@ export function createConsumerWelcomeEmail(data: ConsumerWelcomeEmailData): Emai
         </table>
       </div>
 
+      ${walletButtonsHtml}
+
       <div style="margin:24px 0 8px;text-align:center;">
-        <a href="${data.dashboardUrl}" style="display:inline-block;background:#00d083;color:#000000;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">Open Your Dashboard</a>
+        <a href="${data.dashboardUrl}" style="display:inline-block;background:${hasWalletCtas ? 'transparent' : '#00d083'};color:${hasWalletCtas ? '#00d083' : '#000000'};padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;${hasWalletCtas ? 'border:1px solid #00d083;' : ''}">Open Your Dashboard</a>
       </div>
 
       <div style="margin:12px 0 24px;text-align:center;">
@@ -95,7 +132,7 @@ export function createConsumerWelcomeEmail(data: ConsumerWelcomeEmailData): Emai
       </div>
 
       <div style="background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;padding:18px;margin:0 0 24px;">
-        <p style="font-size:13px;font-weight:600;color:#ffffff;margin:0 0 10px;">Access your dashboard any time from your wallet pass:</p>
+        <p style="font-size:13px;font-weight:600;color:#ffffff;margin:0 0 10px;">Already have the pass installed?</p>
         <p style="font-size:13px;line-height:1.8;color:#999;margin:0 0 6px;"><strong style="color:#ccc;">iPhone:</strong> Open the Wallet app, tap your QWIKKER pass, then tap the info icon <span style="color:#ccc;">(i)</span> to view your personalized links.</p>
         <p style="font-size:13px;line-height:1.8;color:#999;margin:0;"><strong style="color:#ccc;">Android:</strong> Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalized links.</p>
       </div>
@@ -103,7 +140,11 @@ export function createConsumerWelcomeEmail(data: ConsumerWelcomeEmailData): Emai
       <p style="font-size:15px;line-height:1.7;color:#e0e0e0;margin:0;">Best,<br>The QWIKKER Team</p>
     </div>`, data.city)
 
-  const text = `Welcome to QWIKKER ${cityDisplay}, ${data.firstName}\n\nYour pass is set up. Here's what you've unlocked:\n\n- AI Companion: Ask for recommendations and discover hidden gems\n- Exclusive Offers: Deals from local businesses\n- Secret Menus: Off-menu items only QWIKKER members can access\n- Loyalty Rewards: Earn points at your favourite spots\n\nDashboard: ${data.dashboardUrl}\nAI Chat: ${data.chatUrl}\nOffers: ${data.offersUrl}\n\nAccess your dashboard any time from your wallet pass:\n- iPhone: Open the Wallet app, tap your QWIKKER pass, then tap the info icon (i) to view your personalized links.\n- Android: Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalized links.\n\nBest,\nThe QWIKKER Team`
+  const walletTextBlock = hasWalletCtas
+    ? `\nAdd your pass to Wallet (same pass if you re-add later — your progress stays):\n${hasApple ? `Apple Wallet: ${appleUrl}\n` : ''}${hasGoogle ? `Google Wallet: ${googleUrl}\n` : ''}\n`
+    : ''
+
+  const text = `Welcome to QWIKKER ${cityDisplay}, ${data.firstName}\n\nYour pass is set up. Here's what you've unlocked:\n\n- AI Companion: Ask for recommendations and discover hidden gems\n- Exclusive Offers: Deals from local businesses\n- Secret Menus: Off-menu items only QWIKKER members can access\n- Loyalty Rewards: Earn points at your favourite spots\n${walletTextBlock}\nDashboard: ${data.dashboardUrl}\nAI Chat: ${data.chatUrl}\nOffers: ${data.offersUrl}\n\nAlready have the pass installed?\n- iPhone: Open the Wallet app, tap your QWIKKER pass, then tap the info icon (i) to view your personalized links.\n- Android: Open Google Wallet, tap your QWIKKER pass, then tap the three-dot menu to view your personalized links.\n\nBest,\nThe QWIKKER Team`
 
   return { subject, html, text }
 }
