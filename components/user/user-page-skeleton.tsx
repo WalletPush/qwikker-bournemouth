@@ -39,7 +39,7 @@ export function UserPageSkeleton({
             <div className="h-20 w-4/5 rounded-2xl bg-zinc-900 border border-zinc-800" />
             <div className="ml-auto h-10 w-2/3 rounded-2xl bg-zinc-800" />
             <div className="h-16 w-3/4 rounded-2xl bg-zinc-900 border border-zinc-800" />
-            <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] inset-x-0 px-4 lg:hidden">
+            <div className="fixed user-bottom-nav-offset inset-x-0 px-4 lg:hidden">
               <div className="mx-auto max-w-lg h-12 rounded-full bg-zinc-900 border border-zinc-800" />
             </div>
           </div>

@@ -336,9 +336,7 @@ export function UserDashboardLayout({
               </div>
             </header>
 
-            <main
-              className={`flex-1 p-4 sm:p-6 ${USER_BOTTOM_NAV_HEIGHT_CLASS} lg:pb-6`}
-            >
+            <main className={`flex-1 p-4 sm:p-6 ${USER_BOTTOM_NAV_HEIGHT_CLASS}`}>
               {children}
             </main>
           </div>

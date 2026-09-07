@@ -75,9 +75,11 @@ export const BOTTOM_TABS: BottomTabItem[] = [
   },
 ]
 
-/** Height reserved above the home indicator for layout padding (matches bar). */
-export const USER_BOTTOM_NAV_HEIGHT_CLASS =
-  'pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'
+/**
+ * Height reserved for the fixed bottom tab bar (see `.user-bottom-nav-pad` in globals.css).
+ * Use the CSS class — Tailwind arbitrary `env(...,0px)` values often fail to compile.
+ */
+export const USER_BOTTOM_NAV_HEIGHT_CLASS = 'user-bottom-nav-pad'
 
 interface UserBottomNavProps {
   currentSection: string
