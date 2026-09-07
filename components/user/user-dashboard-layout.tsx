@@ -5,7 +5,6 @@ import { getClientCityFallback, getCityDisplayName as getClientCityDisplayName }
 import { NavPendingProvider, PendingLink } from '@/components/ui/nav-pending'
 import {
   UserBottomNav,
-  USER_BOTTOM_NAV_HEIGHT_CLASS,
 } from '@/components/user/user-bottom-nav'
 import { withWalletPassId } from '@/lib/utils/with-wallet-pass'
 
@@ -336,8 +335,14 @@ export function UserDashboardLayout({
               </div>
             </header>
 
-            <main className={`flex-1 p-4 sm:p-6 ${USER_BOTTOM_NAV_HEIGHT_CLASS}`}>
+            {/*
+              Clearance for fixed bottom tabs must be a real block (spacer), not only
+              padding: Tailwind `p-*` can override pb, and iOS rubber-band makes it look
+              like “nav disappeared” while normal max-scroll still clips the last card.
+            */}
+            <main className="flex-1 pt-4 px-4 pb-4 sm:pt-6 sm:px-6 lg:pb-6">
               {children}
+              <div className="user-bottom-nav-spacer" aria-hidden="true" />
             </main>
           </div>
 

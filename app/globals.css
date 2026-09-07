@@ -43,26 +43,39 @@ html:has(.partners-root) body {
 }
 
 /*
-  Space for the fixed mobile bottom tab bar (~52px tabs + padding + home indicator).
-  Do NOT use Tailwind arbitrary pb-[calc(...env(...,0px))] — commas inside env()
-  break class generation, so content scrolled under the nav with only p-4 clearance.
+  Space for the fixed mobile bottom tab bar (~52px tabs + chrome + home indicator).
+  Important: do not pair this with Tailwind `p-*` shorthand on the same node —
+  that resets padding-bottom and fights this rule depending on cascade/layers.
 */
 .user-bottom-nav-pad {
-  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* Offset for UI that sits just above the fixed bottom tab bar (e.g. chat composer skeleton). */
 .user-bottom-nav-offset {
-  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Hard scroll spacer — height always contributes to document scroll (padding can lose). */
+.user-bottom-nav-spacer {
+  display: block;
+  width: 100%;
+  height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 @media (min-width: 1024px) {
   .user-bottom-nav-pad {
-    padding-bottom: 1.5rem;
+    padding-bottom: 1.5rem !important;
   }
 
   .user-bottom-nav-offset {
     bottom: 1.5rem;
+  }
+
+  .user-bottom-nav-spacer {
+    display: none;
   }
 }
 

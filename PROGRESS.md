@@ -13,7 +13,7 @@
 | # | Item | Status |
 |---|---|---|
 | 1 | User welcome email: Apple/Google Wallet re-add links (same serial) | **DONE** — founder smoke-tested OK (Sep 7) |
-| 1b | Mobile: last Discover/list card clipped under bottom nav | **DONE (code)** — Tailwind `pb-[calc(...env(...,0px))]` never compiled; switched to `.user-bottom-nav-pad` in globals.css |
+| 1b | Mobile: last Discover/list card clipped under bottom nav | **DONE (code v2)** — `p-4` was overriding pad; added spacer + !important pad; push `main` again |
 | 2 | Opening hours: morning + afternoon (two ranges/day) | pending |
 | 3 | Logo/photo upload confirmation + less spammy approval emails | pending |
 | 4 | Featured/Highlights/offers photos in editor + profile | pending |
