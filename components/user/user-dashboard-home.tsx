@@ -15,7 +15,9 @@ import type {
   RewardCard,
   SecretTeaserItem,
   TonightLabel,
+  HomeWeatherMeta,
 } from '@/lib/home-feed/types'
+import { WeatherIcon } from '@/components/ui/weather-icon'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS, type StampIconKey } from '@/lib/loyalty/loyalty-utils'
 import { WalletInstallBanner } from '@/components/wallet/wallet-install-banner'
@@ -337,6 +339,7 @@ export function UserDashboardHome({ feed: initialFeed, walletPassId, currentCity
         userName={userName}
         greeting={displayGreeting}
         greetingSubtitle={meta.greetingSubtitle}
+        weather={meta.weather}
         fancyPrompt={fancyPrompt}
         searchValue={searchValue}
         setSearchValue={setSearchValue}
@@ -455,6 +458,7 @@ function HeroSection({
   userName,
   greeting,
   greetingSubtitle,
+  weather,
   fancyPrompt,
   searchValue,
   setSearchValue,
@@ -467,6 +471,7 @@ function HeroSection({
   userName: string
   greeting: string
   greetingSubtitle?: string
+  weather?: HomeWeatherMeta | null
   fancyPrompt: string
   searchValue: string
   setSearchValue: (v: string) => void
@@ -477,9 +482,20 @@ function HeroSection({
   getNavUrl: (href: string) => string
 }) {
   return (
-    <div className="bg-zinc-950 border border-[#00d083]/25 rounded-2xl p-6 sm:p-8 space-y-5">
+    <div className="relative bg-zinc-950 border border-[#00d083]/25 rounded-2xl p-6 sm:p-8 space-y-5">
+      {weather && (
+        <div
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 inline-flex items-center gap-1.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 text-zinc-100"
+          title={`${weather.label} in this city`}
+        >
+          <WeatherIcon iconKey={weather.iconKey} className="h-4 w-4 text-[#00d083]" />
+          <span className="text-sm font-medium tabular-nums">{weather.tempDisplay}°</span>
+          <span className="hidden sm:inline text-xs text-zinc-400">{weather.label}</span>
+        </div>
+      )}
+
       <div className="text-center space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white pr-14 sm:pr-24">
           {greeting}
         </h1>
         <p className="text-base sm:text-lg text-zinc-300 max-w-2xl mx-auto">

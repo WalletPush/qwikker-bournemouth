@@ -5,20 +5,26 @@ import { BusinessCardImage } from '@/components/ui/business-card-image'
 import type { BusinessCRMData } from '@/types/billing'
 import { getBusinessStatus, getFullWeeklyScheduleArray } from '@/lib/utils/business-hours-formatter'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
+import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
 
 interface CrmListingPreviewTabProps {
   business: BusinessCRMData
 }
 
+type ListingBusiness = BusinessCRMData & {
+  business_description?: string | null
+  business_tagline?: string | null
+  booking_preference?: string | null
+  booking_url?: string | null
+  email?: string | null
+}
+
 /**
- * Read-only full listing preview inside Manage — hours, offers, images, contact.
- * Complements the page-level User View cards which are intentionally lighter.
+ * Read-only public listing preview inside Manage —
+ * same customer-facing content as the live page (hero, CTAs, hours, offers, etc.).
  */
 export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
-  const record = business as BusinessCRMData & {
-    business_description?: string | null
-    business_tagline?: string | null
-  }
+  const record = business as ListingBusiness
 
   const images = (business.business_images || []).filter(Boolean)
   const offers = (business.business_offers || []).filter(
@@ -30,10 +36,12 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
     business.business_hours_structured
   )
   const systemCategory = resolveSystemCategory(business)
+  const itemLabels = getFeaturedItemsLabels(systemCategory)
   const secretItems = (business.secret_menu_items || []).filter(
     (i) => !i.status || i.status === 'approved'
   )
   const menus = business.business_menus || []
+  const menuPreview = (business.menu_preview || []).filter((i) => i.name?.trim())
   const description = record.business_description?.trim()
   const tagline = record.business_tagline?.trim()
   const category =
@@ -43,20 +51,33 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
       ? business.google_primary_type.replace(/_/g, ' ')
       : null)
 
+  const vibeTags = (() => {
+    const vt = business.vibe_tags
+    if (!vt) return []
+    return [...(vt.selected || []), ...(vt.custom || [])].filter(Boolean)
+  })()
+
+  const pref = record.booking_preference
+  const showBookUrl = pref === 'url' && Boolean(record.booking_url)
+  const showBookPhone = pref === 'phone' && Boolean(business.phone)
+  const showBookEmail = pref === 'phone' && Boolean(record.email)
+  const hasBookingCtas = showBookUrl || showBookPhone || showBookEmail
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       <p className="text-sm text-slate-400">
-        What customers see on the listing — photos, hours, offers, and contact. Edit elsewhere in Manage.
+        Full public listing preview — scroll for hours, offers, featured items, and contact.
+        Edit elsewhere in Manage.
       </p>
 
-      {/* Hero */}
+      {/* Hero — compact so the rest of the public listing stays visible */}
       <div className="overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/60">
-        <div className="relative h-52 sm:h-64 bg-slate-800">
+        <div className="relative h-40 sm:h-48 w-full bg-slate-800">
           {images.length > 0 ? (
             <ImageCarousel
               images={images}
               alt={business.business_name}
-              className="h-full w-full"
+              className="absolute inset-0 h-full w-full"
               showArrows={images.length > 1}
               showDots={images.length > 1}
             />
@@ -68,8 +89,13 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
               placeholderVariant={business.placeholder_variant}
               customPlaceholderUrl={business.placeholder_custom_url}
               showUnclaimedBadge={business.status === 'unclaimed'}
-              className="h-full w-full"
+              className="absolute inset-0 h-full w-full"
             />
+          )}
+          {offers.length > 0 && (
+            <span className="absolute top-3 left-3 z-10 rounded-full bg-slate-900/80 px-2.5 py-1 text-xs font-medium text-white border border-slate-600/50">
+              {offers.length} {offers.length === 1 ? 'Offer' : 'Offers'}
+            </span>
           )}
         </div>
         <div className="space-y-2 border-t border-slate-700/50 px-4 py-4 sm:px-5">
@@ -93,6 +119,35 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
         </div>
       </div>
 
+      {/* Booking CTAs — same rules as live listing */}
+      {hasBookingCtas && (
+        <section className="space-y-2">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Booking
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {showBookUrl && (
+              <span className="rounded-md bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/40 px-3 py-1.5 text-sm font-medium text-[#00d083]">
+                Book Now
+              </span>
+            )}
+            {showBookPhone && (
+              <span className="rounded-md bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/40 px-3 py-1.5 text-sm font-medium text-[#00d083]">
+                Book by Phone
+              </span>
+            )}
+            {showBookEmail && (
+              <span className="rounded-md bg-gradient-to-r from-[#00d083]/20 to-[#00b86f]/20 border border-[#00d083]/40 px-3 py-1.5 text-sm font-medium text-[#00d083]">
+                Book by Email
+              </span>
+            )}
+          </div>
+          {showBookUrl && record.booking_url && (
+            <p className="truncate text-xs text-slate-500">{record.booking_url}</p>
+          )}
+        </section>
+      )}
+
       {/* About */}
       <section className="space-y-2">
         <h4 className="text-xs font-medium uppercase tracking-wide text-slate-500">About</h4>
@@ -101,6 +156,18 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
             <span className="italic text-slate-500">No description yet.</span>
           )}
         </p>
+        {vibeTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {vibeTags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-slate-600/50 bg-slate-800/60 px-2.5 py-0.5 text-xs text-slate-300"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Hours */}
@@ -156,10 +223,14 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
             <dd className="text-slate-200">{business.phone || '—'}</dd>
           </div>
           <div>
+            <dt className="text-slate-500">Email</dt>
+            <dd className="truncate text-slate-200">{record.email || '—'}</dd>
+          </div>
+          <div>
             <dt className="text-slate-500">Website</dt>
             <dd className="truncate text-slate-200">{business.website_url || '—'}</dd>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <dt className="text-slate-500">Social</dt>
             <dd className="text-slate-200">
               {[
@@ -226,36 +297,34 @@ export function CrmListingPreviewTab({ business }: CrmListingPreviewTabProps) {
       </section>
 
       {/* Featured / menu preview */}
-      {(business.menu_preview || []).filter((i) => i.name?.trim()).length > 0 && (
+      {menuPreview.length > 0 && (
         <section className="space-y-3">
           <h4 className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Featured items
+            {itemLabels.sectionTitle}
           </h4>
           <ul className="grid gap-2 sm:grid-cols-2">
-            {(business.menu_preview || [])
-              .filter((i) => i.name?.trim())
-              .map((item, idx) => (
-                <li
-                  key={`${item.name}-${idx}`}
-                  className="flex gap-3 rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2"
-                >
-                  {item.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.image_url}
-                      alt=""
-                      className="h-12 w-12 shrink-0 rounded-md object-cover"
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white">{item.name}</p>
-                    {item.price && <p className="text-xs text-[#00d083]">{item.price}</p>}
-                    {item.description && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{item.description}</p>
-                    )}
-                  </div>
-                </li>
-              ))}
+            {menuPreview.map((item, idx) => (
+              <li
+                key={`${item.name}-${idx}`}
+                className="flex gap-3 rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2"
+              >
+                {item.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.image_url}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-md object-cover"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white">{item.name}</p>
+                  {item.price && <p className="text-xs text-[#00d083]">{item.price}</p>}
+                  {item.description && (
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{item.description}</p>
+                  )}
+                </div>
+              </li>
+            ))}
           </ul>
         </section>
       )}

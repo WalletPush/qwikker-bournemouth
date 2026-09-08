@@ -343,8 +343,17 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
   }, [messages.length]) // Changed from [messages] to [messages.length]
 
   // Generate a welcome message (not persisted — client-side only)
-  const buildWelcomeMessage = (): ChatMessage => {
+  const buildWelcomeMessage = (weatherLine?: string | null): ChatMessage => {
     const userName = currentUser?.name?.split(' ')[0] || null
+    if (weatherLine) {
+      return {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `${weatherLine} What are you in the mood for?`,
+        timestamp: new Date().toISOString(),
+        quickReplies: ["Show me Qwikker Picks", "Find restaurants", "Current deals"],
+      }
+    }
     const greetings = userName ? [
       `Hey ${userName}! Looking for something tasty in ${cityDisplayName}? I've got the inside scoop on great restaurants, exclusive offers, and secret menus!`,
       `${userName}! Ready to discover ${cityDisplayName}'s best spots? I can show you top-rated restaurants, unbeatable deals, and hidden gems!`,
@@ -367,15 +376,42 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
     }
   }
 
+  const fetchWeatherWelcomeLine = async (): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/weather/current')
+      if (!res.ok) return null
+      const data = await res.json()
+      const userName = currentUser?.name?.split(' ')[0] || null
+      if (data?.weather && data.welcomeLine) {
+        // Personalise the API's anonymous welcome line when we know the name
+        if (userName && typeof data.welcomeLine === 'string') {
+          return data.welcomeLine.replace(/^Hey\b/, `Hey ${userName}`)
+        }
+        return data.welcomeLine as string
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   // Load chat history from API (persisted) or show fresh welcome message
   useEffect(() => {
     const walletPassId = currentUser?.wallet_pass_id
     if (!walletPassId) {
-      // Guest — show welcome message, no persistence
-      const welcome = buildWelcomeMessage()
-      setMessages([welcome])
-      initialMessageCountRef.current = 1
-      return
+      // Guest — show weather-aware welcome when possible
+      let cancelled = false
+      ;(async () => {
+        const weatherLine = await fetchWeatherWelcomeLine()
+        if (cancelled) return
+        const welcome = buildWelcomeMessage(weatherLine)
+        setMessages([welcome])
+        initialMessageCountRef.current = 1
+        setStreamingComplete(new Set([welcome.id]))
+      })()
+      return () => {
+        cancelled = true
+      }
     }
 
     let cancelled = false
@@ -404,27 +440,34 @@ export function UserChatPage({ currentUser, currentCity, cityDisplayName = 'Bour
           )
           setMessages(restored)
           initialMessageCountRef.current = restored.length
-          // History messages skip streaming — mark complete so offer cards/chips show
           setStreamingComplete(new Set(restored.map((m: ChatMessage) => m.id)))
-        } else {
-          const welcome = buildWelcomeMessage()
-          setMessages([welcome])
-          initialMessageCountRef.current = 1
-          setStreamingComplete(new Set([welcome.id]))
+          return
         }
+
+        const weatherLine = await fetchWeatherWelcomeLine()
+        if (cancelled) return
+        const welcome = buildWelcomeMessage(weatherLine)
+        setMessages([welcome])
+        initialMessageCountRef.current = 1
+        setStreamingComplete(new Set([welcome.id]))
       } catch (err) {
         console.error('[chat-history] Failed to load — starting fresh:', err)
-        if (!cancelled) {
-          const welcome = buildWelcomeMessage()
-          setMessages([welcome])
-          initialMessageCountRef.current = 1
-        }
+        if (cancelled) return
+        const weatherLine = await fetchWeatherWelcomeLine()
+        if (cancelled) return
+        const welcome = buildWelcomeMessage(weatherLine)
+        setMessages([welcome])
+        initialMessageCountRef.current = 1
+        setStreamingComplete(new Set([welcome.id]))
       }
     }
 
-    loadHistory()
-    return () => { cancelled = true }
-  }, [currentUser?.wallet_pass_id])
+    void loadHistory()
+    return () => {
+      cancelled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.wallet_pass_id, cityDisplayName])
 
   // Handle pre-filled message from URL parameter
   useEffect(() => {

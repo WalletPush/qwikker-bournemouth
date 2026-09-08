@@ -25,6 +25,8 @@ import {
   haversineDistanceMiles,
 } from './ranking'
 import { CATEGORY_MAP, normalize } from '@/lib/constants/user-preferences'
+import { getCityWeather } from '@/lib/weather/get-city-weather'
+import { weatherAwareSubtitle } from '@/lib/weather/copy'
 import type {
   HomeFeedResponse,
   TonightCard,
@@ -38,6 +40,7 @@ import type {
   MenuPreviewItem,
   UserFeedProfile,
   LoyaltyStatus,
+  HomeWeatherMeta,
 } from './types'
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -91,12 +94,13 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   }
 
   // Parallel data fetching
-  const [businessesResult, offersResult, eventsResult, loyaltyResult, interactionsResult] = await Promise.all([
+  const [businessesResult, offersResult, eventsResult, loyaltyResult, interactionsResult, weather] = await Promise.all([
     fetchBusinesses(supabase, city),
     fetchOffers(supabase, city),
     fetchTonightEvents(supabase, city),
     walletPassId ? fetchLoyaltyMemberships(walletPassId) : Promise.resolve([]),
     walletPassId ? fetchUserInteractions(supabase, walletPassId) : Promise.resolve(null),
+    getCityWeather(city),
   ])
 
   const businesses = businessesResult
@@ -109,6 +113,7 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
   if (isDev) {
     console.log(`[home-feed] ${businesses.length} businesses, ${offers.length} offers, ${events.length} events`)
     console.log(`[home-feed] Premium count: ${premiumCount}, hybrid mode: ${hybridMode}`)
+    if (weather) console.log(`[home-feed] Weather: ${weather.tempDisplay}° ${weather.label}`)
   }
 
   // Build user profile for personalization
@@ -116,7 +121,17 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
     ? await fetchUserProfile(supabase, walletPassId)
     : { firstName: null, preferredCategories: [], dietaryRestrictions: [] }
   const greeting = getGreeting(timeOfDay, userProfile.firstName || 'there', cityDisplayName)
-  const greetingSubtitle = getGreetingSubtitle(timeOfDay, cityDisplayName)
+  const baseSubtitle = getGreetingSubtitle(timeOfDay, cityDisplayName)
+  const weatherMeta: HomeWeatherMeta | null = weather
+    ? {
+        tempDisplay: weather.tempDisplay,
+        label: weather.label,
+        feelPhrase: weather.feelPhrase,
+        iconKey: weather.iconKey,
+        isDay: weather.isDay,
+      }
+    : null
+  const greetingSubtitle = weatherAwareSubtitle(baseSubtitle, weatherMeta, cityDisplayName)
 
   // Build loyalty status map for cross-section boosting
   const loyaltyMap = buildLoyaltyStatusMap(loyaltyResult)
@@ -187,6 +202,7 @@ export async function buildHomeFeed(params: BuildFeedParams): Promise<HomeFeedRe
       greeting,
       greetingSubtitle,
       premiumCount,
+      weather: weatherMeta,
     },
     tonight,
     dishes,

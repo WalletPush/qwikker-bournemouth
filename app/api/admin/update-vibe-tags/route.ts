@@ -36,19 +36,30 @@ const bodySchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const adminId = cookieStore.get('admin_session')?.value
-    if (!adminId) {
+    const adminSessionCookie = cookieStore.get('qwikker_admin_session')
+    if (!adminSessionCookie?.value) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const admin = await getAdminById(adminId)
+    let adminSession: { adminId?: string }
+    try {
+      adminSession = JSON.parse(adminSessionCookie.value)
+    } catch {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!adminSession.adminId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const admin = await getAdminById(adminSession.adminId)
     if (!admin) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const hostname = request.headers.get('host') || ''
-    const city = getCityFromHostname(hostname)
-    if (!isAdminForCity(admin, city)) {
+    const city = await getCityFromHostname(hostname)
+    if (!(await isAdminForCity(adminSession.adminId, city))) {
       return NextResponse.json({ success: false, error: 'Forbidden for this city' }, { status: 403 })
     }
 

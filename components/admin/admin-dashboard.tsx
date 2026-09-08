@@ -690,25 +690,76 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
     return `${day}/${month}/${year}, ${hours}:${minutes}`
   }
 
-  // Maps a CRM record (or legacy Business) to the shape BusinessCard expects
+  // Maps a CRM record (or legacy Business) to the shape BusinessCard + AdminBusinessPreview expect
   const toUserCardProps = (business: any) => {
     const crm = crmData.find(c => c.id === business.id)
     const src = crm || business
+    const now = new Date()
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
     const offers = (src.business_offers || [])
-      .filter((o: any) => o.status === 'approved')
+      .filter((o: any) => {
+        if (o.status !== 'approved') return false
+        if (o.offer_end_date && new Date(o.offer_end_date) < todayStart) return false
+        if (o.offer_start_date && new Date(o.offer_start_date) > now) return false
+        return true
+      })
       .map((o: any) => ({
         id: o.id,
         title: o.offer_name,
         type: o.offer_type,
         value: o.offer_value,
-        image: o.offer_image,
+        terms: o.offer_terms || null,
+        description: o.offer_description || null,
+        image: o.offer_image || src.business_images?.[0] || null,
+        hasDedicatedImage: Boolean(o.offer_image),
+        validUntil: o.offer_end_date || null,
       }))
 
-    const slug = (src.business_name || '')
-      .toLowerCase()
-      .replace(/['']/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || src.id
+    const slug =
+      src.slug ||
+      (src.business_name || '')
+        .toLowerCase()
+        .replace(/['']/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') ||
+      src.id
+
+    // Secret menu: CRM array, or legacy additional_notes JSON
+    let secretMenuItems: Array<{
+      name: string
+      description?: string
+      price?: string
+      image_url?: string
+    }> = []
+    if (Array.isArray(src.secret_menu_items) && src.secret_menu_items.length > 0) {
+      secretMenuItems = src.secret_menu_items
+        .filter((i: any) => !i.status || i.status === 'approved')
+        .map((i: any) => ({
+          name: i.itemName || i.name || 'Secret item',
+          description: i.description,
+          price: i.price,
+          image_url: i.image_url,
+        }))
+    } else if (src.additional_notes) {
+      try {
+        const notes = JSON.parse(src.additional_notes)
+        if (Array.isArray(notes.secret_menu_items)) {
+          secretMenuItems = notes.secret_menu_items.map((i: any) => ({
+            name: i.itemName || i.name || 'Secret item',
+            description: i.description,
+            price: i.price,
+            image_url: i.image_url,
+          }))
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const menuPreview = Array.isArray(src.menu_preview)
+      ? src.menu_preview.filter((i: any) => i?.name?.trim())
+      : []
 
     return {
       id: src.id,
@@ -717,13 +768,16 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       system_category: src.system_category,
       display_category: src.display_category,
       google_primary_type: src.google_primary_type,
+      google_types: src.google_types,
       business_category: src.business_category,
       location: src.business_town,
       address: src.business_address,
       town: src.business_town,
+      postcode: src.business_postcode || '',
       tagline: src.business_tagline || '',
       description: src.business_description || '',
       phone: src.phone || '',
+      email: src.email || '',
       hours: src.business_hours || '',
       business_hours_structured: src.business_hours_structured || null,
       images: src.business_images && src.business_images.length > 0
@@ -733,6 +787,13 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       logo: src.logo || '/placeholder-logo.jpg',
       slug,
       offers,
+      menuPreview,
+      secretMenuItems,
+      vibe_tags: src.vibe_tags || null,
+      booking_preference: src.booking_preference || null,
+      booking_url: src.booking_url || null,
+      instagram_handle: src.instagram_handle || null,
+      facebook_url: src.facebook_url || null,
       plan: (src.status === 'unclaimed' || src.status === 'claimed_free')
         ? null
         : (src.plan || crm?.tier || 'starter'),
@@ -744,8 +805,9 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
         src.business_town,
       ].filter(Boolean),
       activeOffers: offers.length,
-      hasSecretMenu: Array.isArray(src.secret_menu_items) && src.secret_menu_items.length > 0,
+      hasSecretMenu: secretMenuItems.length > 0,
       hasLoyalty: src.loyalty_program_status === 'active',
+      loyaltyMemberCount: src.loyalty_member_count ?? null,
       tier: (src.status === 'unclaimed' || src.status === 'claimed_free')
         ? null
         : src.plan === 'spotlight'
@@ -756,6 +818,8 @@ export function AdminDashboard({ businesses, crmData, adminEmail, city, cityDisp
       website: src.website_url || src.website || null,
       status: src.status,
       google_place_id: src.google_place_id,
+      latitude: src.latitude ?? null,
+      longitude: src.longitude ?? null,
       placeholder_variant: placeholderOverrides[src.id] ?? src.placeholder_variant,
       placeholder_custom_url: src.id in placeholderCustomOverrides
         ? placeholderCustomOverrides[src.id]

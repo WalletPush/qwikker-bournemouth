@@ -25,6 +25,7 @@ import { getBusinessVibeStats } from '@/lib/utils/vibes'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
 import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 import { logAIUsage } from './usage-tracker'
+import { getCityWeather } from '@/lib/weather/get-city-weather'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
@@ -863,13 +864,14 @@ function buildSystemPromptV2(args: {
   state: ConversationState
   atlasAvailable: boolean
   currentTime?: string
+  weatherContext?: string
   previousResponses?: string[]
   userName?: string
   userLoyaltySummary?: string
   eventContext?: string
   userProfileSection?: string
 }): string {
-  const { cityDisplayName, userMessage, isBroadQuery, availableTypes = [], stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, previousResponses, userName, userLoyaltySummary, eventContext, userProfileSection } = args
+  const { cityDisplayName, userMessage, isBroadQuery, availableTypes = [], stateContext, businessContext, cityContext, state, atlasAvailable, currentTime, weatherContext, previousResponses, userName, userLoyaltySummary, eventContext, userProfileSection } = args
 
   const convoFocus = state?.currentBusiness
     ? `FOCUS: You are currently discussing ${state.currentBusiness.name}. Stay on that unless the user asks to switch.`
@@ -878,6 +880,10 @@ function buildSystemPromptV2(args: {
   // Temporal context: current time for "open now" / "tonight" awareness
   const temporalBlock = currentTime
     ? `\nCURRENT TIME: ${currentTime}\nWhen listing results, mention open/closed status if hours are available. List open businesses first, but ALWAYS still include closed businesses — just note they are currently closed. Never skip a relevant business just because it is closed. If hours are missing, do not guess — just omit status. When a business is closed right now, don't lead with the negative — frame it positively: "worth checking out tomorrow" or "opens at 9am" rather than "however, they're closed today".\n`
+    : ''
+
+  const weatherBlock = weatherContext
+    ? `\nCURRENT WEATHER IN ${cityDisplayName.toUpperCase()}: ${weatherContext}\nYou MAY gently reference the weather when it helps (e.g. cosy indoor on a rainy night, getting out when it's sunny). Do NOT invent outdoor seating, rooftops, or activities unless they appear in AVAILABLE BUSINESSES / context. Prefer soft phrasing over hard promises.\n`
     : ''
 
   // Variety context: avoid repeating exact openers
@@ -915,7 +921,7 @@ PERSONALITY:
 - Be genuinely enthusiastic when the request is fun — bars, date nights, nightlife — match their energy
 - For practical queries (hours, directions, menus), be direct and efficient
 - Vary your openers — don't start every response the same way
-${temporalBlock}
+${temporalBlock}${weatherBlock}
 ⚠️  CRITICAL FORMATTING RULES ⚠️
 Every business in AVAILABLE BUSINESSES has internal tags: [SLUG: ...] and [TIER: ...].
 These tags are INTERNAL ONLY — NEVER copy [SLUG: ...] or [TIER: ...] into your reply.
@@ -2741,6 +2747,11 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
       weekday: 'long', hour: '2-digit', minute: '2-digit', 
       timeZone: 'Europe/London' 
     })
+
+    const weather = await getCityWeather(city)
+    const weatherContext = weather
+      ? `${weather.tempDisplay}°C, ${weather.label} (${weather.feelPhrase})`
+      : undefined
     
     // Extract last 2 AI responses for variety tracking
     const previousResponses = conversationHistory
@@ -2901,6 +2912,7 @@ Category: ${business.display_category || 'Not specified'}${vibeTagsLine}${hoursL
       state,
       atlasAvailable,
       currentTime,
+      weatherContext,
       previousResponses,
       userName,
       userLoyaltySummary,

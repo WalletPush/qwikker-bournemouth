@@ -20,6 +20,26 @@ export interface HomeFeedMeta {
   greeting: string
   greetingSubtitle: string
   premiumCount: number
+  /** Current city weather (null if API unavailable) */
+  weather: HomeWeatherMeta | null
+}
+
+export interface HomeWeatherMeta {
+  tempDisplay: number
+  label: string
+  feelPhrase: string
+  iconKey:
+    | 'clear'
+    | 'clear_night'
+    | 'partly_cloudy'
+    | 'partly_cloudy_night'
+    | 'cloudy'
+    | 'rain'
+    | 'drizzle'
+    | 'thunder'
+    | 'snow'
+    | 'fog'
+  isDay: boolean
 }
 
 export interface TonightCard {

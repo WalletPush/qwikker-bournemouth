@@ -74,7 +74,7 @@ export function ImageCarousel({
 
   if (images.length === 1) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 relative overflow-hidden">
+      <div className={`w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 relative overflow-hidden ${className}`}>
         {imageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-700">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-500 border-t-slate-300"></div>
@@ -126,7 +126,7 @@ export function ImageCarousel({
   }
 
   return (
-    <div className="relative group w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 overflow-hidden">
+    <div className={`relative group w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 overflow-hidden ${className}`}>
       {/* Loading State */}
       {imageLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-700 z-10">
