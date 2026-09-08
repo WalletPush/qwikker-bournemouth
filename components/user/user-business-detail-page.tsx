@@ -573,48 +573,82 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Book Now — only shown when business has configured a booking method */}
-        {business.booking_preference && business.booking_preference !== 'none' && (
-          <Button
-            className={`${TAP_FEEDBACK_CLASS} bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold`}
-            onClick={() => {
-              // Fire-and-forget booking click event
-              if (trackingData?.businessId) {
-                fetch('/api/user/track-click', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    businessId: trackingData.businessId,
-                    eventType: 'booking_click',
-                    walletPassId: walletPassId || trackingData.visitorWalletPassId || null,
-                  }),
-                }).catch(() => {/* non-critical, swallow silently */})
-              }
-              if (business.booking_preference === 'phone' && business.phone) {
-                window.location.href = `tel:${business.phone}`
-              } else if (business.booking_url) {
-                const url = business.booking_url.startsWith('http') ? business.booking_url : `https://${business.booking_url}`
-                window.open(url, '_blank', 'noopener,noreferrer')
-              }
-            }}
-          >
-            {business.booking_preference === 'phone' ? (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                Book by Phone
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Book Now
-              </>
-            )}
-          </Button>
-        )}
+        {/* Booking CTAs — url, and/or phone + email when "Phone or email" is selected */}
+        {(() => {
+          const pref = business.booking_preference
+          if (!pref || pref === 'none') return null
+
+          const trackBookingClick = () => {
+            if (!trackingData?.businessId) return
+            fetch('/api/user/track-click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                businessId: trackingData.businessId,
+                eventType: 'booking_click',
+                walletPassId: walletPassId || trackingData.visitorWalletPassId || null,
+              }),
+            }).catch(() => {/* non-critical */})
+          }
+
+          const showUrl = pref === 'url' && Boolean(business.booking_url)
+          // Preference value `phone` means "Phone or email" in merchant settings
+          const showPhone = pref === 'phone' && Boolean(business.phone)
+          const showEmail = pref === 'phone' && Boolean(business.email)
+
+          if (!showUrl && !showPhone && !showEmail) return null
+
+          return (
+            <>
+              {showUrl && (
+                <Button
+                  className={`${TAP_FEEDBACK_CLASS} bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold`}
+                  onClick={() => {
+                    trackBookingClick()
+                    const url = business.booking_url!.startsWith('http')
+                      ? business.booking_url!
+                      : `https://${business.booking_url}`
+                    window.open(url, '_blank', 'noopener,noreferrer')
+                  }}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Book Now
+                </Button>
+              )}
+              {showPhone && (
+                <Button
+                  className={`${TAP_FEEDBACK_CLASS} bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold`}
+                  onClick={() => {
+                    trackBookingClick()
+                    window.location.href = `tel:${business.phone}`
+                  }}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  Book by Phone
+                </Button>
+              )}
+              {showEmail && (
+                <Button
+                  className={`${TAP_FEEDBACK_CLASS} bg-gradient-to-r from-[#00d083] to-[#00b86f] hover:from-[#00b86f] hover:to-[#00a05c] text-black font-semibold`}
+                  onClick={() => {
+                    trackBookingClick()
+                    const subject = encodeURIComponent(`Booking enquiry — ${business.name}`)
+                    window.location.href = `mailto:${business.email}?subject=${subject}`
+                  }}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Book by Email
+                </Button>
+              )}
+            </>
+          )
+        })()}
 
         <Button 
           variant="outline" 
@@ -1063,12 +1097,42 @@ export function UserBusinessDetailPage({ slug, businesses = [], walletPassId, tr
           <div className="space-y-4">
             {businessOffers.length > 0 ? (
               businessOffers.map((offer) => (
-                <Card key={offer.id} className="bg-gradient-to-br from-orange-900/20 to-amber-900/20 border-orange-700/30">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-100 mb-2">{offer.title}</h3>
-                        <p className="text-slate-300 mb-3">{offer.description}</p>
+                <Card
+                  key={offer.id}
+                  className="overflow-hidden bg-gradient-to-br from-orange-900/20 to-amber-900/20 border-orange-700/30"
+                >
+                  {offer.image ? (
+                    <div className="relative h-40 w-full bg-slate-800 sm:h-48">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={offer.image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                      <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white">
+                        {offer.badge}
+                      </span>
+                    </div>
+                  ) : null}
+                  <CardContent className="p-5 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        {!offer.image ? (
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <h3 className="text-xl font-bold text-slate-100">{offer.title}</h3>
+                            <span className="shrink-0 rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white">
+                              {offer.badge}
+                            </span>
+                          </div>
+                        ) : (
+                          <h3 className="text-xl font-bold text-slate-100 mb-2">{offer.title}</h3>
+                        )}
+                        {offer.description ? (
+                          <p className="text-slate-300 mb-3">{offer.description}</p>
+                        ) : null}
                         <div className="space-y-2">
                           <p className="text-sm text-slate-400"><strong>Terms:</strong> {offer.terms}</p>
                           <p className="text-sm text-slate-400"><strong>Valid until:</strong> {offer.expiryDate}</p>
@@ -1394,13 +1458,30 @@ function OfferCard({ offer, isClaimed, onSave, onRedeem, chatHref }: {
   const hasDetails = offer.description || offer.terms
 
   return (
-    <div className="bg-slate-700/50 rounded-lg p-4">
-      {/* Header: title + badge */}
-      <div className="flex items-start justify-between mb-3">
-        <h4 className="text-slate-100 font-semibold flex-1 mr-3">{offer.title}</h4>
-        <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0">
-          {offer.badge}
-        </span>
+    <div className="bg-slate-700/50 rounded-lg overflow-hidden">
+      {offer.image ? (
+        <div className="relative h-28 w-full bg-slate-800">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={offer.image}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+          <span className="absolute right-2 top-2 rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+            {offer.badge}
+          </span>
+        </div>
+      ) : null}
+      <div className="p-4">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h4 className="text-slate-100 font-semibold">{offer.title}</h4>
+        {!offer.image ? (
+          <span className="bg-orange-500 text-slate-100 text-sm px-3 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0">
+            {offer.badge}
+          </span>
+        ) : null}
       </div>
 
       {/* Expandable details */}
@@ -1470,6 +1551,7 @@ function OfferCard({ offer, isClaimed, onSave, onRedeem, chatHref }: {
             Ask About Offer
           </Link>
         </Button>
+      </div>
       </div>
     </div>
   )

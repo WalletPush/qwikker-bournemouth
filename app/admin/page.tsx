@@ -83,6 +83,7 @@ export default async function AdminPage() {
       menu_url,
       business_images,
       menu_preview,
+      vibe_tags,
       additional_notes,
       admin_notes,
       rating,

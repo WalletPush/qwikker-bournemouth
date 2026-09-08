@@ -1,4 +1,7 @@
-import { getSystemCategoryFromDisplayLabel } from '@/lib/constants/system-categories'
+import {
+  getSystemCategoryFromDisplayLabel,
+  type SystemCategory,
+} from '@/lib/constants/system-categories'
 
 export interface VibeTag {
   slug: string
@@ -345,6 +348,9 @@ export const VIBE_TAG_GROUPS: Record<VibeGroup, VibeTagCategory[]> = {
         { slug: 'efficient', label: 'Efficient' },
         { slug: 'trustworthy', label: 'Trustworthy' },
         { slug: 'modern', label: 'Modern' },
+        { slug: 'local', label: 'Local' },
+        { slug: 'family-run', label: 'Family-Run' },
+        { slug: 'expert', label: 'Expert' },
       ],
     },
     {
@@ -352,10 +358,15 @@ export const VIBE_TAG_GROUPS: Record<VibeGroup, VibeTagCategory[]> = {
       label: 'Good for',
       tags: [
         { slug: 'quick-service', label: 'Quick Service' },
+        { slug: 'same-day', label: 'Same Day' },
         { slug: 'long-term', label: 'Long Term' },
         { slug: 'first-timers', label: 'First-Timers' },
         { slug: 'businesses', label: 'Businesses' },
         { slug: 'tourists', label: 'Tourists' },
+        { slug: 'families', label: 'Families' },
+        { slug: 'couples', label: 'Couples' },
+        { slug: 'groups', label: 'Groups' },
+        { slug: 'day-trips', label: 'Day Trips' },
       ],
     },
     {
@@ -367,9 +378,13 @@ export const VIBE_TAG_GROUPS: Record<VibeGroup, VibeTagCategory[]> = {
         { slug: 'online-booking', label: 'Online Booking' },
         { slug: 'home-visits', label: 'Home Visits' },
         { slug: 'free-quotes', label: 'Free Quotes' },
+        { slug: 'pickup-dropoff', label: 'Pickup / Drop-off' },
+        { slug: 'hotel-delivery', label: 'Hotel Delivery' },
+        { slug: 'english-spoken', label: 'English Spoken' },
         { slug: 'parking', label: 'Parking' },
         { slug: 'wheelchair-accessible', label: 'Wheelchair Accessible' },
         { slug: 'card-payments', label: 'Card Payments' },
+        { slug: 'insurance-included', label: 'Insurance Included' },
       ],
     },
   ],
@@ -463,15 +478,22 @@ const BUSINESS_TYPE_TO_VIBE_GROUP: Record<string, VibeGroup> = {
 
 /**
  * Resolve which vibe group applies to a business, from any of the category-ish
- * signals we might have. Tries (in order): system_category enum, legacy
- * business_type enum, then free-text category/type via display-label mapping.
+ * signals we might have.
+ *
+ * Order (dennis #5 / service-business fix):
+ * 1. legacy `business_type` dropdown (what the merchant just picked)
+ * 2. free-text `business_category` (often more specific: "Boat rental")
+ * 3. canonical `system_category` (imports / AI — used when type is blank)
+ *
+ * Preferring business_type over system_category stops stale import categories
+ * (e.g. restaurant) from forcing food vibes onto a Service Business.
  */
 export function resolveVibeGroup(input: {
   systemCategory?: string | null
   businessType?: string | null
   categoryText?: string | null
 }): VibeGroup {
-  const candidates = [input.systemCategory, input.businessType, input.categoryText]
+  const candidates = [input.businessType, input.categoryText, input.systemCategory]
   for (const raw of candidates) {
     if (!raw) continue
     const norm = raw.toLowerCase().trim()
@@ -486,23 +508,75 @@ export function resolveVibeGroup(input: {
   return 'default'
 }
 
+/** Map legacy profile BusinessType → canonical system_category (for save sync). */
+export function mapBusinessTypeToSystemCategory(
+  businessType: string | null | undefined
+): SystemCategory | null {
+  if (!businessType) return null
+  const mapped = BUSINESS_TYPE_TO_SYSTEM_CATEGORY[businessType.toLowerCase().trim()]
+  return mapped ?? null
+}
+
+const BUSINESS_TYPE_TO_SYSTEM_CATEGORY: Record<string, SystemCategory> = {
+  bar: 'bar',
+  cafe: 'cafe',
+  restaurant: 'restaurant',
+  salon: 'salon',
+  spa: 'wellness',
+  gym: 'fitness',
+  retail_shop: 'retail',
+  hotel: 'hotel',
+  service_business: 'professional',
+  other: 'other',
+}
+
 /**
- * Returns the vibe-tag sections relevant to a specific business type.
- * Pass any of system_category, business_type, or free-text categoryText.
+ * Returns vibe-tag sections for a business.
+ * `tagSetOverride` (from vibe_tags.tag_set) wins when set — picker-only swap;
+ * does not change business_type / system_category.
  */
 export function getVibeTagCategoriesForBusiness(input: {
   systemCategory?: string | null
   businessType?: string | null
   categoryText?: string | null
+  tagSetOverride?: VibeGroup | null
 }): VibeTagCategory[] {
+  if (input.tagSetOverride && isVibeGroup(input.tagSetOverride)) {
+    return VIBE_TAG_GROUPS[input.tagSetOverride]
+  }
   return VIBE_TAG_GROUPS[resolveVibeGroup(input)]
 }
+
+/** Suggested default tag set from business type/category (for the select). */
+export function suggestVibeGroup(input: {
+  systemCategory?: string | null
+  businessType?: string | null
+  categoryText?: string | null
+}): VibeGroup {
+  return resolveVibeGroup(input)
+}
+
+export function isVibeGroup(value: unknown): value is VibeGroup {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(VIBE_TAG_GROUPS, value)
+}
+
+export const VIBE_GROUP_OPTIONS: { value: VibeGroup; label: string }[] = [
+  { value: 'food', label: 'Food & drink' },
+  { value: 'beauty', label: 'Beauty & grooming' },
+  { value: 'wellness', label: 'Wellness & health' },
+  { value: 'fitness', label: 'Fitness & sports' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'accommodation', label: 'Hotels & stays' },
+  { value: 'venue', label: 'Venues, tours & activities' },
+  { value: 'services', label: 'Services & rentals' },
+  { value: 'default', label: 'General' },
+]
 
 // Legacy export: the original food/hospitality set (kept for backward compat).
 export const VIBE_TAG_CATEGORIES: VibeTagCategory[] = VIBE_TAG_GROUPS.food
 
 // Union of every tag across every group, de-duplicated by slug. Used for label
-// lookup + slug validation so any saved tag (from any group) always resolves.
+// lookup + slug validation so every saved slug (from any group) always resolves.
 export const ALL_VIBE_TAGS: VibeTag[] = (() => {
   const seen = new Map<string, VibeTag>()
   for (const group of Object.values(VIBE_TAG_GROUPS)) {
@@ -527,4 +601,9 @@ export function getVibeTagLabel(slug: string): string {
 export interface VibeTagsData {
   selected: string[]
   custom: string[]
+  /**
+   * Optional override for which vibe TAG SET the picker shows.
+   * Does NOT change business_type / system_category.
+   */
+  tag_set?: VibeGroup | null
 }

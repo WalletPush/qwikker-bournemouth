@@ -556,15 +556,9 @@ export async function POST(request: NextRequest) {
               city,
               dashboardUrl: `${baseUrl}/dashboard`
             })
-          } else if (change.change_type === 'logo' || change.change_type === 'business_images') {
-            template = createImageApprovalEmail({
-              firstName: biz.first_name || 'Business Owner',
-              businessName: biz.business_name || 'Your Business',
-              imageType: change.change_type === 'logo' ? 'logo' : 'business images',
-              city,
-              dashboardUrl: `${baseUrl}/dashboard`
-            })
           } else if (change.change_type === 'menu_url') {
+            // Logo / photo approvals: in-app notification only (no email — too noisy).
+            // Menu URL still gets a quiet approval email.
             template = createImageApprovalEmail({
               firstName: biz.first_name || 'Business Owner',
               businessName: biz.business_name || 'Your Business',
@@ -573,6 +567,7 @@ export async function POST(request: NextRequest) {
               dashboardUrl: `${baseUrl}/dashboard`
             })
           }
+          // logo + business_images: skip email; createBusinessNotification already covers Activity
 
           if (template) {
             const emailResult = await sendFranchiseEmail({ city, to: biz.email, template })

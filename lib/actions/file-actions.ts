@@ -178,8 +178,10 @@ export async function updateProfileFile(userId: string, fileType: 'logo' | 'menu
       data: changeRecord,
       message:
         fileType === 'business_images'
-          ? 'Uploaded successfully. This image is awaiting city-guide approval.'
-          : `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for admin approval. You will be notified once it is reviewed.`,
+          ? 'Photo submitted for review.'
+          : fileType === 'logo'
+            ? 'Logo submitted for review.'
+            : `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} submitted for review.`,
     }
 
   } else {

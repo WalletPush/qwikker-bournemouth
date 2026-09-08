@@ -12,8 +12,10 @@ import {
   DAYS_OF_WEEK,
   WEEKDAYS,
   convertFormDataToStructured,
-  convertStructuredToText 
+  convertStructuredToText,
+  normalizeStructuredHours,
 } from '@/types/business-hours'
+import { getDayPeriods, normalizeDayHours } from '@/lib/utils/hours-periods'
 
 interface BusinessHoursInputProps {
   value?: BusinessHoursStructured | null
@@ -42,53 +44,64 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
   // Initialize from existing value
   useEffect(() => {
     if (value && !value.needs_conversion && !isInitialized) {
-      // Try to detect pattern from structured data
-      const weekdayHours = WEEKDAYS.map(day => value[day])
-      const allWeekdaysSame = weekdayHours.every(h => 
-        h.open === weekdayHours[0].open && 
-        h.close === weekdayHours[0].close && 
-        h.closed === weekdayHours[0].closed
-      )
-      
+      const dayKey = (a: DayHours, b: DayHours) => {
+        const pa = getDayPeriods(a)
+        const pb = getDayPeriods(b)
+        return (
+          a.closed === b.closed &&
+          JSON.stringify(pa) === JSON.stringify(pb)
+        )
+      }
+
+      const weekdayHours = WEEKDAYS.map((day) => value[day])
+      const allWeekdaysSame = weekdayHours.every((h) => dayKey(h, weekdayHours[0]))
+
+      const periods0 = getDayPeriods(weekdayHours[0])
+      const satP = getDayPeriods(value.saturday)
+      const sunP = getDayPeriods(value.sunday)
+
       if (allWeekdaysSame) {
-        const weekendSame = value.saturday.open === value.sunday.open && 
-                           value.saturday.close === value.sunday.close &&
-                           value.saturday.closed === value.sunday.closed
-        
-        if (weekendSame && 
-            value.saturday.open === weekdayHours[0].open &&
-            value.saturday.close === weekdayHours[0].close &&
-            value.saturday.closed === weekdayHours[0].closed) {
+        const weekendSame = dayKey(value.saturday, value.sunday)
+
+        if (weekendSame && dayKey(value.saturday, weekdayHours[0])) {
           setPattern('weekdays_same')
           setFormData({
             pattern: 'weekdays_same',
-            weekdays_open: weekdayHours[0].open || '09:00',
-            weekdays_close: weekdayHours[0].close || '17:00',
-            weekdays_closed: weekdayHours[0].closed
+            weekdays_open: periods0[0]?.open || '09:00',
+            weekdays_close: periods0[0]?.close || '17:00',
+            weekdays_open_2: periods0[1]?.open,
+            weekdays_close_2: periods0[1]?.close,
+            weekdays_closed: weekdayHours[0].closed,
           })
         } else {
           setPattern('weekdays_weekend')
           setFormData({
             pattern: 'weekdays_weekend',
-            weekdays_open: weekdayHours[0].open || '09:00',
-            weekdays_close: weekdayHours[0].close || '17:00',
+            weekdays_open: periods0[0]?.open || '09:00',
+            weekdays_close: periods0[0]?.close || '17:00',
+            weekdays_open_2: periods0[1]?.open,
+            weekdays_close_2: periods0[1]?.close,
             weekdays_closed: weekdayHours[0].closed,
-            saturday_open: value.saturday.open || '10:00',
-            saturday_close: value.saturday.close || '16:00',
+            saturday_open: satP[0]?.open || '10:00',
+            saturday_close: satP[0]?.close || '16:00',
+            saturday_open_2: satP[1]?.open,
+            saturday_close_2: satP[1]?.close,
             saturday_closed: value.saturday.closed,
-            sunday_open: value.sunday.open || '10:00',
-            sunday_close: value.sunday.close || '16:00',
-            sunday_closed: value.sunday.closed
+            sunday_open: sunP[0]?.open || '10:00',
+            sunday_close: sunP[0]?.close || '16:00',
+            sunday_open_2: sunP[1]?.open,
+            sunday_close_2: sunP[1]?.close,
+            sunday_closed: value.sunday.closed,
           })
         }
       } else {
         setPattern('custom')
         setFormData({
           pattern: 'custom',
-          custom_hours: value
+          custom_hours: normalizeStructuredHours(value),
         })
       }
-      
+
       setIsInitialized(true)
     }
   }, [value, isInitialized])
@@ -149,6 +162,14 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
     }, 0)
   }
 
+  const handleFormPatch = (patch: Partial<BusinessHoursFormData>) => {
+    const newFormData = { ...formData, ...patch }
+    setFormData(newFormData)
+    setTimeout(() => {
+      onChange(convertFormDataToStructured(newFormData))
+    }, 0)
+  }
+
   const TimeDropdown = ({ value, onChange, disabled }: { 
     value: string | undefined, 
     onChange: (value: string) => void,
@@ -167,46 +188,200 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
     </select>
   )
 
-  const DayRow = ({ 
-    day, 
-    dayHours, 
-    onChange 
-  }: { 
-    day: string, 
-    dayHours: DayHours, 
-    onChange: (hours: DayHours) => void 
-  }) => (
-    <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:items-center py-3 border-b border-slate-700/50 last:border-b-0">
-      <Label className="text-white font-medium capitalize text-base">{day}</Label>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={dayHours.closed}
-          onChange={(e) => onChange({ ...dayHours, closed: e.target.checked })}
-          className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 rounded focus:ring-green-500 touch-manipulation"
-        />
-        <span className="text-sm text-slate-300">Closed</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:contents">
-        <div className="space-y-1">
-          <label className="text-xs text-slate-400 sm:hidden">Opens</label>
-          <TimeDropdown
-            value={dayHours.open || undefined}
-            onChange={(open) => onChange({ ...dayHours, open })}
-            disabled={dayHours.closed}
-          />
+  const updateDayHours = (dayHours: DayHours, patch: Partial<DayHours>): DayHours => {
+    return normalizeDayHours({ ...dayHours, ...patch }) as DayHours
+  }
+
+  const DayRow = ({
+    day,
+    dayHours,
+    onChange,
+  }: {
+    day: string
+    dayHours: DayHours
+    onChange: (hours: DayHours) => void
+  }) => {
+    const periods = getDayPeriods(dayHours)
+    const hasSecond = periods.length > 1
+
+    return (
+      <div className="space-y-3 py-3 border-b border-slate-700/50 last:border-b-0">
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:items-center">
+          <Label className="text-white font-medium capitalize text-base">{day}</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={dayHours.closed}
+              onChange={(e) =>
+                onChange(updateDayHours(dayHours, { closed: e.target.checked, periods: undefined }))
+              }
+              className="w-4 h-4 text-green-500 bg-slate-700 border-slate-600 rounded focus:ring-green-500 touch-manipulation"
+            />
+            <span className="text-sm text-slate-300">Closed</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 sm:hidden">Opens</label>
+              <TimeDropdown
+                value={dayHours.open || undefined}
+                onChange={(open) => {
+                  const nextPeriods = [...periods]
+                  if (nextPeriods[0]) nextPeriods[0] = { ...nextPeriods[0], open }
+                  else nextPeriods.push({ open, close: dayHours.close || '17:00' })
+                  onChange(
+                    updateDayHours(dayHours, {
+                      open,
+                      closed: false,
+                      periods: nextPeriods.length > 1 ? nextPeriods : undefined,
+                    })
+                  )
+                }}
+                disabled={dayHours.closed}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 sm:hidden">Closes</label>
+              <TimeDropdown
+                value={dayHours.close || undefined}
+                onChange={(close) => {
+                  const nextPeriods = [...periods]
+                  if (nextPeriods[0]) nextPeriods[0] = { ...nextPeriods[0], close }
+                  else nextPeriods.push({ open: dayHours.open || '09:00', close })
+                  onChange(
+                    updateDayHours(dayHours, {
+                      close,
+                      closed: false,
+                      periods: nextPeriods.length > 1 ? nextPeriods : undefined,
+                    })
+                  )
+                }}
+                disabled={dayHours.closed}
+              />
+            </div>
+          </div>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs text-slate-400 sm:hidden">Closes</label>
-          <TimeDropdown
-            value={dayHours.close || undefined}
-            onChange={(close) => onChange({ ...dayHours, close })}
-            disabled={dayHours.closed}
-          />
-        </div>
+
+        {!dayHours.closed && (
+          <div className="sm:pl-[25%] space-y-2">
+            {hasSecond ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-center">
+                <span className="text-xs text-slate-400 sm:col-span-2">Afternoon / evening session</span>
+                <TimeDropdown
+                  value={periods[1]?.open}
+                  onChange={(open) => {
+                    onChange(
+                      updateDayHours(dayHours, {
+                        periods: [
+                          { open: periods[0].open, close: periods[0].close },
+                          { open, close: periods[1]?.close || '22:00' },
+                        ],
+                      })
+                    )
+                  }}
+                />
+                <TimeDropdown
+                  value={periods[1]?.close}
+                  onChange={(close) => {
+                    onChange(
+                      updateDayHours(dayHours, {
+                        periods: [
+                          { open: periods[0].open, close: periods[0].close },
+                          { open: periods[1]?.open || '17:00', close },
+                        ],
+                      })
+                    )
+                  }}
+                />
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 hover:text-slate-200 underline sm:col-span-4 text-left"
+                  onClick={() =>
+                    onChange(
+                      updateDayHours(dayHours, {
+                        periods: undefined,
+                        open: periods[0].open,
+                        close: periods[0].close,
+                      })
+                    )
+                  }
+                >
+                  Remove second session
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={!dayHours.open || !dayHours.close}
+                className="text-xs text-[#00d083] hover:text-[#00b86f] disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() =>
+                  onChange(
+                    updateDayHours(dayHours, {
+                      periods: [
+                        { open: dayHours.open!, close: dayHours.close! },
+                        { open: '17:00', close: '22:00' },
+                      ],
+                    })
+                  )
+                }
+              >
+                + Add afternoon / evening session
+              </button>
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
+
+  const SecondSessionRow = ({
+    label,
+    open2,
+    close2,
+    disabled,
+    onOpen2,
+    onClose2,
+    onAdd,
+    onRemove,
+  }: {
+    label: string
+    open2?: string
+    close2?: string
+    disabled?: boolean
+    onOpen2: (v: string) => void
+    onClose2: (v: string) => void
+    onAdd: () => void
+    onRemove: () => void
+  }) => {
+    const hasSecond = Boolean(open2 && close2)
+    if (disabled) return null
+    return (
+      <div className="pl-4 space-y-2">
+        {hasSecond ? (
+          <div className="grid grid-cols-4 gap-4 items-center py-2 bg-slate-700/20 rounded px-4">
+            <span className="text-slate-400 text-sm">{label}</span>
+            <span className="text-xs text-slate-500">2nd session</span>
+            <TimeDropdown value={open2} onChange={onOpen2} />
+            <TimeDropdown value={close2} onChange={onClose2} />
+            <button
+              type="button"
+              className="col-span-4 text-left text-xs text-slate-400 hover:text-slate-200 underline"
+              onClick={onRemove}
+            >
+              Remove second session
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="text-xs text-[#00d083] hover:text-[#00b86f]"
+            onClick={onAdd}
+          >
+            + Add afternoon / evening session ({label})
+          </button>
+        )}
+      </div>
+    )
+  }
 
   const content = (
     <div className={`space-y-6 ${compact ? '' : ''}`}>
@@ -298,6 +473,20 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
                 disabled={formData.weekdays_closed}
               />
             </div>
+            <SecondSessionRow
+              label="All days"
+              open2={formData.weekdays_open_2}
+              close2={formData.weekdays_close_2}
+              disabled={formData.weekdays_closed}
+              onOpen2={(v) => handleFormChange('weekdays_open_2', v)}
+              onClose2={(v) => handleFormChange('weekdays_close_2', v)}
+              onAdd={() => {
+                handleFormPatch({ weekdays_open_2: '17:00', weekdays_close_2: '22:00' })
+              }}
+              onRemove={() => {
+                handleFormPatch({ weekdays_open_2: undefined, weekdays_close_2: undefined })
+              }}
+            />
           </div>
         )}
 
@@ -327,6 +516,20 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
                   disabled={formData.weekdays_closed}
                 />
               </div>
+              <SecondSessionRow
+                label="Weekdays"
+                open2={formData.weekdays_open_2}
+                close2={formData.weekdays_close_2}
+                disabled={formData.weekdays_closed}
+                onOpen2={(v) => handleFormChange('weekdays_open_2', v)}
+                onClose2={(v) => handleFormChange('weekdays_close_2', v)}
+                onAdd={() => {
+                  handleFormPatch({ weekdays_open_2: '17:00', weekdays_close_2: '22:00' })
+                }}
+                onRemove={() => {
+                  handleFormPatch({ weekdays_open_2: undefined, weekdays_close_2: undefined })
+                }}
+              />
             </div>
 
             <div className="space-y-2">
@@ -354,6 +557,20 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
                     disabled={formData.saturday_closed}
                   />
                 </div>
+                <SecondSessionRow
+                  label="Saturday"
+                  open2={formData.saturday_open_2}
+                  close2={formData.saturday_close_2}
+                  disabled={formData.saturday_closed}
+                  onOpen2={(v) => handleFormChange('saturday_open_2', v)}
+                  onClose2={(v) => handleFormChange('saturday_close_2', v)}
+                  onAdd={() => {
+                    handleFormPatch({ saturday_open_2: '17:00', saturday_close_2: '22:00' })
+                  }}
+                  onRemove={() => {
+                    handleFormPatch({ saturday_open_2: undefined, saturday_close_2: undefined })
+                  }}
+                />
 
                 <div className="grid grid-cols-4 gap-4 items-center py-2 bg-slate-700/30 rounded px-4">
                   <span className="text-slate-300">Sunday</span>
@@ -377,6 +594,20 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
                     disabled={formData.sunday_closed}
                   />
                 </div>
+                <SecondSessionRow
+                  label="Sunday"
+                  open2={formData.sunday_open_2}
+                  close2={formData.sunday_close_2}
+                  disabled={formData.sunday_closed}
+                  onOpen2={(v) => handleFormChange('sunday_open_2', v)}
+                  onClose2={(v) => handleFormChange('sunday_close_2', v)}
+                  onAdd={() => {
+                    handleFormPatch({ sunday_open_2: '17:00', sunday_close_2: '22:00' })
+                  }}
+                  onRemove={() => {
+                    handleFormPatch({ sunday_open_2: undefined, sunday_close_2: undefined })
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -396,7 +627,7 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
                   <DayRow
                     key={day}
                     day={day}
-                    dayHours={formData.custom_hours[day]}
+                    dayHours={formData.custom_hours![day]}
                     onChange={(hours) => {
                       const newCustomHours = { 
                         ...formData.custom_hours!, 
@@ -448,7 +679,7 @@ export function BusinessHoursInput({ value, onChange, onSave, isSaving, classNam
       <CardHeader>
         <CardTitle className="text-white">Business Hours</CardTitle>
         <p className="text-sm text-slate-400">
-          Set your opening hours. This structured format helps customers and AI understand when you're open.
+          Set your opening hours. Use “Add afternoon / evening session” for lunch + dinner split days. Existing single-range hours keep working as before.
         </p>
       </CardHeader>
       <CardContent>{content}</CardContent>

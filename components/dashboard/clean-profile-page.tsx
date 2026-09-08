@@ -14,7 +14,15 @@ import { BusinessHoursStructured } from '@/types/business-hours'
 import { uploadToCloudinary } from '@/lib/integrations'
 import { updateProfileFile } from '@/lib/actions/file-actions'
 import { GoogleVerificationSection } from './GoogleVerificationSection'
-import { getVibeTagCategoriesForBusiness, getVibeTagLabel, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
+import { SubmissionNotificationModal } from '@/components/ui/submission-notification-modal'
+import { ItemPhotoField } from '@/components/ui/item-photo-field'
+import { getVibeTagCategoriesForBusiness, getVibeTagLabel, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, VIBE_GROUP_OPTIONS, suggestVibeGroup, isVibeGroup, type VibeGroup, type VibeTagsData } from '@/lib/constants/vibe-tags'
+import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
+import {
+  getSystemCategoryFromDisplayLabel,
+  isValidSystemCategory,
+  type SystemCategory,
+} from '@/lib/constants/system-categories'
 
 interface CleanProfilePageProps {
   profile: Profile
@@ -23,6 +31,22 @@ interface CleanProfilePageProps {
 export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   const router = useRouter()
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [uploadToast, setUploadToast] = useState<{ type: 'logo' | 'image'; count?: number } | null>(null)
+
+  const resolveFeaturedCategory = (): SystemCategory => {
+    const stored = (profile as unknown as Record<string, unknown>).system_category
+    if (typeof stored === 'string' && isValidSystemCategory(stored)) return stored
+    const fromType = profile.business_type
+      ? getSystemCategoryFromDisplayLabel(profile.business_type)
+      : null
+    if (fromType && fromType !== 'other') return fromType
+    if (profile.business_category) {
+      return getSystemCategoryFromDisplayLabel(profile.business_category)
+    }
+    return 'other'
+  }
+  const featuredLabels = getFeaturedItemsLabels(resolveFeaturedCategory())
+  const businessPhotos = (profile.business_images || []).filter(Boolean) as string[]
 
   // Personal Info State
   const [personalData, setPersonalData] = useState({
@@ -75,6 +99,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   const existingVibeTags = (profile as unknown as Record<string, unknown>).vibe_tags as VibeTagsData | null
   const [selectedVibeTags, setSelectedVibeTags] = useState<string[]>(existingVibeTags?.selected || [])
   const [customVibeTags, setCustomVibeTags] = useState<string[]>(existingVibeTags?.custom || [])
+  const [vibeTagSet, setVibeTagSet] = useState<VibeGroup | null>(
+    existingVibeTags?.tag_set && isVibeGroup(existingVibeTags.tag_set)
+      ? existingVibeTags.tag_set
+      : null
+  )
   const [customVibeInput, setCustomVibeInput] = useState('')
   const [vibeTagsSaving, setVibeTagsSaving] = useState(false)
   const [vibeTagsSaved, setVibeTagsSaved] = useState(false)
@@ -108,7 +137,14 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     setBusinessSaving(true)
     setBusinessSaved(false)
     try {
-      const result = await updateBusinessInfo(profile.user_id, businessData)
+      // Keep system_category in sync with the Business Type dropdown so vibes /
+      // placeholders / AI don't keep a stale import category (dennis #5).
+      const { mapBusinessTypeToSystemCategory } = await import('@/lib/constants/vibe-tags')
+      const syncedCategory = mapBusinessTypeToSystemCategory(businessData.business_type)
+      const result = await updateBusinessInfo(profile.user_id, {
+        ...businessData,
+        ...(syncedCategory ? { system_category: syncedCategory } : {}),
+      })
       if (result.success) {
         setBusinessSaved(true)
         setMessage({ type: 'success', text: 'Business information saved successfully!' })
@@ -199,7 +235,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     setVibeTagsSaving(true)
     setVibeTagsSaved(false)
     try {
-      const vibeData: VibeTagsData = { selected: selectedVibeTags, custom: customVibeTags }
+      const vibeData: VibeTagsData = {
+        selected: selectedVibeTags,
+        custom: customVibeTags,
+        ...(vibeTagSet ? { tag_set: vibeTagSet } : { tag_set: null }),
+      }
       const result = await updateBusinessInfo(profile.user_id, { vibe_tags: vibeData })
       if (result.success) {
         setVibeTagsSaved(true)
@@ -241,38 +281,6 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
   }
 
   // Helper functions
-  const [menuImageUploading, setMenuImageUploading] = useState<number | null>(null)
-
-  const handleMenuItemImageUpload = async (index: number, file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Please upload an image file' })
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Image must be under 5MB' })
-      return
-    }
-    setMenuImageUploading(index)
-    try {
-      const url = await uploadToCloudinary(file, 'qwikker/menu-items')
-      const updated = menuItems.map((item, i) =>
-        i === index ? { ...item, image_url: url } : item
-      )
-      setMenuItems(updated)
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' })
-    } finally {
-      setMenuImageUploading(null)
-    }
-  }
-
-  const removeMenuItemImage = (index: number) => {
-    const updated = menuItems.map((item, i) =>
-      i === index ? { ...item, image_url: undefined } : item
-    )
-    setMenuItems(updated)
-  }
-
   const addMenuItem = () => {
     if (profile?.status === 'claimed_free' && menuItems.length >= 5) {
       return
@@ -310,6 +318,12 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
     }
   }
 
+  const setMenuItemImage = (index: number, url: string | undefined) => {
+    setMenuItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, image_url: url } : item))
+    )
+  }
+
   // File upload handler
   const handleFileUpload = async (file: File, type: 'logo' | 'business_image') => {
     if (!file) return
@@ -337,10 +351,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
         const result = await updateProfileFile(profile.user_id, type === 'logo' ? 'logo' : 'business_images', uploadedUrl)
         
         if (result.success) {
-          setMessage({ 
-            type: 'success', 
-            text: `${type === 'logo' ? 'Logo' : 'Business image'} uploaded successfully!` 
-          })
+          setUploadToast({ type: type === 'logo' ? 'logo' : 'image' })
           router.refresh()
         } else {
           throw new Error(result.error || 'Failed to update profile')
@@ -782,7 +793,9 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
 
               {businessData.booking_preference === 'phone' && (
                 <p className="text-sm text-slate-400">
-                  Your contact phone number and email from the business details above will be used as the booking method.
+                  Customers see <span className="text-slate-200">Book by Phone</span> and/or{' '}
+                  <span className="text-slate-200">Book by Email</span> using your contact phone and email above
+                  (whichever is filled in).
                 </p>
               )}
 
@@ -808,17 +821,23 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 </div>
                 Vibe Tags
               </CardTitle>
-              <p className="text-slate-400 mt-2">Help customers find you by describing your vibe</p>
+              <p className="text-slate-400 mt-2">
+                Help customers find you by describing your vibe. Tag set is independent of your business type.
+              </p>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               {(() => {
-                // Vibe tags adapt to the selected business type (dennis-03).
-                // Reactive to the Business Type dropdown; falls back to the free-text
-                // category, then the stored system_category.
+                const suggested = suggestVibeGroup({
+                  businessType: businessData.business_type,
+                  categoryText: businessData.business_category,
+                  systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+                })
+                const activeSet = vibeTagSet || suggested
                 const vibeTagCategories = getVibeTagCategoriesForBusiness({
                   businessType: businessData.business_type,
                   categoryText: businessData.business_category,
                   systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+                  tagSetOverride: vibeTagSet,
                 })
                 const shownSlugs = new Set(vibeTagCategories.flatMap(c => c.tags.map(t => t.slug)))
                 // Any previously-selected tags that don't belong to the current type's
@@ -826,6 +845,28 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 const hiddenSelected = selectedVibeTags.filter(s => !shownSlugs.has(s))
                 return (
                   <>
+                    <div className="space-y-2">
+                      <Label className="text-slate-300 text-sm">Tag set</Label>
+                      <select
+                        value={activeSet}
+                        onChange={(e) => {
+                          const next = e.target.value as VibeGroup
+                          setVibeTagSet(next === suggested ? null : next)
+                        }}
+                        className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-900/50 px-3 py-2 text-sm text-white focus:border-[#00d083] focus:outline-none focus:ring-1 focus:ring-[#00d083]/30"
+                      >
+                        {VIBE_GROUP_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                            {opt.value === suggested ? ' (suggested)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500">
+                        Swap this if the suggested tags don&apos;t fit — does not change your business category.
+                      </p>
+                    </div>
+
                     {vibeTagCategories.map(category => (
                       <div key={category.id}>
                         <h4 className="text-sm font-semibold text-slate-300 mb-2">{category.label}</h4>
@@ -925,13 +966,13 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>
                 </div>
-                Featured Items
+                {featuredLabels.sectionTitle}
                 <span className="ml-auto px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs font-medium text-blue-300">
                   Max 5 items
                 </span>
               </CardTitle>
               <p className="text-slate-400 mt-2">
-                Showcase your top menu items or services
+                {featuredLabels.sectionSubtitle}. Photos are optional — upload or reuse a business photo.
               </p>
             </CardHeader>
         <CardContent className="space-y-4">
@@ -968,47 +1009,11 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {item.image_url ? (
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={item.image_url}
-                      alt={item.name || 'Item'}
-                      className="w-16 h-16 rounded-lg object-cover border border-slate-600"
-                    />
-                    <Button
-                      onClick={() => removeMenuItemImage(index)}
-                      variant="outline"
-                      size="sm"
-                      className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs"
-                    >
-                      Remove image
-                    </Button>
-                  </div>
-                ) : (
-                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-600/30 border border-dashed border-slate-500/50 rounded-lg cursor-pointer hover:bg-slate-600/50 transition-colors">
-                    {menuImageUploading === index ? (
-                      <span className="text-xs text-slate-400">Uploading...</span>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-xs text-slate-400">Add photo (optional)</span>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={menuImageUploading === index}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) handleMenuItemImageUpload(index, file)
-                        e.target.value = ''
-                      }}
-                    />
-                  </label>
-                )}
+                <ItemPhotoField
+                  imageUrl={item.image_url}
+                  galleryUrls={businessPhotos}
+                  onChange={(url) => setMenuItemImage(index, url)}
+                />
                 <div className="ml-auto">
                   <Button
                     onClick={() => removeMenuItem(index)}
@@ -1036,7 +1041,7 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
               )}
             </Button>
             <SaveButton saved={menuSaved} saving={menuSaving} onClick={saveMenuItems}>
-              Save Featured Items
+              Save {featuredLabels.tabLabel}
             </SaveButton>
             </div>
           </CardContent>
@@ -1237,6 +1242,14 @@ export function CleanProfilePage({ profile }: CleanProfilePageProps) {
         </Card>
       </div>
       </div>
+
+      <SubmissionNotificationModal
+        isOpen={!!uploadToast}
+        onClose={() => setUploadToast(null)}
+        type={uploadToast?.type || 'image'}
+        count={uploadToast?.count || 1}
+        businessStatus={profile.status || 'approved'}
+      />
     </div>
   )
 }

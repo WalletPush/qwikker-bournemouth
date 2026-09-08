@@ -10,7 +10,7 @@ import { updateBusinessInfo } from '@/lib/actions/business-actions'
 import { Profile, BUSINESS_TYPE_OPTIONS, MenuPreviewItem } from '@/types/profiles'
 import { BusinessHoursInput } from '@/components/business-hours-input'
 import { BusinessHoursStructured } from '@/types/business-hours'
-import { getVibeTagCategoriesForBusiness, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, type VibeTagsData } from '@/lib/constants/vibe-tags'
+import { getVibeTagCategoriesForBusiness, MAX_CUSTOM_TAGS, MAX_CUSTOM_TAG_LENGTH, VIBE_GROUP_OPTIONS, suggestVibeGroup, isVibeGroup, type VibeGroup, type VibeTagsData } from '@/lib/constants/vibe-tags'
 
 interface BusinessInfoPageProps {
   profile: Profile
@@ -58,6 +58,11 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
   const existingVibeTags = (profile as Record<string, unknown>).vibe_tags as VibeTagsData | null
   const [selectedTags, setSelectedTags] = useState<string[]>(existingVibeTags?.selected || [])
   const [customTags, setCustomTags] = useState<string[]>(existingVibeTags?.custom || [])
+  const [vibeTagSet, setVibeTagSet] = useState<VibeGroup | null>(
+    existingVibeTags?.tag_set && isVibeGroup(existingVibeTags.tag_set)
+      ? existingVibeTags.tag_set
+      : null
+  )
   const [customTagInput, setCustomTagInput] = useState('')
 
   const handleInputChange = (field: string, value: string) => {
@@ -192,6 +197,7 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
       const vibeTagsData: VibeTagsData = {
         selected: selectedTags,
         custom: customTags,
+        ...(vibeTagSet ? { tag_set: vibeTagSet } : { tag_set: null }),
       }
       const result = await updateBusinessInfo(profile.user_id, {
         vibe_tags: vibeTagsData,
@@ -541,7 +547,9 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
 
             {formData.booking_preference === 'phone' && (
               <p className="text-sm text-slate-400">
-                Your contact phone number and email from the business details above will be used as the booking method.
+                Customers see <span className="text-slate-200">Book by Phone</span> and/or{' '}
+                <span className="text-slate-200">Book by Email</span> using your contact phone and email above
+                (whichever is filled in).
               </p>
             )}
           </CardContent>
@@ -559,14 +567,46 @@ export function BusinessInfoPage({ profile }: BusinessInfoPageProps) {
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-sm text-gray-400">
-              Help customers find you by describing your vibe. These tags appear on your profile and power AI recommendations.
+              Help customers find you by describing your vibe. Tag set is independent of your business type.
             </p>
 
-            {/* Vibe tags adapt to the selected business type (dennis-03) */}
+            {(() => {
+              const suggested = suggestVibeGroup({
+                businessType: formData.business_type,
+                categoryText: formData.business_category,
+                systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+              })
+              const activeSet = vibeTagSet || suggested
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-slate-300">Tag set</p>
+                  <select
+                    value={activeSet}
+                    onChange={(e) => {
+                      const next = e.target.value as VibeGroup
+                      setVibeTagSet(next === suggested ? null : next)
+                    }}
+                    className="w-full max-w-md rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-[#00d083] focus:outline-none"
+                  >
+                    {VIBE_GROUP_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                        {opt.value === suggested ? ' (suggested)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500">
+                    Swap if suggested tags don&apos;t fit — does not change your business category.
+                  </p>
+                </div>
+              )
+            })()}
+
             {getVibeTagCategoriesForBusiness({
               businessType: formData.business_type,
               categoryText: formData.business_category,
               systemCategory: (profile as unknown as Record<string, unknown>).system_category as string | null,
+              tagSetOverride: vibeTagSet,
             }).map(category => (
               <div key={category.id}>
                 <p className="text-sm font-medium text-slate-300 mb-2">{category.label}</p>

@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { categoryDisplayLabel, categorySystemEnum } from '@/lib/utils/category-helpers'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 
 /**
  * Automatically add basic business information to knowledge base when approved
@@ -331,26 +332,29 @@ export async function createEventKnowledge(
  */
 function formatStructuredHoursForAI(hoursStructured: any): string {
   if (!hoursStructured) return "Business hours not available."
-  
+
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
   const hoursLines = []
-  
-  days.forEach(day => {
+
+  days.forEach((day) => {
     const dayData = hoursStructured[day]
     if (dayData) {
       const dayName = day.charAt(0).toUpperCase() + day.slice(1)
       if (dayData.closed) {
         hoursLines.push(`${dayName}: Closed`)
       } else {
-        hoursLines.push(`${dayName}: ${dayData.open} - ${dayData.close}`)
+        const periods = getDayPeriods(dayData)
+        if (periods.length > 0) {
+          hoursLines.push(`${dayName}: ${formatPeriodsRange(periods)}`)
+        }
       }
     }
   })
-  
+
   if (hoursStructured.timezone) {
     hoursLines.push(`Timezone: ${hoursStructured.timezone}`)
   }
-  
+
   return hoursLines.join('\n')
 }
 

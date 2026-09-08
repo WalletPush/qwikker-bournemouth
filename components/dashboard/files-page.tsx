@@ -10,6 +10,7 @@ import { updateProfileFile, deleteBusinessImage, reorderBusinessImages, uploadMu
 import { uploadToCloudinary } from '@/lib/integrations'
 import { MultipleMenuUpload } from './multiple-menu-upload'
 import { EnhancedImageManager } from './enhanced-image-manager'
+import { SubmissionNotificationModal } from '@/components/ui/submission-notification-modal'
 import { ImageTransform } from '@/types/profiles'
 
 interface FilesPageProps {
@@ -21,6 +22,7 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
   const router = useRouter()
   const [uploading, setUploading] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [uploadToast, setUploadToast] = useState<{ type: 'logo' | 'image' | 'offer'; count?: number } | null>(null)
 
   // Scroll to specific section if hash is present in URL
   useEffect(() => {
@@ -86,17 +88,16 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       if (!result.success) {
         throw new Error(result.error || 'Failed to update profile')
       }
-      
-      setUploadMessage({
-        type: 'success',
-        text:
-          result.message ||
-          (type === 'business_images'
-            ? 'Uploaded successfully. This image is awaiting city-guide approval.'
-            : `${type.charAt(0).toUpperCase() + type.slice(1)} submitted for admin approval!`),
-      })
 
-      // Refresh the page to show updated profile
+      // Same toast for every Files upload (photos use EnhancedImageManager’s toast)
+      if (type === 'logo') {
+        setUploadToast({ type: 'logo' })
+      } else if (type === 'offer') {
+        setUploadToast({ type: 'offer' })
+      } else if (type === 'business_images') {
+        setUploadToast({ type: 'image' })
+      }
+
       router.refresh()
 
     } catch (error) {
@@ -125,13 +126,7 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       const result = await uploadMultipleBusinessImages(profile.user_id, files)
       
       if (result.success) {
-        setUploadMessage({
-          type: 'success',
-          text:
-            result.message ||
-            'Uploaded successfully. This image is awaiting city-guide approval.',
-        })
-        // Refresh the page to show updated images
+        // Toast comes from EnhancedImageManager — avoid a second banner
         router.refresh()
       } else {
         setUploadMessage({
@@ -156,11 +151,6 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       const result = await deleteBusinessImage(profile.user_id, imageUrl, index)
       
       if (result.success) {
-        setUploadMessage({
-          type: 'success',
-          text: result.message
-        })
-        // Refresh the page to show updated images
         router.refresh()
       } else {
         setUploadMessage({
@@ -183,11 +173,6 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
       const result = await reorderBusinessImages(profile.user_id, fromIndex, toIndex)
       
       if (result.success) {
-        setUploadMessage({
-          type: 'success',
-          text: result.message
-        })
-        // Refresh the page to show updated images
         router.refresh()
       } else {
         setUploadMessage({
@@ -215,12 +200,8 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
         </p>
       </div>
 
-      {uploadMessage && (
-        <div className={`p-4 rounded-lg border ${
-          uploadMessage.type === 'success' 
-            ? 'bg-green-500/10 border-green-500/30 text-green-400'
-            : 'bg-red-500/10 border-red-500/30 text-red-400'
-        }`}>
+      {uploadMessage?.type === 'error' && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400">
           {uploadMessage.text}
         </div>
       )}
@@ -298,7 +279,10 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
 
       {/* Multiple Menus & Services */}
       <div id="menus">
-        <MultipleMenuUpload businessId={profile?.id} />
+        <MultipleMenuUpload
+          businessId={profile?.id}
+          businessStatus={profile?.status || 'approved'}
+        />
       </div>
 
       {/* Enhanced Business Photos Manager */}
@@ -353,6 +337,14 @@ export function FilesPage({ profile, hideOfferImage = false }: FilesPageProps) {
           </div>
         </div>
       </div>
+
+      <SubmissionNotificationModal
+        isOpen={!!uploadToast}
+        onClose={() => setUploadToast(null)}
+        type={uploadToast?.type || 'logo'}
+        count={uploadToast?.count || 1}
+        businessStatus={profile?.status || 'approved'}
+      />
     </div>
   )
 }

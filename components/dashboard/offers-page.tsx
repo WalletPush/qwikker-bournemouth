@@ -471,9 +471,22 @@ export function OffersPage({ profile }: OffersPageProps) {
                 <div className="bg-slate-700/30 rounded-lg p-4 sm:p-6">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        {offer.offer_image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={offer.offer_image}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded-lg object-cover border border-slate-600"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-300/90 text-center px-1 leading-tight">
+                            No photo
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
                         <h3 className="text-lg font-semibold text-white">{offer.offer_name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs bg-[#00d083]/20 text-[#00d083] px-2 py-1 rounded-full">
                             Offer #{index + 1}
                           </span>
@@ -501,6 +514,7 @@ export function OffersPage({ profile }: OffersPageProps) {
                               {offer.edit_count >= 1 ? 'No edits remaining' : 'Edits remaining: 1'}
                             </span>
                           )}
+                        </div>
                         </div>
                       </div>
                       <div className="hidden sm:flex gap-2 flex-shrink-0">
@@ -591,11 +605,16 @@ export function OffersPage({ profile }: OffersPageProps) {
                         </span>
                       </div>
                       {offer.offer_image && (
-                        <div>
-                          <span className="text-gray-400">Offer Image:</span>
-                          <a href={offer.offer_image} target="_blank" rel="noopener noreferrer" className="text-[#00d083] hover:text-[#00b86f] ml-2 underline">
-                            View Image
-                          </a>
+                        <div className="sm:col-span-2">
+                          <span className="text-gray-400">Offer image:</span>
+                          <span className="text-green-400 ml-2 text-sm">Shown on listing &amp; offers</span>
+                        </div>
+                      )}
+                      {!offer.offer_image && (
+                        <div className="sm:col-span-2">
+                          <span className="text-amber-300/90 text-sm">
+                            No dedicated offer photo — customers won&apos;t see artwork on this deal until one is set (admin can add via Manage → Offers).
+                          </span>
                         </div>
                       )}
                       {offer.offer_start_date && (

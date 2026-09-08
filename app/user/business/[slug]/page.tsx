@@ -101,6 +101,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       hero_media_id,
       logo,
       phone,
+      email,
       offer_name,
       offer_type,
       offer_value,
@@ -132,6 +133,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         offer_type,
         offer_value,
         offer_terms,
+        offer_description,
         offer_start_date,
         offer_end_date,
         offer_image,
@@ -194,6 +196,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       tagline: business.business_tagline || '',
       description: business.business_description || '',
       phone: business.phone || '',
+      email: business.email || '',
       hours: formatBusinessHours(business.business_hours, business.business_hours_structured), // For cards
       fullSchedule: formatBusinessHours(business.business_hours, business.business_hours_structured, true), // For hero view
       images: business.business_images || ['/placeholder-business.jpg'],
@@ -219,7 +222,10 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         validUntil: offer.offer_end_date,
         expiryDate: offer.offer_end_date ? new Date(offer.offer_end_date).toLocaleDateString() : 'No expiry date',
         badge: offer.offer_value || 'OFFER',
-        image: offer.offer_image || business.business_images?.[0]
+        description: (offer as { offer_description?: string | null }).offer_description || null,
+        // Prefer dedicated artwork; fall back to business photo (same as Offers feed)
+        image: offer.offer_image || business.business_images?.[0] || null,
+        hasDedicatedImage: Boolean(offer.offer_image),
       })) || [],
       // 🎯 Don't set default plan for unclaimed/claimed_free (they should show no badge)
       plan: (business.status === 'unclaimed' || business.status === 'claimed_free') 

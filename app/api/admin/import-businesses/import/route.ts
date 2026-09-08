@@ -11,6 +11,7 @@ import {
 } from '@/lib/constants/system-categories'
 import { CATEGORY_MAPPING } from '@/lib/constants/category-mapping'
 import { validatePlace } from '@/lib/import/validate-place'
+import { normalizeDayHours, parseTimeRangesFromDayRest } from '@/lib/utils/hours-periods'
 interface ImportRequest {
   city?: string // DEPRECATED: Now derived from hostname server-side (ignored if provided)
   placeIds: string[]
@@ -90,16 +91,16 @@ function parseWeekdayDescriptionsToStructured(
       continue
     }
 
-    // Try to parse "9:00 AM – 6:00 PM" (en dash or hyphen)
-    const range = rest.split(/–|-|—/).map(s => s.trim())
-    if (range.length < 2) return { structured: null, text }
+    // One or more ranges: "9:00 AM – 6:00 PM" or "12:00 – 15:00 | 17:00 – 22:00"
+    const periods = parseTimeRangesFromDayRest(rest, normalizeTo24h)
+    if (periods.length === 0) return { structured: null, text }
 
-    const open = normalizeTo24h(range[0])
-    const close = normalizeTo24h(range[1])
-
-    if (!open || !close) return { structured: null, text }
-
-    structured[dayKey] = { open, close, closed: false }
+    structured[dayKey] = normalizeDayHours({
+      closed: false,
+      open: periods[0].open,
+      close: periods[0].close,
+      periods: periods.length > 1 ? periods : undefined,
+    })
   }
 
   // Ensure all 7 keys exist (DB constraint)

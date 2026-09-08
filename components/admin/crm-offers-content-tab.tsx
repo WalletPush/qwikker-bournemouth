@@ -14,6 +14,7 @@ import {
 import { getFeaturedItemsLabels } from '@/lib/utils/featured-items-labels'
 import { resolveSystemCategory } from '@/lib/utils/resolve-system-category'
 import { OfferMediaManager } from '@/components/admin/offer-media-manager'
+import { ItemPhotoField } from '@/components/ui/item-photo-field'
 import { getMaxSecretMenuItems } from '@/lib/utils/tier-limits'
 import { getBusinessImage } from '@/lib/home-feed/ranking'
 
@@ -164,6 +165,20 @@ function toDateInput(value?: string | null): string {
   return value.slice(0, 10)
 }
 
+function emptyOfferForm(): OfferFormState {
+  return {
+    offer_name: '',
+    offer_type: '',
+    offer_value: '',
+    offer_claim_amount: 'single',
+    offer_description: '',
+    offer_terms: '',
+    offer_start_date: '',
+    offer_end_date: '',
+    activation_window_minutes: 60,
+  }
+}
+
 function offerToForm(offer: CrmOffer): OfferFormState {
   const window = offer.activation_window_minutes
   return {
@@ -202,6 +217,7 @@ export function CrmOffersContentTab({
   )
 
   const labels = getFeaturedItemsLabels(resolveSystemCategory(business))
+  const businessPhotos = (business.business_images || []).filter(Boolean)
   const tier =
     business.status === 'claimed_free' ? 'claimed_free' : (business.plan || 'starter')
   const secretLimit = getMaxSecretMenuItems(tier)
@@ -210,6 +226,12 @@ export function CrmOffersContentTab({
   const [offerForm, setOfferForm] = useState<OfferFormState | null>(null)
   const [offerSaving, setOfferSaving] = useState(false)
   const [offerError, setOfferError] = useState<string | null>(null)
+  const [isAddingOffer, setIsAddingOffer] = useState(false)
+  const [addForm, setAddForm] = useState<OfferFormState>(() => emptyOfferForm())
+  const [addAcknowledged, setAddAcknowledged] = useState(false)
+  const [addSaving, setAddSaving] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addMessage, setAddMessage] = useState<string | null>(null)
   const [offerMediaTarget, setOfferMediaTarget] = useState<{
     offerId: string
     offerName: string
@@ -256,6 +278,57 @@ export function CrmOffersContentTab({
     setEditingOfferId(null)
     setOfferForm(null)
     setOfferError(null)
+  }
+
+  const startAddOffer = () => {
+    setIsAddingOffer(true)
+    setAddForm(emptyOfferForm())
+    setAddAcknowledged(false)
+    setAddError(null)
+    setAddMessage(null)
+    cancelEditOffer()
+  }
+
+  const cancelAddOffer = () => {
+    setIsAddingOffer(false)
+    setAddForm(emptyOfferForm())
+    setAddAcknowledged(false)
+    setAddError(null)
+  }
+
+  const createOffer = async () => {
+    setAddSaving(true)
+    setAddError(null)
+    setAddMessage(null)
+    try {
+      if (!addAcknowledged) {
+        throw new Error('Confirm you have the business’s approval before publishing.')
+      }
+      if (!addForm.offer_name.trim() || !addForm.offer_type || !addForm.offer_value.trim()) {
+        throw new Error('Name, type, and value are required.')
+      }
+
+      const res = await fetch('/api/admin/offers/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          ...addForm,
+          confirmedBusinessApproval: true,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Failed to create offer')
+      }
+      cancelAddOffer()
+      setAddMessage('Offer published')
+      onRefresh()
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : 'Failed to create offer')
+    } finally {
+      setAddSaving(false)
+    }
   }
 
   const saveOffer = async () => {
@@ -385,7 +458,195 @@ export function CrmOffersContentTab({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-white">Offers & Content</h3>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Offers & Content</h3>
+          <p className="mt-1 text-sm text-slate-400">
+            Edit live offers, featured items, and secret menu for this listing.
+          </p>
+        </div>
+        {!isAddingOffer && (
+          <Button
+            type="button"
+            onClick={startAddOffer}
+            className="border border-emerald-500/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+          >
+            Add offer
+          </Button>
+        )}
+      </div>
+
+      {addMessage && !isAddingOffer && (
+        <p className="text-sm text-emerald-300">{addMessage}</p>
+      )}
+
+      {isAddingOffer && (
+        <Card className="border-slate-600 bg-slate-900/70">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-white">Add offer for {business.business_name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-3 text-sm text-slate-300">
+              <p className="font-medium text-amber-100">Before you publish</p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-slate-400">
+                <li>Only add offers the business has agreed to honour in-store.</li>
+                <li>This goes live immediately for customers — no separate approval step.</li>
+                <li>Keep terms clear (what’s included, exclusions, expiry). Misleading offers create complaints and refund risk.</li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <Label className="text-slate-300 text-xs">Offer name</Label>
+                <Input
+                  className={fieldClass}
+                  value={addForm.offer_name}
+                  onChange={(e) => setAddForm({ ...addForm, offer_name: e.target.value })}
+                  placeholder="e.g. Free dessert Friday"
+                />
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs">Offer value</Label>
+                <Input
+                  className={fieldClass}
+                  value={addForm.offer_value}
+                  onChange={(e) => setAddForm({ ...addForm, offer_value: e.target.value })}
+                  placeholder="e.g. Free dessert / 20% off"
+                />
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs">Type</Label>
+                <select
+                  className={fieldClass}
+                  value={addForm.offer_type}
+                  onChange={(e) => setAddForm({ ...addForm, offer_type: e.target.value })}
+                >
+                  <option value="">Select type</option>
+                  {OFFER_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs">Claim amount</Label>
+                <select
+                  className={fieldClass}
+                  value={addForm.offer_claim_amount}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, offer_claim_amount: e.target.value })
+                  }
+                >
+                  {OFFER_CLAIM_AMOUNT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs">Start date</Label>
+                <Input
+                  type="date"
+                  className={fieldClass}
+                  value={addForm.offer_start_date}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, offer_start_date: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs">End date</Label>
+                <Input
+                  type="date"
+                  className={fieldClass}
+                  value={addForm.offer_end_date}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, offer_end_date: e.target.value })
+                  }
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-slate-300 text-xs">Redeem window</Label>
+                <select
+                  className={fieldClass}
+                  value={addForm.activation_window_minutes}
+                  onChange={(e) =>
+                    setAddForm({
+                      ...addForm,
+                      activation_window_minutes: Number(e.target.value) as 30 | 60 | 120,
+                    })
+                  }
+                >
+                  {WINDOW_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} — {opt.tip}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-slate-300 text-xs">Description</Label>
+                <textarea
+                  className={`${fieldClass} min-h-[72px]`}
+                  value={addForm.offer_description}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, offer_description: e.target.value })
+                  }
+                  placeholder="Optional — what the customer gets"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="text-slate-300 text-xs">Terms</Label>
+                <textarea
+                  className={`${fieldClass} min-h-[72px]`}
+                  value={addForm.offer_terms}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, offer_terms: e.target.value })
+                  }
+                  placeholder="Optional — exclusions, one per table, etc."
+                />
+              </div>
+            </div>
+
+            <label className="flex items-start gap-2.5 rounded-lg border border-slate-600 bg-slate-950/50 px-3 py-3 text-sm text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={addAcknowledged}
+                onChange={(e) => setAddAcknowledged(e.target.checked)}
+              />
+              <span>
+                I confirm this offer has been agreed with the business and they will honour it
+                for customers who claim it on Qwikker.
+              </span>
+            </label>
+
+            {addError && <p className="text-sm text-rose-300">{addError}</p>}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={createOffer}
+                disabled={addSaving || !addAcknowledged}
+                className="bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {addSaving ? 'Publishing…' : 'Publish offer'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelAddOffer}
+                disabled={addSaving}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Offers */}
       {approvedOffers.length > 0 ? (
@@ -774,17 +1035,31 @@ export function CrmOffersContentTab({
                 {featuredItems.map((item, i) => (
                   <div
                     key={`${item.name}-${i}`}
-                    className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2"
+                    className="flex gap-3 rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-white text-sm font-medium">{item.name}</p>
-                      {item.price ? (
-                        <p className="text-[#00d083] text-sm shrink-0">{item.price}</p>
+                    {item.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.image_url}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-md object-cover border border-slate-600"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-800 text-[10px] text-slate-500">
+                        No photo
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-white text-sm font-medium">{item.name}</p>
+                        {item.price ? (
+                          <p className="text-[#00d083] text-sm shrink-0">{item.price}</p>
+                        ) : null}
+                      </div>
+                      {item.description ? (
+                        <p className="text-slate-400 text-xs mt-1">{item.description}</p>
                       ) : null}
                     </div>
-                    {item.description ? (
-                      <p className="text-slate-400 text-xs mt-1">{item.description}</p>
-                    ) : null}
                   </div>
                 ))}
               </div>
@@ -827,6 +1102,16 @@ export function CrmOffersContentTab({
                     onChange={(e) => {
                       const next = [...featuredItems]
                       next[index] = { ...next[index], description: e.target.value }
+                      setFeaturedItems(next)
+                    }}
+                  />
+                  <ItemPhotoField
+                    compact
+                    imageUrl={item.image_url}
+                    galleryUrls={businessPhotos}
+                    onChange={(url) => {
+                      const next = [...featuredItems]
+                      next[index] = { ...next[index], image_url: url }
                       setFeaturedItems(next)
                     }}
                   />

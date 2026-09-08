@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { OfferMediaManager } from '@/components/admin/offer-media-manager'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 
 interface Business {
   id: string
@@ -324,7 +325,16 @@ Qwikker Admin Team`
                                     return (
                                       <div key={day} className="flex justify-between text-sm">
                                         <span className="capitalize">{day}:</span>
-                                        <span>{hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}</span>
+                                        <span>
+                                          {hours.closed
+                                            ? 'Closed'
+                                            : (() => {
+                                                const periods = getDayPeriods(hours)
+                                                return periods.length
+                                                  ? formatPeriodsRange(periods)
+                                                  : 'Hours not set'
+                                              })()}
+                                        </span>
                                       </div>
                                     )
                                   })}

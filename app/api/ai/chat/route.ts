@@ -4,6 +4,7 @@ import { generateQuickReplies, categorizeUserMessage } from '@/lib/ai/chat'
 import { getFranchiseCityFromRequest } from '@/lib/utils/franchise-areas'
 import { getValidatedUser } from '@/lib/utils/wallet-pass-security'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 /**
@@ -1074,25 +1075,31 @@ export async function POST(request: NextRequest) {
               function formatWeeklyHours(rawData: any): string {
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
                 const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                
+
+                const parseTime = (t: string) => {
+                  const [h, m] = t.split(':').map(Number)
+                  const ampm = h >= 12 ? 'pm' : 'am'
+                  const hour12 = h % 12 === 0 ? 12 : h % 12
+                  return m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`
+                }
+
                 const lines: string[] = []
                 for (let i = 0; i < days.length; i++) {
                   const dayData = rawData[days[i]]
                   if (!dayData) continue
-                  
+
                   if (dayData.closed === true) {
                     lines.push(`${dayLabels[i]}: Closed`)
-                  } else if (dayData.open && dayData.close) {
-                    const parseTime = (t: string) => {
-                      const [h, m] = t.split(':').map(Number)
-                      const ampm = h >= 12 ? 'pm' : 'am'
-                      const hour12 = h % 12 === 0 ? 12 : h % 12
-                      return m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`
+                  } else {
+                    const periods = getDayPeriods(dayData)
+                    if (periods.length > 0) {
+                      lines.push(
+                        `${dayLabels[i]}: ${formatPeriodsRange(periods, (t) => parseTime(t))}`
+                      )
                     }
-                    lines.push(`${dayLabels[i]}: ${parseTime(dayData.open)} – ${parseTime(dayData.close)}`)
                   }
                 }
-                
+
                 return lines.length > 0 ? lines.join('\n') : 'Hours not available'
               }
               

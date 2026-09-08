@@ -1,32 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { storeKnowledgeWithEmbedding } from '@/lib/ai/embeddings'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 
 /**
  * Format structured business hours for AI consumption
  */
 function formatStructuredHoursForAI(hoursStructured: Record<string, unknown>): string {
   if (!hoursStructured) return ""
-  
+
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
   const hoursLines = []
-  
-  days.forEach(day => {
-    const dayData = hoursStructured[day]
+
+  days.forEach((day) => {
+    const dayData = hoursStructured[day] as
+      | { open?: string; close?: string; closed?: boolean; periods?: Array<{ open: string; close: string }> }
+      | undefined
     if (dayData) {
       const dayName = day.charAt(0).toUpperCase() + day.slice(1)
       if (dayData.closed) {
         hoursLines.push(`${dayName}: Closed`)
-      } else if (dayData.open && dayData.close) {
-        hoursLines.push(`${dayName}: ${dayData.open} - ${dayData.close}`)
+      } else {
+        const periods = getDayPeriods(dayData)
+        if (periods.length > 0) {
+          hoursLines.push(`${dayName}: ${formatPeriodsRange(periods)}`)
+        }
       }
     }
   })
-  
+
   if (hoursStructured.timezone) {
     hoursLines.push(`Timezone: ${hoursStructured.timezone}`)
   }
-  
+
   return hoursLines.join('\n')
 }
 

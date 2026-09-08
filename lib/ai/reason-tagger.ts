@@ -7,6 +7,7 @@
 
 import { IntentResult } from './intent-detector'
 import { normalizeLocation, calculateDistance as calculateDistanceShared } from '@/lib/utils/location'
+import { getDayPeriods, isTimeWithinPeriods } from '@/lib/utils/hours-periods'
 
 export type ReasonType = 
   | 'category_match' // 🍜 PRIORITY 1 when intent exists
@@ -280,25 +281,12 @@ function isOpenNow(businessHours: any): boolean {
     
     // Handle if business_hours is JSON object
     if (typeof businessHours === 'object') {
-      // Expected format: { monday: { open: "09:00", close: "17:00" }, ... }
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
       const todayName = dayNames[currentDay]
       const todayHours = businessHours[todayName]
-      
-      if (!todayHours || todayHours.closed) return false
-      
-      if (todayHours.open && todayHours.close) {
-        const openMinutes = parseTimeToMinutes(todayHours.open)
-        const closeMinutes = parseTimeToMinutes(todayHours.close)
-        
-        if (openMinutes !== null && closeMinutes !== null) {
-          // Handle overnight hours (close < open, e.g. 22:00 to 02:00)
-          if (closeMinutes < openMinutes) {
-            return currentMinutes >= openMinutes || currentMinutes < closeMinutes
-          }
-          return currentMinutes >= openMinutes && currentMinutes < closeMinutes
-        }
-      }
+      const periods = getDayPeriods(todayHours)
+      if (periods.length === 0) return false
+      return isTimeWithinPeriods(periods, currentMinutes).open
     }
     
     return false

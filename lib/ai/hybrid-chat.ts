@@ -23,6 +23,7 @@ import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
 import { normalizeLocation, calculateDistance, isValidUUID } from '@/lib/utils/location'
 import { getBusinessVibeStats } from '@/lib/utils/vibes'
 import { getOpenStatusForToday } from '@/lib/utils/opening-hours'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 import { logAIUsage } from './usage-tracker'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
@@ -337,8 +338,11 @@ function buildOwnerFactBlock(business: any): string | null {
           const dayName = day.charAt(0).toUpperCase() + day.slice(1)
           if (dayData.closed) {
             lines.push(`  ${dayName}: Closed`)
-          } else if (dayData.open && dayData.close) {
-            lines.push(`  ${dayName}: ${dayData.open} - ${dayData.close}`)
+          } else {
+            const periods = getDayPeriods(dayData)
+            if (periods.length > 0) {
+              lines.push(`  ${dayName}: ${formatPeriodsRange(periods)}`)
+            }
           }
         }
       })
@@ -955,7 +959,7 @@ HARD RULES (DO NOT BREAK):
 - TIERS: Lead with paid partners when they match the request: [TIER: qwikker_picks] first, then [TIER: featured], then [TIER: recommended] (starter), then free/unclaimed. Never force a paid venue that does not match — but if a Recommended/Featured/Pick bar matches a drinks query, it MUST be mentioned before free bars. Relevance still beats tier when a free venue is clearly a better match (e.g. exact dish only they have).
 - "QWIKKER PICKS": Only use this label if EVERY business you mentioned is [TIER: qwikker_picks].
 - ATLAS: ${atlasAvailable ? 'When listing 2+ businesses, end your response with a short line like: "Tap **Explore on Atlas** below to take a guided tour of these spots on the map!" — use natural wording but always mention the Atlas button.' : 'DO NOT mention map views or Atlas — the map is not available for these businesses.'}
-- 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone:" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
+- 📅 BOOKING CTA: When recommending a business that has a "Book online:" or "Book by phone/email" line in its data, include a brief booking nudge at the end of that business's paragraph. Use category-appropriate phrasing (e.g. "Reserve a table" for restaurants, "Book an appointment" for barbers/salons, or just "Book online" if unsure). If it is a URL: "[Reserve a table](URL)" or "[Book an appointment](URL)". If phone: "Call to book: PHONE". If email: "Email to book: EMAIL". One line max. NOTE: This is for BUSINESS reservations only — do NOT confuse with event ticket links.
 - 🍝 CUISINE QUERIES WITH PARTIAL MATCHES: If the user asks for a specific cuisine (e.g. "Italian", "Mexican", "Thai") and no business in your context is categorized exactly as that cuisine, but some businesses have related dishes or items in their KB/menu data (pasta, pizza, tacos, pad thai, etc.), you MUST recommend those businesses. Acknowledge honestly that there isn't a dedicated [cuisine] restaurant on Qwikker yet, then highlight the businesses that offer relevant dishes: "There isn't a dedicated Italian spot on Qwikker yet, but [Business Name] has some great Italian-inspired dishes — try their [specific item from KB]." This is FAR more helpful than saying "I don't have any recommendations." The businesses are in your context BECAUSE they have relevant menu items — use them.
 - ZERO RESULTS: ONLY when AVAILABLE BUSINESSES is literally empty (or says "No businesses available"). NEVER say "you're in luck" if you have nothing to show. Suggest a nearby alternative category or ask what else they'd like.
 - 🚨 NEVER FAKE AN EMPTY CITY: If AVAILABLE BUSINESSES lists ANY venues, you MUST recommend from that list. Saying "there aren't any bars/places listed", "I couldn't find any", or "none on Qwikker" while businesses are in your context is a CRITICAL failure — users will think the product is broken. Prefer imperfect matches ("here are solid spots for a drink") over claiming inventory is empty.
@@ -2645,8 +2649,13 @@ export async function generateHybridAIResponse(
           let bookingLine = ''
           if (business.booking_url) {
             bookingLine = `\nBook online: ${business.booking_url}`
-          } else if (business.booking_preference === 'phone' && business.phone) {
-            bookingLine = `\nBook by phone: ${business.phone}`
+          } else if (business.booking_preference === 'phone') {
+            const parts: string[] = []
+            if (business.phone) parts.push(`phone ${business.phone}`)
+            if (business.email) parts.push(`email ${business.email}`)
+            if (parts.length > 0) {
+              bookingLine = `\nBook by ${parts.join(' or ')}`
+            }
           }
 
           let vibeTagsLine = ''

@@ -4,6 +4,7 @@ import OpenAI from 'openai'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { categoryDisplayLabel, categorySystemEnum } from '@/lib/utils/category-helpers'
 import { getFranchiseApiKeys } from '@/lib/utils/franchise-api-keys'
+import { formatPeriodsRange, getDayPeriods } from '@/lib/utils/hours-periods'
 
 // DO NOT instantiate OpenAI globally - must be per-franchise to use their API key
 // Each franchise pays for their own AI usage via franchise_crm_configs.openai_api_key
@@ -82,12 +83,14 @@ export async function syncBusinessProfileToKnowledgeBase(businessId: string): Pr
     // Generate the updated content
     const formattedHours = business.business_hours_structured
       ? Object.entries(business.business_hours_structured)
-          .filter(([key]) => !['timezone', 'last_updated'].includes(key))
+          .filter(([key]) => !['timezone', 'last_updated', 'legacy_text', 'needs_conversion'].includes(key))
           .map(([day, hours]: [string, any]) => {
             const dayName = day.charAt(0).toUpperCase() + day.slice(1)
+            if (!hours || typeof hours !== 'object') return `${dayName}: Hours not set`
             if (hours.closed) return `${dayName}: Closed`
-            if (!hours.open || !hours.close) return `${dayName}: null - null`
-            return `${dayName}: ${hours.open} - ${hours.close}`
+            const periods = getDayPeriods(hours)
+            if (periods.length === 0) return `${dayName}: Closed`
+            return `${dayName}: ${formatPeriodsRange(periods)}`
           })
           .join('\n')
       : business.business_hours || 'Not specified'

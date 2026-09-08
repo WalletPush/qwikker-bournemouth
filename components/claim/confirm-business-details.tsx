@@ -725,7 +725,7 @@ export function ConfirmBusinessDetails({ business, smsOptInAvailable, trialConfi
 
               {bookingPreference === 'phone' && (
                 <p className="text-sm text-muted-foreground">
-                  Your contact phone number from above will be used as the booking method.
+                  Your contact phone and email from above will be used — customers see Book by Phone and/or Book by Email.
                 </p>
               )}
             </div>

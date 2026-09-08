@@ -13,12 +13,89 @@
 | # | Item | Status |
 |---|---|---|
 | 1 | User welcome email: Apple/Google Wallet re-add links (same serial) | **DONE** — founder smoke-tested OK (Sep 7) |
-| 1b | Mobile: last Discover/list card clipped under bottom nav | **DONE (code v2)** — `p-4` was overriding pad; added spacer + !important pad; push `main` again |
-| 2 | Opening hours: morning + afternoon (two ranges/day) | pending |
-| 3 | Logo/photo upload confirmation + less spammy approval emails | pending |
-| 4 | Featured/Highlights/offers photos in editor + profile | pending |
-| 5 | Vibe tags for service businesses | pending |
-| 6 | Booking: show Book by Email when email booking enabled | pending |
+| 1b | Mobile: last Discover/list card clipped under bottom nav | **DONE** — founder OK (spacer fix `d6f861c0`) |
+| 2 | Split opening hours (morning + afternoon, max 2 periods/day) | **DONE (code)** — awaiting smoke |
+| 2b | CRM: pencil edit hours on business control panel | **DONE (code)** — `/api/admin/update-hours` + CRM pencil |
+| 2c | CRM: pencil edit phone / address / website / IG / FB | **DONE (code)** — `/api/admin/update-business-contact` |
+| 3 | Logo/photo upload confirmation + quieter approval emails | **DONE (code)** — slim toast; no logo/photo approval emails |
+| 4 | Featured/Highlights/offers photos in editor + profile | **DONE (code)** — profile Offers/Overview show offer art; featured photo field + CRM vibes edit |
+| 5 | Vibe tags for service businesses | **DONE (code)** — resolver prefers Business Type; richer services tags; sync system_category on save |
+| 6 | Booking: show Book by Email when email booking enabled | **DONE (code)** — phone pref shows Phone and/or Email CTAs from contact details |
+
+**Dennis batch status:** All backlog items coded. 1/1b smoked on prod; **2–6 still need founder smoke** before merge. Large uncommitted diff on `fix/prod-quick-edits`.
+
+### #6 — Book by Email (Sep 8)
+
+**Problem:** Merchant option “Phone or email” only rendered **Book by Phone** on the public listing.
+
+**Fix:** When `booking_preference === 'phone'`, show **Book by Phone** if phone exists and **Book by Email** (`mailto:`) if email exists. Pass `email` through business detail page. Merchant/claim copy + AI booking line updated.
+
+**Smoke:** Business with Phone or email + both contacts → both CTAs; email-only → Book by Email only; online booking link unchanged.
+
+### #4 — Featured / Highlights / offer photos (Sep 8)
+
+**Problem:** Merchants could upload offer + featured photos, but the public business listing ignored offer artwork; CRM featured edit had no photo UI; service businesses still saw generic “Featured Items” copy.
+
+**Fix (smart):**
+1. Public listing `OfferCard` + Offers tab show **dedicated** `offer_image` only (no copy of the business hero onto every deal).
+2. Shared `ItemPhotoField` — upload or reuse a business photo; used on Profile featured/highlights and CRM Offers & Content.
+3. CRM Listing preview + featured list show item thumbs; merchant Offers list shows offer thumbnails / “no photo” cue.
+4. Profile section uses category labels (Highlights / Services / etc.).
+
+**Smoke:** Add featured photo on Profile → Save → public Menu/Highlights tab shows thumb. Create offer with image → business detail Overview + Offers show it. Admin Manage → featured photo from gallery → Listing tab reflects it.
+
+### Live Listings cards (Sep 8)
+- Collapsed cards: less rainbow chrome; labeled Email/Call/Map/Message; primary **Manage** (was CRM); quiet meta line (Live · tier · AI · joined).
+- Manage panel: new **Listing** tab = full customer-facing preview (photos, hours week, offers, featured, secret menu, contact).
+- Live toggle: **Manage** / **Cards** (was CRM View / User View).
+
+**Problem:** Profile said “uploaded successfully!” even when pending review; Files used a loud full-screen modal; approving logo/photos emailed every time (noisy).
+
+**Fix:**
+1. `SubmissionNotificationModal` → compact bottom toast (zinc + small accent dot, short copy, auto-dismiss ~4s). No progress bar / Contact Admin / exclamation chrome.
+2. Wired on Profile (logo + photo) and Files (logo); photos already via `EnhancedImageManager`.
+3. `approve-change`: skip emails for `logo` / `business_images` (in-app Activity notification stays). Keep emails for menu_url, offers, secret menu, rejections, go-live.
+4. Softened server messages in `file-actions.ts`.
+
+**Smoke:** Upload logo/photo/menu from Files → same bottom toast; no green success banners; admin approve logo/photo → no email; menu/offer approve still emails.
+
+### #2 — Split opening hours (morning + afternoon) — FULL SYSTEM GATE
+
+**Status:** Implemented on `fix/prod-quick-edits` (Sep 7, 2026). Awaiting founder smoke test before merge to `main`.
+
+**Founder rule:** After this ships, **everything** that uses hours must be correct for 1-range and 2-range days. No “editor only” / “display later.” No DB migration (JSONB already).
+
+**Compat rule:** Keep `open`/`close`/`closed` on each day. Add optional `periods: [{ open, close }]` (max 2 for v1). When `periods` present, status/display use **all** periods; also mirror first period into `open`/`close` so any missed reader still sees something sane. Single-range businesses unchanged.
+
+**Shared resolver:** `lib/utils/hours-periods.ts` — `getDayPeriods`, `isTimeWithinPeriods`, `normalizeDayHours`, `parseTimeRangesFromDayRest`. Selftest: `node --import tsx lib/utils/hours-periods.selftest.ts`
+
+#### Updated (full system)
+| Area | Files |
+|------|--------|
+| Types + text conversion | `types/business-hours.ts` |
+| Status / Discover cards | `lib/utils/business-hours.ts` |
+| Chat / Atlas conversational status | `lib/utils/opening-hours.ts` |
+| Display formatters | `lib/utils/business-hours-formatter.ts` |
+| Editor (author 2 ranges) | `components/business-hours-input.tsx` — “+ Add afternoon / evening session” |
+| Chat prompt formatters | `lib/ai/hybrid-chat.ts`, `app/api/ai/chat/route.ts` |
+| Atlas Open-now filter | `lib/ai/reason-tagger.ts` |
+| KB / embeddings hours text | `lib/actions/knowledge-base-actions.ts`, `lib/ai/embeddings.ts`, `app/api/admin/knowledge/auto-populate/route.ts` |
+| CRM display | `components/admin/admin-inspection-modal.tsx` (+ CRM via formatters) |
+| Classic Google import | `app/api/admin/import-businesses/import/route.ts` — multi-range weekday lines → `periods` |
+
+#### Still deferred (parked Concierge branch)
+| Area | Notes |
+|------|--------|
+| Concierge website → structured | `feat/research-business-package` — wire `extract-hours-snippet` dual ranges into `periods` when that branch resumes. Editor is SoT for split days until then. |
+
+#### Smoke test (required before call done)
+1. Existing 1-range business: Open now / schedule / chat / Discover unchanged.
+2. New 2-range day (e.g. 12:00–15:00 + 17:00–22:00): editor saves; profile + Discover show both; Open now true in morning session, false in gap, true in evening.
+3. Chat/Atlas “open now” / hours line match.
+4. CRM + inspection show both ranges.
+5. Re-save merchant profile does not drop second range.
+
+---
 
 ### #1 — Consumer welcome email Wallet CTAs (what changed)
 

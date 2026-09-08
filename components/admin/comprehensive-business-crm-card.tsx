@@ -16,8 +16,16 @@ import {
 import { InitialAvatar } from '@/components/admin/initial-avatar'
 import { formatDate, formatLastSync, formatJoinedDate } from '@/lib/utils/date-formatter'
 import { formatBusinessHours } from '@/lib/utils/business-hours-formatter'
+import { BusinessHoursInput } from '@/components/business-hours-input'
+import {
+  convertFormDataToStructured,
+  convertStructuredToText,
+  type BusinessHoursStructured,
+} from '@/types/business-hours'
 import { OfferDeletionModal } from '@/components/admin/offer-deletion-modal'
 import { CrmOffersContentTab } from '@/components/admin/crm-offers-content-tab'
+import { CrmListingPreviewTab } from '@/components/admin/crm-listing-preview-tab'
+import { CrmVibeTagsEditor } from '@/components/admin/crm-vibe-tags-editor'
 import { DeleteBusinessModal } from '@/components/admin/delete-business-modal'
 import { computeEntitlementState } from '@/lib/utils/entitlement-helpers'
 import { TierManagementCard } from './tier-management-card'
@@ -124,6 +132,20 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   const [isEditingCategory, setIsEditingCategory] = useState(false)
   const [categoryValue, setCategoryValue] = useState(business.business_category || business.display_category || '')
   const [isSavingCategory, setIsSavingCategory] = useState(false)
+  const [isEditingHours, setIsEditingHours] = useState(false)
+  const [hoursDraft, setHoursDraft] = useState<BusinessHoursStructured | null>(
+    (business.business_hours_structured as BusinessHoursStructured | null) || null
+  )
+  const [isSavingHours, setIsSavingHours] = useState(false)
+  type ContactEditField = 'phone' | 'address' | 'website' | 'instagram' | 'facebook'
+  const [editingContactField, setEditingContactField] = useState<ContactEditField | null>(null)
+  const [contactDraft, setContactDraft] = useState('')
+  const [isSavingContact, setIsSavingContact] = useState(false)
+  const [phoneValue, setPhoneValue] = useState(business.phone || '')
+  const [addressValue, setAddressValue] = useState(business.business_address || '')
+  const [websiteValue, setWebsiteValue] = useState(business.website_url || '')
+  const [instagramValue, setInstagramValue] = useState(business.instagram_handle || '')
+  const [facebookValue, setFacebookValue] = useState(business.facebook_url || '')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   // Outreach: manually-added contact email + claim-invitation flow
   const [contactEmail, setContactEmail] = useState<string | null>(business.email ?? null)
@@ -167,7 +189,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   })
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [isSavingNotes, setIsSavingNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'events' | 'controls' | 'analytics'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'listing' | 'contact' | 'files' | 'activity' | 'tasks' | 'offers' | 'events' | 'controls' | 'analytics'>('overview')
   const [newTask, setNewTask] = useState('')
   const [newTaskBody, setNewTaskBody] = useState('')
   const [newTaskActionType, setNewTaskActionType] = useState('other')
@@ -702,6 +724,154 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
     }
   }
 
+  const handleSaveHours = async () => {
+    if (!hoursDraft) {
+      alert('Set hours before saving')
+      return
+    }
+    setIsSavingHours(true)
+    try {
+      const response = await fetch('/api/admin/update-hours', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: business.id,
+          hoursStructured: hoursDraft,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        alert(`Failed to update hours: ${data.error || 'Unknown error'}`)
+        return
+      }
+      business.business_hours_structured = data.business_hours_structured
+      business.business_hours = data.business_hours || convertStructuredToText(hoursDraft)
+      setIsEditingHours(false)
+      router.refresh()
+    } catch (error) {
+      console.error('Error updating hours:', error)
+      alert(`Failed to update hours: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSavingHours(false)
+    }
+  }
+
+  const startEditContact = (field: ContactEditField) => {
+    const current =
+      field === 'phone'
+        ? phoneValue
+        : field === 'address'
+          ? addressValue
+          : field === 'website'
+            ? websiteValue
+            : field === 'instagram'
+              ? instagramValue
+              : facebookValue
+    setContactDraft(current)
+    setEditingContactField(field)
+  }
+
+  const handleSaveContactField = async () => {
+    if (!editingContactField) return
+    setIsSavingContact(true)
+    try {
+      const payload: Record<string, string | null> = { businessId: business.id }
+      const value = contactDraft.trim() || null
+      if (editingContactField === 'phone') payload.phone = value
+      if (editingContactField === 'address') payload.business_address = value
+      if (editingContactField === 'website') payload.website_url = value
+      if (editingContactField === 'instagram') payload.instagram_handle = value
+      if (editingContactField === 'facebook') payload.facebook_url = value
+
+      const response = await fetch('/api/admin/update-business-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        alert(`Failed to save: ${data.error || 'Unknown error'}`)
+        return
+      }
+
+      if (editingContactField === 'phone') {
+        const next = data.phone ?? value
+        setPhoneValue(next || '')
+        business.phone = next || ''
+      }
+      if (editingContactField === 'address') {
+        const next = data.business_address ?? value
+        setAddressValue(next || '')
+        business.business_address = next || ''
+      }
+      if (editingContactField === 'website') {
+        const next = data.website_url ?? value
+        setWebsiteValue(next || '')
+        business.website_url = next || undefined
+      }
+      if (editingContactField === 'instagram') {
+        const next = data.instagram_handle ?? value
+        setInstagramValue(next || '')
+        business.instagram_handle = next || undefined
+      }
+      if (editingContactField === 'facebook') {
+        const next = data.facebook_url ?? value
+        setFacebookValue(next || '')
+        business.facebook_url = next || undefined
+      }
+
+      setEditingContactField(null)
+      router.refresh()
+    } catch (error) {
+      console.error('Error updating contact field:', error)
+      alert(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSavingContact(false)
+    }
+  }
+
+  const pencilIcon = (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    </svg>
+  )
+
+  const renderContactEditControls = () => (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="text"
+        value={contactDraft}
+        onChange={(e) => setContactDraft(e.target.value)}
+        className="px-2 py-1 text-sm bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-emerald-500 min-w-[140px] max-w-[200px]"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void handleSaveContactField()
+          if (e.key === 'Escape') setEditingContactField(null)
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => void handleSaveContactField()}
+        disabled={isSavingContact}
+        className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+      >
+        {isSavingContact ? '…' : '✓'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditingContactField(null)}
+        className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded hover:bg-slate-500"
+      >
+        ✕
+      </button>
+    </div>
+  )
+
   // Create a real task via Contact Centre API (shows in business Action Items + Contact Centre)
   const handleAddTask = async () => {
     if (!newTask.trim()) return
@@ -958,6 +1128,185 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
   // NOTE: getTierBorderColor and getTierAccentGradient are defined at the TOP of the file
   // Do NOT duplicate them here!
 
+  const statusText = (() => {
+    if (business.trial_status === 'expired' || entitlement.state === 'TRIAL_EXPIRED') return 'Expired'
+    if (
+      business.status === 'approved' ||
+      business.status === 'unclaimed' ||
+      business.status === 'claimed_free' ||
+      sub?.status === 'active' ||
+      business.trial_status === 'active'
+    ) {
+      return 'Live'
+    }
+    if (sub?.status === 'paused') return 'Paused'
+    return 'Inactive'
+  })()
+
+  const tierText =
+    entitlement.state === 'PAID_ACTIVE'
+      ? entitlement.tierNameOrNull || 'Paid'
+      : entitlement.state === 'TRIAL_ACTIVE'
+        ? 'Free trial'
+        : entitlement.state === 'TRIAL_EXPIRED'
+          ? 'Trial ended'
+          : entitlement.state === 'NO_SUB'
+            ? 'Free listing'
+            : entitlement.state === 'UNCLAIMED'
+              ? 'Unclaimed'
+              : '—'
+
+  const trialDaysLeft =
+    business.trial_status === 'active' && business.trial_days_remaining != null
+      ? business.trial_days_remaining
+      : sub?.is_in_free_trial && business.trial_days_remaining != null
+        ? business.trial_days_remaining
+        : null
+
+  const trialValue = (() => {
+    if (business.trial_status === 'expired' || entitlement.state === 'TRIAL_EXPIRED') {
+      const ended = sub?.free_trial_end_date || business.billing_starts_date || null
+      return ended ? `Ended ${formatDateConsistent(ended)}` : 'Ended'
+    }
+    if (trialDaysLeft == null || trialDaysLeft < 0) return null
+    const endDate =
+      sub?.free_trial_end_date ||
+      (business.billing_starts_date && trialDaysLeft > 0 ? business.billing_starts_date : null)
+    const days =
+      trialDaysLeft === 0
+        ? 'Ends today'
+        : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left`
+    return endDate ? `${days} · ${formatDateConsistent(endDate)}` : days
+  })()
+
+  const renewValue =
+    !trialValue && sub?.current_period_end && sub?.status === 'active' && !sub?.is_in_free_trial
+      ? formatDateConsistent(sub.current_period_end)
+      : null
+
+  const isAiEligible =
+    entitlement.state === 'PAID_ACTIVE' ||
+    entitlement.state === 'TRIAL_ACTIVE' ||
+    (entitlement.state === 'NO_SUB' && business.admin_chat_fallback_approved) ||
+    (entitlement.state === 'UNCLAIMED' && business.admin_chat_fallback_approved)
+
+  const categoryLine =
+    business.display_category ||
+    business.google_primary_type?.replace(/_/g, ' ') ||
+    business.business_category ||
+    null
+
+  const offerCount = (business.business_offers || []).length
+  const photoCount = (business.business_images || []).filter(Boolean).length
+  const townLine = [business.business_town, business.business_postcode].filter(Boolean).join(' · ')
+  const pendingCount = business.pending_changes_count || 0
+  const hasPending = business.has_pending_changes || pendingCount > 0
+  const gaps = [
+    photoCount === 0 ? 'No photos' : null,
+    !business.business_hours_structured && !business.business_hours ? 'No hours' : null,
+    !business.phone ? 'No phone' : null,
+  ].filter(Boolean) as string[]
+
+  const coreMeta: Array<{ label: string; value: string; shell: string; valueClass: string }> = [
+    {
+      label: 'Status',
+      value: statusText,
+      shell:
+        statusText === 'Live'
+          ? 'border-emerald-500/25 bg-emerald-500/[0.07]'
+          : statusText === 'Expired' || statusText === 'Inactive'
+            ? 'border-rose-500/25 bg-rose-500/[0.07]'
+            : 'border-slate-600/80 bg-slate-900/80',
+      valueClass:
+        statusText === 'Live'
+          ? 'text-emerald-300'
+          : statusText === 'Expired' || statusText === 'Inactive'
+            ? 'text-rose-300'
+            : 'text-slate-200',
+    },
+    {
+      label: 'Tier',
+      value: tierText,
+      shell:
+        tierText === 'Spotlight'
+          ? 'border-amber-500/25 bg-amber-500/[0.07]'
+          : tierText === 'Featured'
+            ? 'border-teal-500/25 bg-teal-500/[0.07]'
+            : tierText === 'Free trial'
+              ? 'border-sky-500/25 bg-sky-500/[0.07]'
+              : tierText === 'Trial ended'
+                ? 'border-rose-500/25 bg-rose-500/[0.07]'
+                : 'border-slate-600/80 bg-slate-900/80',
+      valueClass:
+        tierText === 'Spotlight'
+          ? 'text-amber-200'
+          : tierText === 'Featured'
+            ? 'text-teal-200'
+            : tierText === 'Free trial'
+              ? 'text-sky-200'
+              : tierText === 'Trial ended'
+                ? 'text-rose-300'
+                : 'text-slate-200',
+    },
+    {
+      label: 'AI',
+      value: isAiEligible ? 'On' : 'Off',
+      shell: isAiEligible
+        ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+        : 'border-slate-600/80 bg-slate-900/80',
+      valueClass: isAiEligible ? 'text-emerald-300' : 'text-slate-400',
+    },
+  ]
+
+  const extraMeta: Array<{ label: string; value: string; shell: string; valueClass: string }> = []
+  if (trialValue) {
+    const urgent =
+      business.trial_status === 'expired' ||
+      entitlement.state === 'TRIAL_EXPIRED' ||
+      (trialDaysLeft != null && trialDaysLeft <= 7)
+    const critical = trialDaysLeft != null && trialDaysLeft <= 3
+    extraMeta.push({
+      label: 'Trial',
+      value: trialValue,
+      shell: urgent
+        ? critical
+          ? 'border-rose-500/25 bg-rose-500/[0.07]'
+          : 'border-amber-500/25 bg-amber-500/[0.07]'
+        : 'border-sky-500/20 bg-sky-500/[0.06]',
+      valueClass: urgent
+        ? critical
+          ? 'text-rose-200'
+          : 'text-amber-200'
+        : 'text-sky-200',
+    })
+  } else if (renewValue) {
+    extraMeta.push({
+      label: 'Renews',
+      value: renewValue,
+      shell: 'border-slate-600/80 bg-slate-900/80',
+      valueClass: 'text-slate-200',
+    })
+  }
+  if (business.loyalty_program_status === 'active') {
+    extraMeta.push({
+      label: 'Loyalty',
+      value:
+        business.loyalty_member_count != null
+          ? `${business.loyalty_member_count} members`
+          : 'Active',
+      shell: 'border-emerald-500/20 bg-emerald-500/[0.06]',
+      valueClass: 'text-emerald-200',
+    })
+  }
+  if (hasPending) {
+    extraMeta.push({
+      label: 'Pending',
+      value: pendingCount > 0 ? `${pendingCount} update${pendingCount === 1 ? '' : 's'}` : 'Updates waiting',
+      shell: 'border-orange-500/25 bg-orange-500/[0.07]',
+      valueClass: 'text-orange-200',
+    })
+  }
+
   return (
     <>
       {/* 🔴 DEV WATERMARK - WHICH COMPONENT IS RENDERING? */}
@@ -967,398 +1316,292 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
         </div>
       )}
       
-      {/* Main Card - COMPLETELY REDESIGNED */}
-      <div className={`relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-2 ${getTierBorderColor(business)} rounded-2xl overflow-hidden shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-black/80 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 ${className}`}>
-
-        {/* Main Content */}
-        <div className="p-6 @container">
-          {/* Header Row — stacks (name above actions) when the CARD itself is
-              narrow (e.g. 2-up grid), rows out when it has room. Uses container
-              queries so it responds to card width, not viewport width. */}
-          <div className="flex flex-col gap-3 @min-[480px]:flex-row @min-[480px]:items-start @min-[480px]:justify-between @min-[480px]:gap-0 mb-4">
-            {/* Left: Business Info with Avatar */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <InitialAvatar 
-                businessName={business.business_name} 
-                className="w-12 h-12 rounded-xl border-2 border-slate-600/50 shadow-lg text-base font-bold flex-shrink-0"
+      {/* Collapsed listing card */}
+      <div className={`rounded-xl border border-slate-700 bg-[#0b1220] ${className}`}>
+        <div className="p-5">
+          {/* Header */}
+          <div className="flex items-start gap-3.5">
+            {business.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={business.logo}
+                alt=""
+                className="h-14 w-14 shrink-0 rounded-lg border border-slate-700 bg-slate-900 object-cover"
               />
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xl @min-[480px]:text-2xl font-bold text-white leading-tight line-clamp-2 break-words">
-                  {business.business_name}
-                </h3>
-                {/* Google Primary Type */}
-                {business.google_primary_type && (
-                  <p className="text-sm text-white/70 mt-0.5">
-                    {business.google_primary_type.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            ) : (
+              <InitialAvatar
+                businessName={business.business_name}
+                className="h-14 w-14 shrink-0 rounded-lg border border-slate-700 text-base font-semibold"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-xl font-semibold leading-tight tracking-tight text-white line-clamp-2 break-words">
+                    {business.business_name}
+                  </h3>
+                  <p className="mt-1 text-sm leading-snug text-slate-400 capitalize">
+                    {[categoryLine, townLine].filter(Boolean).join(' · ') || 'No category'}
                   </p>
-                )}
-                {/* Google Rating & Review Count + Rating Source Badge */}
-                {(business.rating || business.review_count) ? (
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {business.rating ? (
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4 fill-yellow-400 text-yellow-400" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span className="text-sm font-semibold text-white">{business.rating.toFixed(1)}</span>
-                      </div>
-                    ) : null}
-                    {business.review_count ? (
-                      <span className="text-sm text-slate-400">({business.review_count} reviews)</span>
-                    ) : null}
-                    {/* Rating source badge */}
-                    {business.rating_source === 'google_verified' && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/15 text-green-400 border border-green-500/30">
-                        Google Verified
-                      </span>
-                    )}
-                    {business.rating_source === 'self_reported' && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                        Self-Reported
-                      </span>
-                    )}
-                    {business.rating_source === 'admin_verified' && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                        Admin Verified
-                      </span>
-                    )}
-                    {(!business.rating_source || business.rating_source === 'unknown') && business.rating && business.rating > 0 && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-500/15 text-slate-400 border border-slate-500/30">
-                        Not Verified
-                      </span>
-                    )}
-                    {!!business.google_place_id && (
+                </div>
+                <Button
+                  onClick={() => setIsExpanded(true)}
+                  className="shrink-0 border border-emerald-500/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-200 shadow-none hover:bg-emerald-500/25 hover:text-emerald-100"
+                >
+                  Manage
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Key facts — full width, 3-up */}
+          <div className="mt-5 grid grid-cols-3 gap-2.5">
+            {coreMeta.map((row) => (
+              <div
+                key={row.label}
+                className={`rounded-lg border px-3 py-3 ${row.shell}`}
+              >
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                  {row.label}
+                </p>
+                <p className={`mt-1 text-lg font-semibold leading-tight ${row.valueClass}`}>
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {extraMeta.length > 0 && (
+            <div className={`mt-2.5 grid gap-2.5 ${extraMeta.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {extraMeta.map((row) => (
+                <div
+                  key={row.label}
+                  className={`rounded-lg border px-3 py-3 ${row.shell}`}
+                >
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                    {row.label}
+                  </p>
+                  <p className={`mt-1 text-lg font-semibold leading-tight ${row.valueClass}`}>
+                    {row.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Counts — also use the width */}
+          <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+            <div
+              className={`rounded-lg border px-3 py-3 ${
+                photoCount === 0
+                  ? 'border-amber-500/20 bg-amber-500/[0.05]'
+                  : 'border-slate-700/80 bg-slate-950/60'
+              }`}
+            >
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Photos</p>
+              <p className={`mt-1 text-lg font-semibold ${photoCount === 0 ? 'text-amber-200/90' : 'text-white'}`}>
+                {photoCount}
+              </p>
+            </div>
+            <div
+              className={`rounded-lg border px-3 py-3 ${
+                offerCount > 0
+                  ? 'border-emerald-500/20 bg-emerald-500/[0.05]'
+                  : 'border-slate-700/80 bg-slate-950/60'
+              }`}
+            >
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Offers</p>
+              <p className={`mt-1 text-lg font-semibold ${offerCount > 0 ? 'text-emerald-200' : 'text-slate-300'}`}>
+                {offerCount}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-700/80 bg-slate-950/60 px-3 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Joined</p>
+              <p className="mt-1 text-base font-semibold leading-tight text-slate-100">
+                {formatDateConsistent(business.created_at)}
+              </p>
+            </div>
+          </div>
+
+          {/* Rating + gaps */}
+          {((business.rating || business.review_count || business.google_place_id) || gaps.length > 0) && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <p className="text-slate-300">
+              {(business.rating || business.review_count) ? (
+                <>
+                  <span className="font-semibold text-white">
+                    {business.rating != null ? business.rating.toFixed(1) : '—'}
+                  </span>
+                  {business.review_count != null && (
+                    <span className="text-slate-400"> ({business.review_count} reviews)</span>
+                  )}
+                  {business.rating_source === 'self_reported' && (
+                    <span className="text-slate-400"> · self-reported</span>
+                  )}
+                  {!!business.google_place_id && (
+                    <>
+                      <span className="text-slate-600"> · </span>
                       <button
                         type="button"
                         onClick={handleSyncGoogleRating}
                         disabled={ratingSyncing}
-                        title="Pull latest rating & review count from Google"
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:bg-slate-600/50 hover:text-white transition-colors disabled:opacity-50"
+                        className="font-medium text-slate-300 underline-offset-2 hover:text-white hover:underline disabled:opacity-50"
                       >
-                        {ratingSyncing ? 'Syncing…' : '↻ Sync Google'}
+                        {ratingSyncing ? 'Syncing…' : 'Sync rating'}
                       </button>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
-                    </svg>
-                    No rating data
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Right: Quick Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0 @min-[480px]:ml-4">
-              <button
-                onClick={handleEmail}
-                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
-                title={contactEmail ? 'Email Suite — compose' : 'Add email'}
-              >
-                <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => window.open(`tel:${business.phone}`)}
-                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
-                title="Call"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </button>
-
-              {/* View on Google Maps — exact place via place_id, else coords, else name search */}
-              <a
-                href={getGoogleMapsUrl(business)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all hover:scale-105"
-                title="View on Google Maps"
-              >
-                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </a>
-              
-              {/* Message Button - Opens CRM with compose form (only for claimed businesses) */}
-              {isClaimed && (
+                    </>
+                  )}
+                </>
+              ) : !!business.google_place_id ? (
                 <button
-                  onClick={() => {
-                    setIsExpanded(true)
-                    setShowMessageForm(true)
-                  }}
-                  className="p-2 bg-cyan-900/30 hover:bg-cyan-800/40 border border-cyan-500/30 rounded-lg transition-all hover:scale-105"
-                  title="Message Business"
+                  type="button"
+                  onClick={handleSyncGoogleRating}
+                  disabled={ratingSyncing}
+                  className="font-medium text-slate-300 underline-offset-2 hover:text-white hover:underline disabled:opacity-50"
                 >
-                  <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                  {ratingSyncing ? 'Syncing…' : 'Sync rating from Google'}
                 </button>
-              )}
-
-              {/* CRM Button */}
-              <Button
-                onClick={() => setIsExpanded(true)}
-                className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-3 py-2 shadow-lg hover:shadow-xl transition-all text-xs"
-              >
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                CRM
-              </Button>
-              
-              {business.status === 'pending_review' && onInspect && (
-                <Button
-                  onClick={() => onInspect(business)}
-                  className="bg-blue-600/20 text-blue-400 border border-blue-500/40 hover:bg-blue-600/30 hover:border-blue-500/60 font-semibold px-4 py-2.5 text-sm"
-                >
-                  Inspect
-                </Button>
-              )}
-            </div>
+              ) : null}
+            </p>
+            {gaps.length > 0 && (
+              <p className="text-sm font-medium text-amber-200/90">{gaps.join(' · ')}</p>
+            )}
           </div>
-          
-          {/* Rating Verification Panel — shown for self-reported or unverified ratings */}
+          )}
+
           {(business.rating_source === 'self_reported' || ((!business.rating_source || business.rating_source === 'unknown') && business.rating && business.rating > 0)) && (
-            <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-xs text-amber-300">
-                    {business.rating_source === 'self_reported' ? 'Rating is self-reported — verify before approving' : 'Rating source unknown — verify'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
+            <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm text-slate-400">
+                  {business.rating_source === 'self_reported'
+                    ? 'Rating is self-reported — verify before approving'
+                    : 'Rating source unknown — verify'}
+                </span>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleVerifyRating}
                     disabled={ratingLookup.loading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-lg text-amber-300 text-xs font-medium transition-colors disabled:opacity-50"
+                    className="text-sm font-medium text-slate-200 underline-offset-2 hover:underline disabled:opacity-50"
                   >
-                    {ratingLookup.loading ? (
-                      <div className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    )}
-                    Lookup on Google
+                    {ratingLookup.loading ? 'Looking up…' : 'Lookup on Google'}
                   </button>
                   <a
                     href={getGoogleMapsUrl(business)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors"
+                    className="text-sm text-slate-400 hover:text-white"
                   >
-                    Google Maps
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
+                    Maps
                   </a>
                 </div>
               </div>
-
-              {/* Lookup result */}
               {ratingLookup.error && (
-                <div className="mt-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">
-                  {ratingLookup.error}
-                </div>
+                <p className="mt-2 text-sm text-slate-300">{ratingLookup.error}</p>
               )}
               {ratingLookup.result && (
                 <div className="mt-3 space-y-2">
                   {ratingLookup.result.found ? (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-800/60 rounded-lg p-2.5 text-center">
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Claimed</p>
-                          <p className="text-lg font-bold text-white">{business.rating?.toFixed(1) || '—'}</p>
-                          <p className="text-[10px] text-slate-500">{business.review_count || 0} reviews</p>
+                      <div className="grid grid-cols-2 gap-2 text-center text-sm">
+                        <div className="rounded-md border border-slate-700 px-2 py-2">
+                          <p className="text-slate-500">Claimed</p>
+                          <p className="font-semibold text-white">{business.rating?.toFixed(1) || '—'}</p>
                         </div>
-                        <div className="bg-slate-800/60 rounded-lg p-2.5 text-center">
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Google</p>
-                          <p className={`text-lg font-bold ${ratingLookup.result.match ? 'text-green-400' : 'text-amber-400'}`}>
+                        <div className="rounded-md border border-slate-700 px-2 py-2">
+                          <p className="text-slate-500">Google</p>
+                          <p className="font-semibold text-white">
                             {ratingLookup.result.googleRating?.toFixed(1) || '—'}
                           </p>
-                          <p className="text-[10px] text-slate-500">{ratingLookup.result.googleReviewCount || 0} reviews</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleConfirmRating(true)}
-                          className="flex-1 py-1.5 text-xs font-medium bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-400 rounded-lg transition-colors"
+                          className="flex-1 rounded-md border border-slate-600 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
                         >
-                          Use Google values
+                          Use Google
                         </button>
                         <button
                           onClick={() => handleConfirmRating(false)}
-                          className="flex-1 py-1.5 text-xs font-medium bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 rounded-lg transition-colors"
+                          className="flex-1 rounded-md border border-slate-700 py-1.5 text-sm text-slate-400 hover:bg-slate-900"
                         >
-                          Keep claimed values
+                          Keep claimed
                         </button>
                       </div>
                     </>
                   ) : (
-                    <div className="text-xs text-slate-400 bg-slate-800/40 rounded p-2">
-                      No Google listing found for this business. Use the Google Maps link to search manually.
-                    </div>
+                    <p className="text-sm text-slate-500">No Google listing found.</p>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Tier-colored Full Width Line - More Visible */}
-          <div className={`h-1 w-full bg-gradient-to-r ${getTierAccentGradient(business)} rounded-full mb-4 opacity-80`} />
+          {business.status === 'pending_review' && onInspect && (
+            <button
+              type="button"
+              onClick={() => onInspect(business)}
+              className="mt-3 text-sm font-medium text-slate-300 underline-offset-2 hover:text-white hover:underline"
+            >
+              Inspect application
+            </button>
+          )}
 
-          {/* Stats Grid - Centered Icons & Text (columns respond to card width) */}
-          <div className="grid grid-cols-3 @min-[560px]:grid-cols-5 gap-3">
-            {/* Tier */}
-            <div className="bg-gradient-to-br from-purple-950/40 to-purple-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-purple-500/20 flex flex-col items-center justify-center text-center">
-              <svg className="w-4 h-4 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              <span className="text-slate-400 text-xs font-medium mb-2">Tier</span>
-              <span className={`font-bold ${entitlement.state === 'UNCLAIMED' ? 'text-base' : 'text-lg'} leading-none ${entitlement.displayColor}`}>
-                {/* ✅ LOCKDOWN: Use entitlement state ONLY (no business.plan!) */}
-                {entitlement.state === 'PAID_ACTIVE'
-                  ? (entitlement.tierNameOrNull || 'Paid')
-                  : entitlement.state === 'TRIAL_ACTIVE'
-                  ? 'Free Trial'
-                  : entitlement.state === 'TRIAL_EXPIRED'
-                  ? 'N/A'
-                  : entitlement.state === 'NO_SUB'
-                  ? 'Free Listing'
-                  : entitlement.state === 'UNCLAIMED'
-                  ? 'Unclaimed'
-                  : 'N/A'}
-              </span>
-            </div>
-
-            {/* Billing */}
-            <div className="bg-gradient-to-br from-blue-950/40 to-blue-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-blue-500/20 text-center">
-              <svg className="w-4 h-4 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-slate-400 text-xs font-medium block mb-2">Billing</span>
-                <span className="font-medium text-white text-sm @min-[560px]:text-base leading-tight block">
-                  {/* Show trial end date if on trial (subscription OR legacy) */}
-                  {sub?.is_in_free_trial && sub?.free_trial_end_date
-                    ? formatDateConsistent(sub.free_trial_end_date)
-                    : business.billing_starts_date && business.trial_days_remaining !== null && business.trial_days_remaining > 0
-                    ? formatDateConsistent(business.billing_starts_date)
-                    : sub?.current_period_end
-                    ? formatDateConsistent(sub.current_period_end)
-                    : 'N/A'}
-                </span>
-            </div>
-
-            {/* Status */}
-            <div className={`backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border text-center ${
-              // ✅ FIXED: Check trial_status directly (cleaner logic)
-              business.trial_status === 'expired'
-                ? 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
-                : 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
-            }`}>
-              <svg className={`w-4 h-4 mx-auto mb-2 ${
-                business.trial_status === 'expired'
-                  ? 'text-red-400'
-                  : 'text-emerald-400'
-              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-slate-400 text-xs font-medium block mb-2">Status</span>
-              <span className={`font-semibold leading-tight block ${
-                business.trial_status === 'expired' ? 'text-sm' : 'text-xl'
-              } ${
-                // PRIORITY 1: Expired trial
-                business.trial_status === 'expired'
-                  ? 'text-red-400'
-                // PRIORITY 2: Live (approved, unclaimed, claimed_free, active subscription, or on trial)
-                : (business.status === 'approved' || 
-                   business.status === 'unclaimed' ||
-                   business.status === 'claimed_free' ||
-                   sub?.status === 'active' || 
-                   business.trial_status === 'active')
-                  ? 'text-[#00d083]'
-                // PRIORITY 3: Paused
-                : sub?.status === 'paused'
-                  ? 'text-slate-400'
-                // DEFAULT: Inactive
-                : 'text-red-400'
-              }`}>
-                {business.trial_status === 'expired'
-                  ? 'EXPIRED' 
-                  : (business.status === 'approved' || 
-                     business.status === 'unclaimed' ||
-                     business.status === 'claimed_free' ||
-                     sub?.status === 'active' || 
-                     business.trial_status === 'active')
-                    ? 'LIVE' 
-                    : sub?.status === 'paused' 
-                      ? 'Paused' 
-                      : 'Inactive'}
-              </span>
-            </div>
-
-            {/* Joined */}
-            <div className="bg-gradient-to-br from-amber-950/40 to-amber-900/20 backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border border-amber-500/20 text-center">
-              <svg className="w-4 h-4 text-amber-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-slate-400 text-xs font-medium block mb-2">Joined</span>
-              <span className="font-medium text-white text-sm @min-[560px]:text-base leading-tight block">
-                {formatDateConsistent(business.created_at)}
-              </span>
-            </div>
-
-            {/* AI Eligible */}
-            {(() => {
-              // ✅ CORRECT LOGIC: Paid/Trial businesses are ALWAYS AI eligible
-              // Only free tier businesses need the admin_chat_fallback_approved flag
-              const isAiEligible = 
-                entitlement.state === 'PAID_ACTIVE' || 
-                entitlement.state === 'TRIAL_ACTIVE' ||
-                (entitlement.state === 'NO_SUB' && business.admin_chat_fallback_approved) ||
-                (entitlement.state === 'UNCLAIMED' && business.admin_chat_fallback_approved)
-              
-              return (
-                <div
-                  title="Whether this business can appear in the AI chat. Paid & trial businesses are always eligible. Imported/unclaimed listings only appear as text-only fallback suggestions once approved via 'Make AI eligible' (and can be removed again)."
-                  className={`backdrop-blur-sm px-2 py-3 @min-[560px]:px-4 @min-[560px]:py-4 rounded-xl border text-center ${
-                  isAiEligible
-                    ? 'bg-gradient-to-br from-emerald-950/40 to-emerald-900/20 border-emerald-500/20'
-                    : 'bg-gradient-to-br from-red-950/40 to-red-900/20 border-red-500/20'
-                }`}>
-                  <svg className={`w-4 h-4 mx-auto mb-2 ${
-                    isAiEligible
-                      ? 'text-emerald-400'
-                      : 'text-red-400'
-                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  <span className="text-slate-400 text-xs font-medium block mb-2">AI Eligible</span>
-                  <span className={`font-semibold text-xl leading-tight block ${
-                    isAiEligible
-                      ? 'text-emerald-400'
-                      : 'text-red-400'
-                  }`}>
-                    {isAiEligible ? 'Yes' : 'No'}
-                  </span>
-                </div>
-              )
-            })()}
-
+          {/* Actions — full width */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <button
+              type="button"
+              onClick={handleEmail}
+              className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-slate-400 hover:bg-slate-800"
+            >
+              Email
+            </button>
+            <button
+              type="button"
+              onClick={() => window.open(`tel:${business.phone}`)}
+              disabled={!business.phone}
+              className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-slate-400 hover:bg-slate-800 disabled:opacity-35"
+            >
+              Call
+            </button>
+            <a
+              href={getGoogleMapsUrl(business)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5 text-center text-sm font-semibold text-slate-100 hover:border-slate-400 hover:bg-slate-800"
+            >
+              Map
+            </a>
+            {isClaimed ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsExpanded(true)
+                  setShowMessageForm(true)
+                }}
+                className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-slate-400 hover:bg-slate-800"
+              >
+                Message
+              </button>
+            ) : (
+              <div className="hidden sm:block" />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsExpanded(true)
+                setActiveTab('listing')
+              }}
+              className="rounded-md border border-slate-500 bg-slate-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 col-span-2 sm:col-span-1"
+            >
+              Listing
+            </button>
           </div>
         </div>
       </div>
 
-      {/* CRM Control Panel Modal - STUNNING POPUP! */}
+
+      {/* Manage panel modal */}
       {isExpanded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-200">
           {/* Backdrop Blur - More Transparent */}
@@ -1433,7 +1676,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                       )}
                     </div>
                     <p className="text-slate-400 text-sm mt-1">
-                      Business Control Panel
+                      Manage listing
                     </p>
                   </div>
                 </div>
@@ -1489,19 +1732,6 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             Send email
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-purple-500 text-purple-400 hover:bg-purple-500/20 flex items-center gap-2"
-            onClick={() => {
-              // Quick sync button
-            }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Sync
           </Button>
           <a
             href={getGoogleMapsUrl(business)}
@@ -1690,6 +1920,7 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
             <div className="flex flex-wrap gap-1">
               {[
                 { id: 'overview', label: 'Overview', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+                { id: 'listing', label: 'Listing', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
                 { id: 'contact', label: 'Contact History', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
                 { id: 'files', label: 'Files & Assets', icon: 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
                 { id: 'activity', label: 'Activity Feed', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
@@ -1829,73 +2060,220 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Phone:</span>
-                        <span className="text-white text-sm">{business.phone || 'Not provided'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Address:</span>
-                        {business.business_address ? (
-                          <a
-                            href={getGoogleMapsUrl(business)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-400 hover:text-emerald-300 hover:underline text-sm text-right transition-colors"
-                            title="View on Google Maps"
-                          >
-                            {business.business_address}
-                          </a>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Phone:</span>
+                        {editingContactField === 'phone' ? (
+                          renderContactEditControls()
                         ) : (
-                          <span className="text-white text-sm text-right">Not provided</span>
+                          <span className="text-white text-sm text-right inline-flex items-center gap-1.5">
+                            {phoneValue || 'Not provided'}
+                            <button
+                              type="button"
+                              title="Edit phone"
+                              onClick={() => startEditContact('phone')}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors"
+                            >
+                              {pencilIcon}
+                            </button>
+                          </span>
                         )}
                       </div>
-                      <div className="flex items-start justify-between">
-                        <span className="text-slate-400 text-sm">Hours:</span>
-                        <div className="text-white text-sm text-right max-w-[250px]">
-                          {business.business_hours || business.business_hours_structured ? (
-                            <div className="text-right">
-                              <div className="text-xs leading-relaxed whitespace-pre-line">
-                                {formatBusinessHours(
-                                  business.business_hours,
-                                  business.business_hours_structured,
-                                  true // showFullSchedule = true for complete weekly schedule
-                                )}
-                              </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Address:</span>
+                        {editingContactField === 'address' ? (
+                          renderContactEditControls()
+                        ) : (
+                          <span className="text-sm text-right inline-flex items-center gap-1.5 max-w-[220px]">
+                            {addressValue ? (
+                              <a
+                                href={getGoogleMapsUrl({ ...business, business_address: addressValue })}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
+                                title="View on Google Maps"
+                              >
+                                {addressValue}
+                              </a>
+                            ) : (
+                              <span className="text-white">Not provided</span>
+                            )}
+                            <button
+                              type="button"
+                              title="Edit address"
+                              onClick={() => startEditContact('address')}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors shrink-0"
+                            >
+                              {pencilIcon}
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Hours:</span>
+                        {isEditingHours ? (
+                          <div className="flex-1 min-w-0 space-y-3">
+                            <BusinessHoursInput
+                              compact
+                              value={hoursDraft}
+                              onChange={setHoursDraft}
+                              className="text-left"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsEditingHours(false)
+                                  setHoursDraft(
+                                    (business.business_hours_structured as BusinessHoursStructured | null) ||
+                                      null
+                                  )
+                                }}
+                                className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded hover:bg-slate-500"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSaveHours}
+                                disabled={isSavingHours || !hoursDraft}
+                                className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                              >
+                                {isSavingHours ? 'Saving…' : 'Save hours'}
+                              </button>
                             </div>
-                          ) : (
-                            <span className="text-red-400">Missing</span>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <div className="text-white text-sm text-right max-w-[250px] inline-flex items-start gap-1.5">
+                            {business.business_hours || business.business_hours_structured ? (
+                              <div className="text-right">
+                                <div className="text-xs leading-relaxed whitespace-pre-line">
+                                  {formatBusinessHours(
+                                    business.business_hours,
+                                    business.business_hours_structured,
+                                    true
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-red-400">Missing</span>
+                            )}
+                            <button
+                              type="button"
+                              title="Edit hours"
+                              onClick={() => {
+                                const existing =
+                                  (business.business_hours_structured as BusinessHoursStructured | null) ||
+                                  null
+                                setHoursDraft(
+                                  existing ||
+                                    convertFormDataToStructured({
+                                      pattern: 'weekdays_weekend',
+                                      weekdays_open: '09:00',
+                                      weekdays_close: '17:00',
+                                      weekdays_closed: false,
+                                      saturday_open: '10:00',
+                                      saturday_close: '16:00',
+                                      saturday_closed: false,
+                                      sunday_closed: true,
+                                    })
+                                )
+                                setIsEditingHours(true)
+                              }}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors shrink-0 mt-0.5"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Website:</span>
-                        <span className="text-white text-sm text-right">
-                          {business.website_url ? (
-                            <a href={business.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                              View Site
-                            </a>
-                          ) : 'Not provided'}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Website:</span>
+                        {editingContactField === 'website' ? (
+                          renderContactEditControls()
+                        ) : (
+                          <span className="text-white text-sm text-right inline-flex items-center gap-1.5">
+                            {websiteValue ? (
+                              <a
+                                href={websiteValue}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:underline"
+                              >
+                                View Site
+                              </a>
+                            ) : (
+                              'Not provided'
+                            )}
+                            <button
+                              type="button"
+                              title="Edit website"
+                              onClick={() => startEditContact('website')}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors"
+                            >
+                              {pencilIcon}
+                            </button>
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Instagram:</span>
-                        <span className="text-white text-sm text-right">
-                          {business.instagram_handle ? (
-                            <a href={`https://instagram.com/${business.instagram_handle}`} target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">
-                              @{business.instagram_handle}
-                            </a>
-                          ) : 'Not provided'}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Instagram:</span>
+                        {editingContactField === 'instagram' ? (
+                          renderContactEditControls()
+                        ) : (
+                          <span className="text-white text-sm text-right inline-flex items-center gap-1.5">
+                            {instagramValue ? (
+                              <a
+                                href={`https://instagram.com/${instagramValue}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-pink-400 hover:underline"
+                              >
+                                @{instagramValue}
+                              </a>
+                            ) : (
+                              'Not provided'
+                            )}
+                            <button
+                              type="button"
+                              title="Edit Instagram"
+                              onClick={() => startEditContact('instagram')}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors"
+                            >
+                              {pencilIcon}
+                            </button>
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-sm">Facebook:</span>
-                        <span className="text-white text-sm text-right">
-                          {business.facebook_url ? (
-                            <a href={business.facebook_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                              View Page
-                            </a>
-                          ) : 'Not provided'}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-slate-400 text-sm shrink-0">Facebook:</span>
+                        {editingContactField === 'facebook' ? (
+                          renderContactEditControls()
+                        ) : (
+                          <span className="text-white text-sm text-right inline-flex items-center gap-1.5">
+                            {facebookValue ? (
+                              <a
+                                href={facebookValue}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:underline"
+                              >
+                                View Page
+                              </a>
+                            ) : (
+                              'Not provided'
+                            )}
+                            <button
+                              type="button"
+                              title="Edit Facebook"
+                              onClick={() => startEditContact('facebook')}
+                              className="text-slate-500 hover:text-emerald-400 transition-colors"
+                            >
+                              {pencilIcon}
+                            </button>
+                          </span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1971,32 +2349,19 @@ export function ComprehensiveBusinessCRMCard({ business, onApprove, onInspect, c
                   </Card>
                 </div>
 
-                {/* Vibe Tags */}
-                {(() => {
-                  const vt = (business as Record<string, unknown>).vibe_tags as { selected?: string[]; custom?: string[] } | null
-                  if (!vt) return null
-                  const allTags = [...(vt.selected || []), ...(vt.custom || [])]
-                  if (allTags.length === 0) return null
-                  return (
-                    <Card className="bg-slate-800/50 border-slate-700">
-                      <CardContent className="p-4">
-                        <h4 className="text-sm font-medium text-slate-300 mb-2">Vibe Tags</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {allTags.map((tag: string) => (
-                            <span
-                              key={tag}
-                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700/50 border border-slate-600 text-slate-300"
-                            >
-                              {tag.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                            </span>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })()}
+                {/* Vibe Tags — view + edit */}
+                <CrmVibeTagsEditor
+                  businessId={business.id}
+                  systemCategory={business.system_category}
+                  businessType={business.business_type}
+                  businessCategory={business.business_category}
+                  vibeTags={business.vibe_tags}
+                  onSaved={() => router.refresh()}
+                />
               </div>
             )}
+
+            {activeTab === 'listing' && <CrmListingPreviewTab business={business} />}
 
             {/* Contact History Tab */}
             {activeTab === 'contact' && (

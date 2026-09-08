@@ -145,12 +145,19 @@ export interface BusinessCRMData {
   created_at?: string | null
   updated_at?: string | null
   business_offers?: any[] | null
+  business_description?: string | null
+  business_tagline?: string | null
   menu_preview?: Array<{
     name: string
     price?: string
     description?: string
     image_url?: string
   }> | null
+  vibe_tags?: {
+    selected?: string[]
+    custom?: string[]
+    tag_set?: string | null
+  } | null
   plan?: string | null
   
   // Visibility control
@@ -170,7 +177,11 @@ export interface BusinessCRMData {
   
   // Business details
   menu_url: string | null
+  business_hours?: string | null
+  business_hours_structured?: any | null
   business_images: string[] | null
+  instagram_handle?: string | null
+  facebook_url?: string | null
   business_menus?: Array<{
     id: string
     menu_name: string

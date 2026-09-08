@@ -450,6 +450,7 @@ export async function getBusinessCRMData(city: string): Promise<BusinessCRMData[
         business_events: eventsByBusiness.get(business.id) || null,
         business_offers: offersByBusiness.get(business.id) || [],
         menu_preview: Array.isArray(business.menu_preview) ? business.menu_preview : null,
+        vibe_tags: (business.vibe_tags as { selected?: string[]; custom?: string[] } | null) || null,
         offer_name: business.offer_name,
         offer_type: business.offer_type,
         offer_image: business.offer_image,

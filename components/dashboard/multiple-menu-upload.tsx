@@ -10,22 +10,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, Eye, X } from 'lucide-react'
 import { BusinessMenu, MENU_TYPE_OPTIONS, MenuType } from '@/types/profiles'
+import { SubmissionNotificationModal } from '@/components/ui/submission-notification-modal'
 
 interface MultipleMenuUploadProps {
   businessId: string
+  businessStatus?: string
 }
 
 interface UploadMessage {
-  type: 'success' | 'error' | 'info'
+  type: 'error'
   text: string
 }
 
-export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
+export function MultipleMenuUpload({
+  businessId,
+  businessStatus = 'approved',
+}: MultipleMenuUploadProps) {
   const router = useRouter()
   const [menus, setMenus] = useState<BusinessMenu[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [uploadMessage, setUploadMessage] = useState<UploadMessage | null>(null)
+  const [showUploadToast, setShowUploadToast] = useState(false)
   const [newMenu, setNewMenu] = useState({
     name: '',
     type: '' as MenuType | '',
@@ -109,16 +115,13 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
       const data = await response.json()
 
       if (data.success) {
-        setUploadMessage({
-          type: 'success',
-          text: data.message
-        })
-        
+        setShowUploadToast(true)
+
         // Reset form
         setNewMenu({ name: '', type: '', file: null })
         const fileInput = document.getElementById('menu-file') as HTMLInputElement
         if (fileInput) fileInput.value = ''
-        
+
         // Reload menus
         await loadMenus()
         router.refresh()
@@ -155,10 +158,6 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
       const data = await response.json()
 
       if (data.success) {
-        setUploadMessage({
-          type: 'success',
-          text: data.message || 'Menu deleted successfully from all systems'
-        })
         setShowDeleteConfirmation(null)
         await loadMenus()
         router.refresh()
@@ -228,11 +227,7 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {uploadMessage && (
-            <div className={`p-3 rounded-md ${
-              uploadMessage.type === 'success' ? 'bg-green-50 text-green-700' :
-              uploadMessage.type === 'error' ? 'bg-red-50 text-red-700' :
-              'bg-blue-50 text-blue-700'
-            }`}>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
               {uploadMessage.text}
             </div>
           )}
@@ -476,6 +471,13 @@ export function MultipleMenuUpload({ businessId }: MultipleMenuUploadProps) {
           </Card>
         </div>
       )}
+
+      <SubmissionNotificationModal
+        isOpen={showUploadToast}
+        onClose={() => setShowUploadToast(false)}
+        type="menu"
+        businessStatus={businessStatus}
+      />
     </div>
   )
 }
