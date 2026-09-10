@@ -1,6 +1,9 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
 
+// Preview/CI builds have no Supabase env at prerender time — match other admin pages.
+export const dynamic = 'force-dynamic'
+
 export default async function FranchiseConfigPage() {
   const supabase = createServiceRoleClient()
   

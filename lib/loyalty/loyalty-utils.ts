@@ -281,6 +281,75 @@ export function getLoyaltyPassFieldValues(
   }
 }
 
+/** Business profile fields used on loyalty wallet passes / Featured Actions */
+export interface LoyaltyBusinessPassSource {
+  business_name?: string | null
+  phone?: string | null
+  business_address?: string | null
+  business_town?: string | null
+  business_postcode?: string | null
+  google_place_id?: string | null
+}
+
+export function buildLoyaltyMapsUrl(business: LoyaltyBusinessPassSource): string {
+  const name = (business.business_name || '').trim()
+  if (business.google_place_id) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name || 'Business')}&query_place_id=${business.google_place_id}`
+  }
+  const parts = [business.business_address, business.business_town, business.business_postcode]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+  if (parts.length > 0) {
+    return `https://maps.google.com/?q=${encodeURIComponent(parts.join(', '))}`
+  }
+  if (name) {
+    return `https://maps.google.com/?q=${encodeURIComponent(name)}`
+  }
+  return ''
+}
+
+/**
+ * Business placeholders for Featured Actions + header.
+ * WalletPush treats Business_Phone / Maps_Url as required when used on the template.
+ */
+export function getLoyaltyBusinessPassFields(
+  business: LoyaltyBusinessPassSource
+): Record<string, string> {
+  const name = (business.business_name || '').trim() || 'Loyalty'
+  const phone = (business.phone || '').trim()
+  const mapsUrl = buildLoyaltyMapsUrl(business)
+  const address = [business.business_address, business.business_town, business.business_postcode]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+    .join(', ')
+
+  const fields: Record<string, string> = {
+    Business_Name: name,
+    Business_Phone: phone,
+    Maps_Url: mapsUrl,
+  }
+  if (address) fields.Business_Address = address
+  return fields
+}
+
+/** Full field map for first-time pass issue (balance + business + welcome). */
+export function getLoyaltyPassIssueFields(
+  program: Pick<LoyaltyProgram, 'reward_threshold' | 'reward_description' | 'stamp_label'>,
+  membership: Pick<LoyaltyMembership, 'stamps_balance' | 'points_balance'>,
+  business: LoyaltyBusinessPassSource,
+  programType: 'stamps' | 'points' = 'stamps'
+): Record<string, string> {
+  const balanceFields = getLoyaltyPassFieldValues(program, membership, programType)
+  const businessFields = getLoyaltyBusinessPassFields(business)
+  const businessName = businessFields.Business_Name || 'this business'
+
+  return {
+    ...balanceFields,
+    ...businessFields,
+    Last_Message: `Welcome to your ${businessName} stamp card`,
+  }
+}
+
 /**
  * Transforms a Cloudinary URL to auto-crop to the Apple Wallet strip
  * aspect ratio (1125x432 ≈ 2.6:1) using smart gravity.

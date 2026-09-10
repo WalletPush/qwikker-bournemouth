@@ -9,11 +9,13 @@ import {
   getTodayInTimezone,
   getProximityMessage,
   getLoyaltyPassFieldValues,
+  getLoyaltyPassIssueFields,
   EARN_RATE_LIMIT_PER_USER_PER_HOUR,
   EARN_RATE_LIMIT_PER_IP_PER_HOUR,
   IP_VELOCITY_THRESHOLD,
   IP_VELOCITY_WINDOW_MINUTES,
 } from '@/lib/loyalty/loyalty-utils'
+import { loadLoyaltyBusinessForPass } from '@/lib/loyalty/load-loyalty-business-for-pass'
 import { issueLoyaltyPass, updateLoyaltyPassField } from '@/lib/loyalty/walletpush-loyalty'
 
 /**
@@ -185,7 +187,16 @@ export async function POST(request: NextRequest) {
         .eq('wallet_pass_id', walletPassId)
         .single()
 
-      const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
+      const business = (await loadLoyaltyBusinessForPass(serviceRole, program.business_id)) || {
+        business_name: null,
+        phone: null,
+      }
+      const initialFields = getLoyaltyPassIssueFields(
+        program,
+        membership,
+        business,
+        program.type
+      )
 
       const passResult = await issueLoyaltyPass(
         program as any,

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
-import { hasWalletPushCredentials } from '@/lib/loyalty/loyalty-types'
-import { getLoyaltyPassFieldValues } from '@/lib/loyalty/loyalty-utils'
+import { getLoyaltyPassIssueFields } from '@/lib/loyalty/loyalty-utils'
+import { loadLoyaltyBusinessForPass } from '@/lib/loyalty/load-loyalty-business-for-pass'
 import { issueLoyaltyPass } from '@/lib/loyalty/walletpush-loyalty'
 
 /**
@@ -98,7 +98,23 @@ export async function POST(request: NextRequest) {
     const canCreatePass = !!(program.walletpush_template_id && program.walletpush_api_key)
 
     if (canCreatePass) {
-      const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
+      const business = (await loadLoyaltyBusinessForPass(serviceRole, program.business_id)) || {
+        business_name: null,
+        phone: null,
+      }
+      const initialFields = getLoyaltyPassIssueFields(
+        program,
+        membership,
+        business,
+        program.type
+      )
+
+      if (!initialFields.Business_Phone || !initialFields.Maps_Url) {
+        console.error(
+          '[loyalty/join] Missing Business_Phone or Maps_Url for pass issue',
+          { businessId: program.business_id, fields: initialFields }
+        )
+      }
 
       const result = await issueLoyaltyPass(
         program as any,

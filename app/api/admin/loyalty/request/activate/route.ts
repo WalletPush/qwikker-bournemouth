@@ -23,12 +23,14 @@ export async function POST(request: NextRequest) {
 
     const city = admin.city
 
-    const {
-      requestId,
-      walletpush_template_id,
-      walletpush_api_key,
-      walletpush_pass_type_id,
-    } = await request.json()
+    const body = await request.json()
+    const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
+    const walletpush_template_id =
+      typeof body.walletpush_template_id === 'string' ? body.walletpush_template_id.trim() : ''
+    const walletpush_api_key =
+      typeof body.walletpush_api_key === 'string' ? body.walletpush_api_key.trim() : ''
+    const walletpush_pass_type_id =
+      typeof body.walletpush_pass_type_id === 'string' ? body.walletpush_pass_type_id.trim() : ''
 
     if (!requestId || !walletpush_template_id || !walletpush_api_key || !walletpush_pass_type_id) {
       return NextResponse.json(
