@@ -318,10 +318,6 @@ export function getLoyaltyBusinessPassFields(
   const name = (business.business_name || '').trim() || 'Loyalty'
   const phone = (business.phone || '').trim()
   const mapsUrl = buildLoyaltyMapsUrl(business)
-  const address = [business.business_address, business.business_town, business.business_postcode]
-    .map((p) => (p || '').trim())
-    .filter(Boolean)
-    .join(', ')
 
   const fields: Record<string, string> = {
     Business_Name: name,
@@ -333,22 +329,48 @@ export function getLoyaltyBusinessPassFields(
   return fields
 }
 
-/** Full field map for first-time pass issue (balance + business + welcome). */
+/** Same short-code rule as main pass /c and /o links (suffix after last dash). */
+export function getWalletPassShortCode(walletPassId: string): string {
+  const parts = walletPassId.split('-').filter(Boolean)
+  return parts[parts.length - 1] || walletPassId
+}
+
+/** Featured Action URL: https://{city}.qwikker.com/w/{shortCode} */
+export function buildLoyaltyRewardsUrl(cityBaseUrl: string, walletPassId: string): string {
+  const base = cityBaseUrl.replace(/\/+$/, '')
+  return `${base}/w/${getWalletPassShortCode(walletPassId)}`
+}
+
+export interface LoyaltyPassIssueOptions {
+  /** e.g. https://bournemouth.qwikker.com */
+  cityBaseUrl?: string
+  /** Consumer main wallet pass id (not the loyalty serial) */
+  walletPassId?: string
+}
+
+/** Full field map for first-time pass issue (balance + business + welcome + rewards link). */
 export function getLoyaltyPassIssueFields(
   program: Pick<LoyaltyProgram, 'reward_threshold' | 'reward_description' | 'stamp_label'>,
   membership: Pick<LoyaltyMembership, 'stamps_balance' | 'points_balance'>,
   business: LoyaltyBusinessPassSource,
-  programType: 'stamps' | 'points' = 'stamps'
+  programType: 'stamps' | 'points' = 'stamps',
+  options?: LoyaltyPassIssueOptions
 ): Record<string, string> {
   const balanceFields = getLoyaltyPassFieldValues(program, membership, programType)
   const businessFields = getLoyaltyBusinessPassFields(business)
   const businessName = businessFields.Business_Name || 'this business'
 
-  return {
+  const fields: Record<string, string> = {
     ...balanceFields,
     ...businessFields,
     Last_Message: `Welcome to your ${businessName} stamp card`,
   }
+
+  if (options?.cityBaseUrl && options?.walletPassId) {
+    fields.Rewards_Url = buildLoyaltyRewardsUrl(options.cityBaseUrl, options.walletPassId)
+  }
+
+  return fields
 }
 
 /**

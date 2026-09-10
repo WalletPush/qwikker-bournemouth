@@ -17,6 +17,7 @@ import {
 } from '@/lib/loyalty/loyalty-utils'
 import { loadLoyaltyBusinessForPass } from '@/lib/loyalty/load-loyalty-business-for-pass'
 import { issueLoyaltyPass, updateLoyaltyPassField } from '@/lib/loyalty/walletpush-loyalty'
+import { getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
 
 /**
  * POST /api/loyalty/earn
@@ -195,7 +196,11 @@ export async function POST(request: NextRequest) {
         program,
         membership,
         business,
-        program.type
+        program.type,
+        {
+          cityBaseUrl: getFranchiseBaseUrl(city),
+          walletPassId,
+        }
       )
 
       const passResult = await issueLoyaltyPass(
