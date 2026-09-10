@@ -176,59 +176,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create membership' }, { status: 500 })
     }
 
-    // 8b. If we just auto-created membership, issue a WalletPush pass
-    let passCreated = false
-    let passAppleUrl: string | undefined
-    let passGoogleUrl: string | undefined
-
-    if (!membership.walletpush_serial && hasWalletPushCredentials(program)) {
-      const { data: appUser } = await serviceRole
-        .from('app_users')
-        .select('first_name, last_name, email')
-        .eq('wallet_pass_id', walletPassId)
-        .single()
-
-      const business = (await loadLoyaltyBusinessForPass(serviceRole, program.business_id)) || {
-        business_name: null,
-        phone: null,
-      }
-      const initialFields = getLoyaltyPassIssueFields(
-        program,
-        membership,
-        business,
-        program.type,
-        {
-          cityBaseUrl: getFranchiseBaseUrl(city),
-          walletPassId,
-        }
-      )
-
-      const passResult = await issueLoyaltyPass(
-        program as any,
-        {
-          firstName: appUser?.first_name || 'Qwikker',
-          lastName: appUser?.last_name || 'Member',
-          email: appUser?.email || `${walletPassId}@pass.qwikker.com`,
-        },
-        initialFields
-      )
-
-      if (passResult) {
-        await serviceRole
-          .from('loyalty_memberships')
-          .update({ walletpush_serial: passResult.serial })
-          .eq('id', membership.id)
-
-        membership = { ...membership, walletpush_serial: passResult.serial }
-        passCreated = true
-        passAppleUrl = passResult.appleUrl
-        passGoogleUrl = passResult.googleUrl
-      } else {
-        console.error('[loyalty/earn] Auto-create pass failed for membership', membership.id)
-      }
-    }
-
-    // 9. Cooldown check
+    // 9. Cooldown check (before any balance write or pass create)
     const earnCheck = canEarnNow(membership, program)
     if (!earnCheck.allowed) {
       await serviceRole.from('loyalty_earn_events').insert({
@@ -282,36 +230,97 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', membership.id)
 
-    // 12. WalletPush call-out (fire-and-forget)
-    if (
-      hasWalletPushCredentials(program) &&
-      membership.walletpush_serial
-    ) {
-      const serial = membership.walletpush_serial
-      const businessName = (program as any).business_profiles?.business_name || 'this business'
+    const membershipAfterEarn = { ...membership, stamps_balance: newBalance }
 
-      // Sequential updates with delays — WalletPush API drops concurrent PUTs
-      if (rewardUnlocked) {
-        await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
-        await new Promise(r => setTimeout(r, 500))
-        await updateLoyaltyPassField(program, serial, 'Status', 'Reward Available!', false)
-        await new Promise(r => setTimeout(r, 500))
-        await updateLoyaltyPassField(
+    // 12. WalletPush: create pass AFTER increment (so create payload has the real balance),
+    // or update fields on an existing serial. Creating before increment caused a race where
+    // WalletPush finished packaging Points=N-1 after we wrote Reward Available / Points=N.
+    let passCreated = false
+    let passAppleUrl: string | undefined
+    let passGoogleUrl: string | undefined
+    let serial = membership.walletpush_serial as string | null
+
+    if (hasWalletPushCredentials(program)) {
+      const businessName =
+        (program as any).business_profiles?.business_name || 'this business'
+
+      if (!serial) {
+        const { data: appUser } = await serviceRole
+          .from('app_users')
+          .select('first_name, last_name, email')
+          .eq('wallet_pass_id', walletPassId)
+          .single()
+
+        const business = (await loadLoyaltyBusinessForPass(serviceRole, program.business_id)) || {
+          business_name: null,
+          phone: null,
+        }
+        const initialFields = getLoyaltyPassIssueFields(
           program,
-          serial,
-          'Last_Message',
-          `You earned a free ${program.reward_description} at ${businessName}!`,
-          true
+          membershipAfterEarn,
+          business,
+          program.type,
+          {
+            cityBaseUrl: getFranchiseBaseUrl(city),
+            walletPassId,
+          }
         )
+
+        if (rewardUnlocked) {
+          initialFields.Status = `${newBalance}/${program.reward_threshold} ${program.stamp_label} · Reward ready!`
+          initialFields.Last_Message = `You earned a free ${program.reward_description} at ${businessName}!`
+        }
+
+        const passResult = await issueLoyaltyPass(
+          program as any,
+          {
+            firstName: appUser?.first_name || 'Qwikker',
+            lastName: appUser?.last_name || 'Member',
+            email: appUser?.email || `${walletPassId}@pass.qwikker.com`,
+          },
+          initialFields
+        )
+
+        if (passResult) {
+          await serviceRole
+            .from('loyalty_memberships')
+            .update({ walletpush_serial: passResult.serial })
+            .eq('id', membership.id)
+
+          serial = passResult.serial
+          passCreated = true
+          passAppleUrl = passResult.appleUrl
+          passGoogleUrl = passResult.googleUrl
+        } else {
+          console.error('[loyalty/earn] Pass creation returned null for membership', membership.id)
+        }
       } else {
-        const fieldValues = getLoyaltyPassFieldValues(
-          program,
-          { ...membership, stamps_balance: newBalance },
-          program.type
-        )
-        await updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
-        await new Promise(r => setTimeout(r, 500))
-        await updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, true)
+        // Existing pass — sequential updates; push only on the last write.
+        // Status keeps the numeric progress visible (avoids a flash then revert),
+        // and carries the lock-screen text via the Status changeMessage (%@).
+        if (rewardUnlocked) {
+          const statusText = `${newBalance}/${program.reward_threshold} ${program.stamp_label} · Reward ready!`
+          await updateLoyaltyPassField(program, serial, 'Points', String(newBalance), false)
+          await new Promise((r) => setTimeout(r, 600))
+          await updateLoyaltyPassField(
+            program,
+            serial,
+            'Last_Message',
+            `You earned a free ${program.reward_description} at ${businessName}!`,
+            false
+          )
+          await new Promise((r) => setTimeout(r, 600))
+          await updateLoyaltyPassField(program, serial, 'Status', statusText, true)
+        } else {
+          const fieldValues = getLoyaltyPassFieldValues(
+            program,
+            membershipAfterEarn,
+            program.type
+          )
+          await updateLoyaltyPassField(program, serial, 'Points', fieldValues.Points, false)
+          await new Promise((r) => setTimeout(r, 600))
+          await updateLoyaltyPassField(program, serial, 'Status', fieldValues.Status, true)
+        }
       }
     }
 
