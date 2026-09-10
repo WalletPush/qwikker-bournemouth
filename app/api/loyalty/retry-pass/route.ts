@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
-import { hasWalletPushCredentials } from '@/lib/loyalty/loyalty-types'
-import { getLoyaltyPassFieldValues } from '@/lib/loyalty/loyalty-utils'
+import { getLoyaltyPassIssueFields } from '@/lib/loyalty/loyalty-utils'
+import { loadLoyaltyBusinessForPass } from '@/lib/loyalty/load-loyalty-business-for-pass'
 import { issueLoyaltyPass } from '@/lib/loyalty/walletpush-loyalty'
 
 /**
@@ -54,7 +54,26 @@ export async function POST(request: NextRequest) {
       .eq('wallet_pass_id', walletPassId)
       .single()
 
-    const initialFields = getLoyaltyPassFieldValues(program, membership, program.type)
+    const business = (await loadLoyaltyBusinessForPass(serviceRole, program.business_id)) || {
+      business_name: null,
+      phone: null,
+    }
+    const initialFields = getLoyaltyPassIssueFields(
+      program,
+      membership,
+      business,
+      program.type
+    )
+
+    if (!initialFields.Business_Phone || !initialFields.Maps_Url) {
+      return NextResponse.json(
+        {
+          error:
+            'Business phone or address/maps is missing on the listing. Update the business profile, then retry.',
+        },
+        { status: 400 }
+      )
+    }
 
     const result = await issueLoyaltyPass(
       program as any,

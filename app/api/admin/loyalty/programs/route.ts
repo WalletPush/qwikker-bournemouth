@@ -28,6 +28,7 @@ export async function GET() {
         stamp_icon, earn_instructions, earn_mode,
         primary_color, background_color, logo_url, strip_image_url,
         status, city, created_at, updated_at,
+        walletpush_template_id, walletpush_api_key, walletpush_pass_type_id,
         business_profiles!inner(id, business_name, logo, city)
       `)
       .in('status', ['active', 'paused'])

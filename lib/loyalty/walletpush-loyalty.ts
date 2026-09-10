@@ -32,7 +32,7 @@ interface IssueLoyaltyPassResult {
  *
  * Uses the program's per-template credentials to create a pass
  * with the user's details and initial field values (Points,
- * Threshold, Status, Reward).
+ * Threshold, Status, Reward, Business_*, etc.).
  *
  * Returns the serial number and download URLs, or null on failure.
  */
@@ -42,8 +42,9 @@ export async function issueLoyaltyPass(
   initialFields: Record<string, string>
 ): Promise<IssueLoyaltyPassResult | null> {
   try {
-    const url = getWalletPushCreateUrl(program.walletpush_template_id, program.walletpush_dashboard_url)
-    const headers = getWalletPushAuthHeader(program.walletpush_api_key)
+    const templateId = program.walletpush_template_id.trim()
+    const url = getWalletPushCreateUrl(templateId, program.walletpush_dashboard_url)
+    const headers = getWalletPushAuthHeader(program.walletpush_api_key.trim())
 
     // Field names must exactly match template placeholders.
     const body = {
@@ -55,7 +56,7 @@ export async function issueLoyaltyPass(
 
     console.log('[WalletPush] issueLoyaltyPass request:', {
       url,
-      templateId: program.walletpush_template_id,
+      templateId,
       fields: Object.keys(body),
     })
 
@@ -69,7 +70,7 @@ export async function issueLoyaltyPass(
       const text = await response.text().catch(() => 'no body')
       console.error(
         `[WalletPush] issueLoyaltyPass failed: ${response.status} ${response.statusText}`,
-        { templateId: program.walletpush_template_id, email: memberData.email, body: text }
+        { templateId, email: memberData.email, body: text }
       )
       return null
     }

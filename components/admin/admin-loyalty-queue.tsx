@@ -53,6 +53,9 @@ interface ActiveProgram {
   city: string
   created_at: string
   member_count: number
+  walletpush_template_id?: string | null
+  walletpush_api_key?: string | null
+  walletpush_pass_type_id?: string | null
   business_profiles?: {
     id: string
     business_name: string
@@ -77,6 +80,13 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
   const [rejectReason, setRejectReason] = useState('')
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [walletpushDashboardUrl, setWalletpushDashboardUrl] = useState<string | null>(null)
+  const [editingCredsId, setEditingCredsId] = useState<string | null>(null)
+  const [programCreds, setProgramCreds] = useState<Record<string, {
+    walletpush_template_id: string
+    walletpush_api_key: string
+    walletpush_pass_type_id: string
+  }>>({})
+  const [savingCredsId, setSavingCredsId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -195,6 +205,67 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
       setTogglingId(null)
     }
   }, [])
+
+  const openProgramCredentials = useCallback((prog: ActiveProgram) => {
+    setEditingCredsId((prev) => (prev === prog.id ? null : prog.id))
+    setProgramCreds((prev) => ({
+      ...prev,
+      [prog.id]: prev[prog.id] || {
+        walletpush_template_id: prog.walletpush_template_id || '',
+        walletpush_api_key: prog.walletpush_api_key || '',
+        walletpush_pass_type_id: prog.walletpush_pass_type_id || '',
+      },
+    }))
+  }, [])
+
+  const updateProgramCredential = useCallback((
+    programId: string,
+    field: 'walletpush_template_id' | 'walletpush_api_key' | 'walletpush_pass_type_id',
+    value: string
+  ) => {
+    setProgramCreds((prev) => ({
+      ...prev,
+      [programId]: { ...prev[programId], [field]: value },
+    }))
+  }, [])
+
+  const handleSaveProgramCredentials = useCallback(async (programId: string) => {
+    const creds = programCreds[programId]
+    if (!creds?.walletpush_template_id?.trim() || !creds?.walletpush_api_key?.trim() || !creds?.walletpush_pass_type_id?.trim()) {
+      alert('All three WalletPush credential fields are required.')
+      return
+    }
+
+    setSavingCredsId(programId)
+    try {
+      const res = await fetch('/api/admin/loyalty/program/credentials', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ programId, ...creds }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Failed to save credentials')
+        return
+      }
+
+      const trimmed = {
+        walletpush_template_id: creds.walletpush_template_id.trim(),
+        walletpush_api_key: creds.walletpush_api_key.trim(),
+        walletpush_pass_type_id: creds.walletpush_pass_type_id.trim(),
+      }
+      setActivePrograms((prev) =>
+        prev.map((p) => (p.id === programId ? { ...p, ...trimmed } : p))
+      )
+      setProgramCreds((prev) => ({ ...prev, [programId]: trimmed }))
+      setEditingCredsId(null)
+      alert('WalletPush credentials updated. Retry the member pass if issue failed before.')
+    } catch {
+      alert('Failed to save credentials')
+    } finally {
+      setSavingCredsId(null)
+    }
+  }, [programCreds])
 
   if (isLoading) {
     return (
@@ -575,7 +646,7 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 pt-3 mt-3 border-t border-zinc-800/50">
+                        <div className="flex flex-wrap items-center gap-3 pt-3 mt-3 border-t border-zinc-800/50">
                           <Button
                             variant="outline"
                             size="sm"
@@ -596,10 +667,77 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                             )}
                             {prog.status === 'active' ? 'Pause' : 'Resume'}
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openProgramCredentials(prog)}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs"
+                          >
+                            {editingCredsId === prog.id ? (
+                              <ChevronUp className="w-3 h-3 mr-1.5" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3 mr-1.5" />
+                            )}
+                            Edit WalletPush
+                          </Button>
                           <span className="text-zinc-600 text-xs">
                             Created {new Date(prog.created_at).toLocaleDateString()}
                           </span>
                         </div>
+
+                        {editingCredsId === prog.id && (
+                          <div className="mt-3 space-y-3 rounded-lg border border-slate-700/50 bg-slate-900/40 p-3">
+                            <p className="text-xs text-slate-400">
+                              Paste from the stamp-card template (no spaces). Wrong API key causes 403.
+                            </p>
+                            <div className="space-y-1.5">
+                              <Label className="text-slate-400 text-xs">Template ID</Label>
+                              <Input
+                                value={programCreds[prog.id]?.walletpush_template_id || ''}
+                                onChange={(e) =>
+                                  updateProgramCredential(prog.id, 'walletpush_template_id', e.target.value)
+                                }
+                                className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
+                                placeholder="Template UUID"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-slate-400 text-xs">API Key</Label>
+                              <Input
+                                value={programCreds[prog.id]?.walletpush_api_key || ''}
+                                onChange={(e) =>
+                                  updateProgramCredential(prog.id, 'walletpush_api_key', e.target.value)
+                                }
+                                className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
+                                placeholder="API key for this template"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-slate-400 text-xs">Pass Type ID</Label>
+                              <Input
+                                value={programCreds[prog.id]?.walletpush_pass_type_id || ''}
+                                onChange={(e) =>
+                                  updateProgramCredential(prog.id, 'walletpush_pass_type_id', e.target.value)
+                                }
+                                className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
+                                placeholder="e.g. pass.com.walletpush.loyalty"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveProgramCredentials(prog.id)}
+                              disabled={savingCredsId === prog.id}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              {savingCredsId === prog.id ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              Save credentials
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
