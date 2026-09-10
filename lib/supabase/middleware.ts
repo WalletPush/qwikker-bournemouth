@@ -100,6 +100,7 @@ export async function updateSession(request: NextRequest) {
     '/s/',          // Shortlinks
     '/c/',          // Chat shortlinks
     '/o/',          // Offer shortlinks
+    '/w/',          // Loyalty rewards shortlinks (stamp card Featured Action)
     '/n/',          // Push notification tracking links (cookie-free)
     '/r/',          // Claim-invite tracked redirects (Claim / Present Mode CTAs)
     '/claim',       // Business claim flow (creates account after verification)

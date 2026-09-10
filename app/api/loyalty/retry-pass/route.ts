@@ -4,6 +4,7 @@ import { getSafeCurrentCity } from '@/lib/utils/tenant-security'
 import { getLoyaltyPassIssueFields } from '@/lib/loyalty/loyalty-utils'
 import { loadLoyaltyBusinessForPass } from '@/lib/loyalty/load-loyalty-business-for-pass'
 import { issueLoyaltyPass } from '@/lib/loyalty/walletpush-loyalty'
+import { getFranchiseBaseUrl } from '@/lib/email/send-franchise-email'
 
 /**
  * POST /api/loyalty/retry-pass
@@ -62,7 +63,11 @@ export async function POST(request: NextRequest) {
       program,
       membership,
       business,
-      program.type
+      program.type,
+      {
+        cityBaseUrl: getFranchiseBaseUrl(city),
+        walletPassId,
+      }
     )
 
     if (!initialFields.Business_Phone || !initialFields.Maps_Url) {
