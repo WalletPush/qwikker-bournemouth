@@ -328,7 +328,8 @@ export function getLoyaltyBusinessPassFields(
     Business_Phone: phone,
     Maps_Url: mapsUrl,
   }
-  if (address) fields.Business_Address = address
+  // Do not send Business_Address unless it exists as a WalletPush placeholder —
+  // unmatched fields cause 400 on pass create. Maps_Url covers directions.
   return fields
 }
 
