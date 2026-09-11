@@ -220,7 +220,14 @@ async function uploadTemplateImage(
   return typeof data.url === 'string' ? data.url : null
 }
 
-/** Stamp grid + layout tuned so N stamps fit the poster strip (API-settable). */
+/**
+ * Stamp grid layout for posterGeneric stamp cards.
+ *
+ * WalletPush MASTER (3 stamps) uses widthPct 40 / cellAspect 0.6 / cellPadding 0.15.
+ * Linearly scaling widthPct with stamp count (e.g. 5 → ~67%) overflows the poster
+ * safe area: stamps clip at the edges and look sparsely spaced. Cap single-row
+ * width and keep MASTER cell metrics so plates sit in a tight centered cluster.
+ */
 function stampLayoutForThreshold(total: number): {
   cols: number
   rows: number
@@ -230,17 +237,32 @@ function stampLayoutForThreshold(total: number): {
   verticalCenterPct: number
 } {
   const n = Math.max(1, Math.min(20, Math.round(total)))
-  // MASTER baseline: 3 stamps @ widthPct 40 → ~13.3% strip width per cell
-  const perCell = 40 / 3
+  // Match MASTER cell metrics (slightly tighter padding so plated icons sit closer)
+  const cellAspect = 0.6
+  const cellPadding = 0.1
+  const verticalCenterPct = 55
+  const masterWidthFor3 = 40
 
-  if (n <= 5) {
+  if (n <= 4) {
     return {
       cols: n,
       rows: 1,
-      widthPct: Math.min(70, Math.round(perCell * n)),
-      cellAspect: 0.55,
-      cellPadding: 0.22,
-      verticalCenterPct: 50,
+      // Proportional to MASTER 3@40, capped so 4 stays inside the safe area
+      widthPct: Math.min(52, Math.round((masterWidthFor3 / 3) * n)),
+      cellAspect,
+      cellPadding,
+      verticalCenterPct,
+    }
+  }
+  if (n === 5) {
+    // Single row of 5 — keep under ~50% or iOS clips the outer stamps
+    return {
+      cols: 5,
+      rows: 1,
+      widthPct: 48,
+      cellAspect,
+      cellPadding,
+      verticalCenterPct,
     }
   }
   if (n <= 8) {
@@ -248,29 +270,29 @@ function stampLayoutForThreshold(total: number): {
     return {
       cols,
       rows: 2,
-      widthPct: Math.min(72, Math.round(perCell * cols)),
-      cellAspect: 0.55,
-      cellPadding: 0.2,
-      verticalCenterPct: 48,
+      widthPct: Math.min(50, Math.round((masterWidthFor3 / 3) * cols)),
+      cellAspect,
+      cellPadding,
+      verticalCenterPct: 52,
     }
   }
   if (n <= 12) {
     return {
       cols: 4,
       rows: Math.ceil(n / 4),
-      widthPct: 68,
-      cellAspect: 0.55,
-      cellPadding: 0.2,
-      verticalCenterPct: 48,
+      widthPct: 50,
+      cellAspect,
+      cellPadding,
+      verticalCenterPct: 52,
     }
   }
   return {
     cols: 5,
     rows: Math.ceil(n / 5),
-    widthPct: 72,
-    cellAspect: 0.5,
-    cellPadding: 0.2,
-    verticalCenterPct: 48,
+    widthPct: 52,
+    cellAspect: 0.55,
+    cellPadding,
+    verticalCenterPct: 50,
   }
 }
 
