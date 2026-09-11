@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { StampGrid } from '@/components/loyalty/stamp-grid'
 import { STAMP_ICONS } from '@/lib/loyalty/loyalty-utils'
@@ -56,6 +56,9 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   const [walletLinksById, setWalletLinksById] = useState<
     Record<string, { appleUrl: string; googleUrl: string } | 'loading' | 'error'>
   >({})
+  const walletLinksInflight = useRef<Set<string>>(new Set())
+  const walletLinksCache = useRef(walletLinksById)
+  walletLinksCache.current = walletLinksById
 
   const fetchSuggestions = useCallback(async (currentMemberships: Membership[]) => {
     try {
@@ -98,16 +101,19 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   }, [])
 
   const loadWalletLinks = useCallback(
-    async (membership: Membership) => {
+    async (membership: Membership, opts?: { force?: boolean }) => {
       if (!membership.walletpush_serial) return
+      const id = membership.id
 
-      let shouldFetch = false
-      setWalletLinksById((prev) => {
-        if (prev[membership.id] && prev[membership.id] !== 'error') return prev
-        shouldFetch = true
-        return { ...prev, [membership.id]: 'loading' }
-      })
-      if (!shouldFetch) return
+      if (!opts?.force) {
+        if (walletLinksInflight.current.has(id)) return
+        const existing = walletLinksCache.current[id]
+        // Only skip when we already have real URLs (not a stuck 'loading' leftover)
+        if (existing && existing !== 'error' && existing !== 'loading') return
+      }
+
+      walletLinksInflight.current.add(id)
+      setWalletLinksById((prev) => ({ ...prev, [id]: 'loading' }))
 
       try {
         const res = await fetch('/api/loyalty/wallet-links', {
@@ -118,17 +124,21 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
             walletPassId,
           }),
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.appleUrl) {
-          setWalletLinksById((prev) => ({ ...prev, [membership.id]: 'error' }))
+          console.error('[loyalty] wallet-links failed', res.status, data)
+          setWalletLinksById((prev) => ({ ...prev, [id]: 'error' }))
           return
         }
         setWalletLinksById((prev) => ({
           ...prev,
-          [membership.id]: { appleUrl: data.appleUrl, googleUrl: data.googleUrl },
+          [id]: { appleUrl: data.appleUrl as string, googleUrl: data.googleUrl as string },
         }))
-      } catch {
-        setWalletLinksById((prev) => ({ ...prev, [membership.id]: 'error' }))
+      } catch (err) {
+        console.error('[loyalty] wallet-links error', err)
+        setWalletLinksById((prev) => ({ ...prev, [id]: 'error' }))
+      } finally {
+        walletLinksInflight.current.delete(id)
       }
     },
     [walletPassId]
@@ -339,7 +349,7 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
                         {walletLinksById[m.id] === 'error' && (
                           <button
                             type="button"
-                            onClick={() => loadWalletLinks(m)}
+                            onClick={() => loadWalletLinks(m, { force: true })}
                             className="text-xs text-emerald-400 hover:text-emerald-300"
                           >
                             Try again

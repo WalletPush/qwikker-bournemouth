@@ -12,8 +12,8 @@ import {
  * POST /api/loyalty/wallet-links
  *
  * Returns Apple + Google re-install URLs for an existing loyalty pass serial.
- * Syncs current stamp balance onto the WalletPush pass first so re-add shows
- * live progress (same serial — never mints a new card / resets stamps).
+ * Same serial → stamps preserved. Syncs balance in the background (do not block
+ * the install links on WalletPush latency).
  *
  * Body: { publicId, walletPassId }
  */
@@ -55,36 +55,37 @@ export async function POST(request: NextRequest) {
 
     const franchise = await getFranchiseConfig(city)
     const dashboardUrl =
-      program.walletpush_dashboard_url ||
+      (program as { walletpush_dashboard_url?: string }).walletpush_dashboard_url ||
       franchise?.walletpush_dashboard_url ||
       'https://loyalty.qwikker.com'
 
-    // Push live Qwikker balance onto the existing serial before minting install links
-    if (
-      program.walletpush_api_key &&
-      program.walletpush_pass_type_id &&
-      membership.walletpush_serial
-    ) {
+    const urls = buildLoyaltyPassInstallUrls(membership.walletpush_serial, dashboardUrl)
+
+    // Sync live balance onto the pass without blocking the response
+    if (program.walletpush_api_key && program.walletpush_pass_type_id) {
       const fields = getLoyaltyPassFieldValues(program, membership, program.type)
       const entries = Object.entries(fields)
-      for (let i = 0; i < entries.length; i++) {
-        const [name, value] = entries[i]
-        const isLast = i === entries.length - 1
-        await updateLoyaltyPassField(
-          {
-            walletpush_api_key: program.walletpush_api_key,
-            walletpush_pass_type_id: program.walletpush_pass_type_id,
-            walletpush_dashboard_url: dashboardUrl,
-          },
-          membership.walletpush_serial,
-          name,
-          value,
-          isLast
-        )
-      }
+      void (async () => {
+        try {
+          for (let i = 0; i < entries.length; i++) {
+            const [name, value] = entries[i]
+            await updateLoyaltyPassField(
+              {
+                walletpush_api_key: program.walletpush_api_key,
+                walletpush_pass_type_id: program.walletpush_pass_type_id,
+                walletpush_dashboard_url: dashboardUrl,
+              },
+              membership.walletpush_serial,
+              name,
+              value,
+              i === entries.length - 1
+            )
+          }
+        } catch (err) {
+          console.warn('[loyalty/wallet-links] background sync failed', err)
+        }
+      })()
     }
-
-    const urls = buildLoyaltyPassInstallUrls(membership.walletpush_serial, dashboardUrl)
 
     return NextResponse.json({
       serial: membership.walletpush_serial,
