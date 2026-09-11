@@ -53,6 +53,9 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   const [suggestions, setSuggestions] = useState<LoyaltyPick[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [walletLinksById, setWalletLinksById] = useState<
+    Record<string, { appleUrl: string; googleUrl: string } | 'loading' | 'error'>
+  >({})
 
   const fetchSuggestions = useCallback(async (currentMemberships: Membership[]) => {
     try {
@@ -93,6 +96,43 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
   const toggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }, [])
+
+  const loadWalletLinks = useCallback(
+    async (membership: Membership) => {
+      if (!membership.walletpush_serial) return
+
+      let shouldFetch = false
+      setWalletLinksById((prev) => {
+        if (prev[membership.id] && prev[membership.id] !== 'error') return prev
+        shouldFetch = true
+        return { ...prev, [membership.id]: 'loading' }
+      })
+      if (!shouldFetch) return
+
+      try {
+        const res = await fetch('/api/loyalty/wallet-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publicId: membership.program.public_id,
+            walletPassId,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.appleUrl) {
+          setWalletLinksById((prev) => ({ ...prev, [membership.id]: 'error' }))
+          return
+        }
+        setWalletLinksById((prev) => ({
+          ...prev,
+          [membership.id]: { appleUrl: data.appleUrl, googleUrl: data.googleUrl },
+        }))
+      } catch {
+        setWalletLinksById((prev) => ({ ...prev, [membership.id]: 'error' }))
+      }
+    },
+    [walletPassId]
+  )
 
   const reloadMemberships = useCallback(async () => {
     try {
@@ -193,7 +233,10 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
           >
             {/* Card header */}
             <button
-              onClick={() => toggleExpand(m.id)}
+              onClick={() => {
+                toggleExpand(m.id)
+                if (expandedId !== m.id) loadWalletLinks(m)
+              }}
               className="w-full flex items-start gap-3 p-4 text-left"
             >
               {p.business.logo && (
@@ -280,6 +323,59 @@ export function UserRewardsPage({ walletPassId }: UserRewardsPageProps) {
                         <Gift className="w-4 h-4" />
                         Reveal Reward
                       </button>
+                    )}
+
+                    {m.walletpush_serial && (
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 space-y-2">
+                        <p className="text-zinc-400 text-xs">
+                          Lost or deleted your card? Re-add it — your stamps stay on this membership.
+                        </p>
+                        {walletLinksById[m.id] === 'loading' && (
+                          <div className="flex items-center gap-2 text-zinc-500 text-xs py-1">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Preparing wallet links…
+                          </div>
+                        )}
+                        {walletLinksById[m.id] === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => loadWalletLinks(m)}
+                            className="text-xs text-emerald-400 hover:text-emerald-300"
+                          >
+                            Try again
+                          </button>
+                        )}
+                        {walletLinksById[m.id] &&
+                          walletLinksById[m.id] !== 'loading' &&
+                          walletLinksById[m.id] !== 'error' && (
+                            <div className="flex flex-col gap-2">
+                              <a
+                                href={(walletLinksById[m.id] as { appleUrl: string }).appleUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full h-11 bg-black border border-zinc-700 rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 transition-colors"
+                              >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                                </svg>
+                                Add to Apple Wallet
+                              </a>
+                              <a
+                                href={(walletLinksById[m.id] as { googleUrl: string }).googleUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex justify-center"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/images/add-to-google-wallet.svg"
+                                  alt="Add to Google Wallet"
+                                  className="h-11"
+                                />
+                              </a>
+                            </div>
+                          )}
+                      </div>
                     )}
 
                     <div className="flex items-center gap-3 pt-1">

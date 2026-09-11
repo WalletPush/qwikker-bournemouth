@@ -129,11 +129,29 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
     }))
   }, [])
 
-  const handleActivate = useCallback(async (requestId: string) => {
-    const creds = credentials[requestId]
-    if (!creds?.walletpush_template_id || !creds?.walletpush_api_key || !creds?.walletpush_pass_type_id) {
-      alert('All three WalletPush credential fields are required.')
-      return
+  const handleActivate = useCallback(async (requestId: string, mode: 'auto' | 'template' | 'manual' = 'auto') => {
+    const creds = credentials[requestId] || {
+      walletpush_template_id: '',
+      walletpush_api_key: '',
+      walletpush_pass_type_id: '',
+    }
+
+    const body: Record<string, string> = { requestId }
+
+    if (mode === 'manual') {
+      if (!creds.walletpush_template_id || !creds.walletpush_api_key || !creds.walletpush_pass_type_id) {
+        alert('All three WalletPush credential fields are required for manual activate.')
+        return
+      }
+      body.walletpush_template_id = creds.walletpush_template_id.trim()
+      body.walletpush_api_key = creds.walletpush_api_key.trim()
+      body.walletpush_pass_type_id = creds.walletpush_pass_type_id.trim()
+    } else if (mode === 'template' || creds.walletpush_template_id?.trim()) {
+      if (!creds.walletpush_template_id?.trim()) {
+        alert('Paste the Pass Designer template id (duplicate of the city Loyalty MASTER).')
+        return
+      }
+      body.walletpush_template_id = creds.walletpush_template_id.trim()
     }
 
     setActivatingId(requestId)
@@ -141,13 +159,31 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
       const res = await fetch('/api/admin/loyalty/request/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, ...creds }),
+        body: JSON.stringify(body),
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         setRequests((prev) => prev.filter((r) => r.id !== requestId))
+        if (data.warning) {
+          alert(`Activated.\n\n${data.warning}`)
+        }
+        // Refresh active programs list
+        try {
+          const programsRes = await fetch('/api/admin/loyalty/programs')
+          if (programsRes.ok) {
+            const progData = await programsRes.json()
+            setActivePrograms(progData.programs || [])
+          }
+        } catch {}
       } else {
-        const data = await res.json()
-        alert(data.error || 'Activation failed')
+        const extra = data.code === 'NEEDS_MANUAL_TEMPLATE' || data.code === 'TEMPLATE_NOT_ISSUABLE'
+          ? '\n\nOpen Fallback options below, paste an existing Pass Designer template id, then Activate with template id.'
+          : ''
+        alert((data.error || 'Activation failed') + extra)
+        if (data.details?.passDesignerUrl) {
+          console.info('[loyalty activate]', data.code, data.details)
+        }
+        setExpandedId(requestId)
       }
     } catch {
       alert('Activation failed')
@@ -461,96 +497,120 @@ export function AdminLoyaltyQueue({ city }: AdminLoyaltyQueueProps) {
                 )}
               </div>
 
-              {/* Expand toggle */}
+              {/* Activate */}
+              <div className="flex flex-wrap gap-3 pt-1">
+                <Button
+                  onClick={() => handleActivate(request.id, 'auto')}
+                  disabled={activatingId === request.id}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {activatingId === request.id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                  )}
+                  Activate stamp card
+                </Button>
+
+                {rejectingId === request.id ? null : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setRejectingId(request.id)}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Reject
+                  </Button>
+                )}
+              </div>
+
+              {rejectingId === request.id && (
+                <div className="space-y-3 p-3 rounded-lg border border-red-500/20 bg-red-500/5">
+                  <Textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Reason for rejection (optional)"
+                    className="bg-slate-900/50 border-slate-600 text-white text-sm min-h-[72px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleReject(request.id)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Confirm reject
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setRejectingId(null)
+                        setRejectReason('')
+                      }}
+                      className="border-slate-600 text-slate-300"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => setExpandedId(isExpanded ? null : request.id)}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors"
               >
                 {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                {isExpanded ? 'Hide credentials' : 'Enter WalletPush credentials'}
+                Having trouble?
               </button>
 
               {isExpanded && (
-                <div className="space-y-4 pt-2 border-t border-slate-700/50">
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-400 text-xs">Template ID</Label>
-                      <Input
-                        value={creds.walletpush_template_id || ''}
-                        onChange={(e) => updateCredential(request.id, 'walletpush_template_id', e.target.value)}
-                        className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
-                        placeholder="Enter the Template ID from WalletPush"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-400 text-xs">API Key</Label>
-                      <Input
-                        value={creds.walletpush_api_key || ''}
-                        onChange={(e) => updateCredential(request.id, 'walletpush_api_key', e.target.value)}
-                        className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
-                        placeholder="Enter the API Key for this template"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-400 text-xs">Pass Type ID</Label>
-                      <Input
-                        value={creds.walletpush_pass_type_id || ''}
-                        onChange={(e) => updateCredential(request.id, 'walletpush_pass_type_id', e.target.value)}
-                        className="bg-slate-900/50 border-slate-600 text-white text-sm h-9"
-                        placeholder="e.g., pass.com.walletpush.loyalty"
-                      />
-                    </div>
+                <div className="space-y-3 pt-2 border-t border-slate-800">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      value={creds.walletpush_template_id || ''}
+                      onChange={(e) => updateCredential(request.id, 'walletpush_template_id', e.target.value)}
+                      className="bg-slate-900/50 border-slate-700 text-white text-sm h-9 flex-1"
+                      placeholder="Existing Pass Designer template ID"
+                    />
+                    <Button
+                      onClick={() => handleActivate(request.id, 'template')}
+                      disabled={activatingId === request.id}
+                      variant="outline"
+                      className="border-slate-600 text-slate-300 shrink-0"
+                    >
+                      Use this template
+                    </Button>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => handleActivate(request.id)}
-                      disabled={activatingId === request.id}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      {activatingId === request.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                      )}
-                      Activate
-                    </Button>
-
-                    {rejectingId === request.id ? (
-                      <div className="flex items-center gap-2 flex-1">
+                  <details className="text-xs text-slate-600">
+                    <summary className="cursor-pointer hover:text-slate-400">Paste credentials manually</summary>
+                    <div className="space-y-3 pt-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-500 text-xs">API Key</Label>
                         <Input
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
-                          placeholder="Reason for rejection"
-                          className="bg-slate-900/50 border-slate-600 text-white text-sm h-9 flex-1"
-                          autoFocus
+                          value={creds.walletpush_api_key || ''}
+                          onChange={(e) => updateCredential(request.id, 'walletpush_api_key', e.target.value)}
+                          className="bg-slate-900/50 border-slate-700 text-white text-sm h-9"
+                          placeholder="Scoped API key"
                         />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleReject(request.id)}
-                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                        >
-                          Confirm
-                        </Button>
-                        <button
-                          onClick={() => { setRejectingId(null); setRejectReason('') }}
-                          className="text-xs text-slate-500 hover:text-slate-400"
-                        >
-                          Cancel
-                        </button>
                       </div>
-                    ) : (
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-500 text-xs">Pass Type ID</Label>
+                        <Input
+                          value={creds.walletpush_pass_type_id || ''}
+                          onChange={(e) => updateCredential(request.id, 'walletpush_pass_type_id', e.target.value)}
+                          className="bg-slate-900/50 border-slate-700 text-white text-sm h-9"
+                          placeholder="pass.come.globalwalletpush"
+                        />
+                      </div>
                       <Button
                         variant="outline"
-                        onClick={() => setRejectingId(request.id)}
-                        className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                        onClick={() => handleActivate(request.id, 'manual')}
+                        disabled={activatingId === request.id}
+                        className="border-slate-700 text-slate-400"
                       >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reject
+                        Activate with credentials
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  </details>
                 </div>
               )}
             </CardContent>

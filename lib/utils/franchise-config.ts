@@ -12,6 +12,8 @@ export interface FranchiseConfig {
   walletpush_api_key?: string
   walletpush_template_id?: string
   walletpush_dashboard_url?: string
+  /** Pass Designer loyalty stamp-card MASTER (not the main city pass) */
+  walletpush_loyalty_master_template_id?: string
   
   // Slack Integration
   slack_webhook_url?: string
@@ -92,6 +94,7 @@ export async function getWalletPushCredentials(city: string) {
     apiKey: config?.walletpush_api_key || process.env.MOBILE_WALLET_APP_KEY,
     templateId: config?.walletpush_template_id || process.env.MOBILE_WALLET_TEMPLATE_ID,
     dashboardUrl: config?.walletpush_dashboard_url || undefined,
+    loyaltyMasterTemplateId: config?.walletpush_loyalty_master_template_id || undefined,
     city: city,
     franchiseName: config?.display_name || city,
     // IANA tz from franchise_crm_configs (e.g. Africa/Dar_es_Salaam for Zanzibar)

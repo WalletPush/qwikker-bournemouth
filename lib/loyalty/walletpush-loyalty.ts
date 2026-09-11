@@ -141,3 +141,22 @@ export async function updateLoyaltyPassField(
     return false
   }
 }
+
+/**
+ * Re-install URLs for an EXISTING loyalty pass serial.
+ * Same serial → same WalletPush pass object → stamps/fields preserved.
+ * Apple serves the live .pkpass; Google save JWT is minted fresh on redirect.
+ */
+export function buildLoyaltyPassInstallUrls(
+  serial: string,
+  dashboardUrl?: string
+): { appleUrl: string; googleUrl: string; installPageUrl: string } {
+  const base = (dashboardUrl || 'https://loyalty.qwikker.com').replace(/\/+$/, '')
+  const s = serial.trim()
+  return {
+    appleUrl: `${base}/api/apple-pass/${encodeURIComponent(s)}/download`,
+    googleUrl: `${base}/api/google-wallet/${encodeURIComponent(s)}`,
+    installPageUrl: `${base}/api/pass-install/${encodeURIComponent(s)}`,
+  }
+}
+

@@ -449,7 +449,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
       title: '🪪 Loyalty Cards (Spotlight)',
       description: 'Build repeat visits with a white-label loyalty system:',
       features: [
-        'Program types: stamp cards, points, tiers, or perks',
+        'White-label stamp card loyalty in Apple & Google Wallet',
         'Smart rewards: auto-unlock free items, upsells, birthday treats',
         'Member engagement: send push to loyalty members only',
         'Insights: visits, redemptions, breakage, most-loved rewards',
@@ -915,7 +915,7 @@ export function DashboardHome({ profile }: DashboardHomeProps) {
                 <button 
                   onClick={() => setShowModal('loyalty')}
                   className="p-1 hover:bg-slate-700 rounded-full transition-colors" 
-                  title="Create a digital loyalty program with stamps, points, or rewards—plus member push and analytics."
+                  title="Create a branded stamp card loyalty program for Apple & Google Wallet—plus member push and analytics."
                 >
                   <svg className="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

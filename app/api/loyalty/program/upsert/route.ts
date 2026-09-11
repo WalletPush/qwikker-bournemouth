@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
         .from('loyalty_programs')
         .update({
           ...body,
+          type: 'stamps',
+          stamp_label: 'Stamps',
           city,
           updated_at: new Date().toISOString(),
         })
@@ -111,10 +113,10 @@ export async function POST(request: NextRequest) {
         business_id: business.id,
         public_id: publicId,
         program_name: programName,
-        type: body.type || 'stamps',
+        type: 'stamps',
         reward_threshold: body.reward_threshold || 10,
         reward_description: body.reward_description || '',
-        stamp_label: body.stamp_label || 'Stamps',
+        stamp_label: 'Stamps',
         earn_mode: body.earn_mode || 'per_visit',
         stamp_icon: body.stamp_icon || 'stamp',
         earn_instructions: body.earn_instructions || null,

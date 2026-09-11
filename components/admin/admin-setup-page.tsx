@@ -39,6 +39,7 @@ interface FranchiseConfig {
   walletpush_api_key: string | null // Masked
   walletpush_template_id: string
   walletpush_dashboard_url: string
+  walletpush_loyalty_master_template_id?: string
   has_walletpush_api_key?: boolean
   
   // Notifications (Slack)
@@ -1532,6 +1533,26 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                         placeholder="d9110746-50d3-46b9-8799-a2b7f22ec939"
                         required
                       />
+                      <p className="text-slate-500 text-xs mt-2">
+                        Main city discovery pass template (not loyalty stamp cards).
+                      </p>
+                    </div>
+
+                    <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Label className="text-white text-sm font-medium mb-0">
+                          Loyalty stamp card MASTER template ID
+                        </Label>
+                      </div>
+                      <Input
+                        value={config.walletpush_loyalty_master_template_id || ''}
+                        onChange={(e) => setConfig({...config, walletpush_loyalty_master_template_id: e.target.value})}
+                        className="bg-slate-700/80 border-slate-600 text-white h-11 rounded-lg"
+                        placeholder="d1534289-cda9-430a-b183-489d6b78071e"
+                      />
+                      <p className="text-slate-500 text-xs mt-2">
+                        Pass Designer MASTER used when provisioning business stamp cards. Bournemouth default is already known in code if left blank.
+                      </p>
                     </div>
 
                     <div className="border border-slate-700 bg-slate-800/50 rounded-lg p-4">
@@ -1560,7 +1581,7 @@ export function AdminSetupPage({ city }: AdminSetupPageProps) {
                     {/* Section-scoped save: only sends WalletPush fields, never touches other sections */}
                     <div className="flex items-center gap-3 pt-1">
                       <Button
-                        onClick={() => saveSection('walletpush', ['walletpush_api_key', 'walletpush_template_id', 'walletpush_dashboard_url'])}
+                        onClick={() => saveSection('walletpush', ['walletpush_api_key', 'walletpush_template_id', 'walletpush_dashboard_url', 'walletpush_loyalty_master_template_id'])}
                         disabled={sectionStatus.walletpush === 'saving'}
                         className="bg-green-600 hover:bg-green-700 text-white"
                       >

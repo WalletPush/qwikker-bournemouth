@@ -4,12 +4,16 @@ import { motion } from 'framer-motion'
 import {
   Bean, Stamp, Scissors, Flame, Hamburger, Wine,
   Pizza, Star, Heart, CakeSlice, Dumbbell, PawPrint,
+  Coffee, Beer, UtensilsCrossed, IceCreamCone, Leaf,
+  Sparkles, Waves, ShoppingBag,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Stamp, Bean, Scissors, Flame, Hamburger, Wine,
   Pizza, Star, Heart, CakeSlice, Dumbbell, PawPrint,
+  Coffee, Beer, UtensilsCrossed, IceCreamCone, Leaf,
+  Sparkles, Waves, ShoppingBag,
 }
 
 interface StampGridProps {

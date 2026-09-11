@@ -15,12 +15,16 @@ import type { LoyaltyProgram, LoyaltyProgramFormData } from '@/lib/loyalty/loyal
 import {
   Bean, Stamp, Scissors, Flame, Hamburger, Wine,
   Pizza, Star, Heart, CakeSlice, Dumbbell, PawPrint,
+  Coffee, Beer, UtensilsCrossed, IceCreamCone, Leaf,
+  Sparkles, Waves, ShoppingBag,
   ChevronRight, ChevronLeft, Loader2, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 
 const ICON_COMPONENTS: Record<string, React.ElementType> = {
   Bean, Stamp, Scissors, Flame, Hamburger, Wine,
   Pizza, Star, Heart, CakeSlice, Dumbbell, PawPrint,
+  Coffee, Beer, UtensilsCrossed, IceCreamCone, Leaf,
+  Sparkles, Waves, ShoppingBag,
 }
 
 interface LoyaltySpecsFormProps {
@@ -29,7 +33,7 @@ interface LoyaltySpecsFormProps {
   onProgramUpdate: (program: LoyaltyProgram) => void
 }
 
-const STEPS = ['Basics', 'Rewards & Rules', 'Branding', 'Terms', 'Review & Submit'] as const
+const STEPS = ['Card basics', 'Rewards & Rules', 'Branding', 'Terms', 'Review & Submit'] as const
 type StepIndex = 0 | 1 | 2 | 3 | 4
 
 const TIMEZONES = [
@@ -57,11 +61,11 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
 
   const [form, setForm] = useState<LoyaltyProgramFormData>({
     program_name: existingProgram?.program_name || `${businessName} Rewards`,
-    type: existingProgram?.type || 'stamps',
+    type: 'stamps',
     reward_threshold: existingProgram?.reward_threshold || 10,
     reward_description: existingProgram?.reward_description || '',
     estimated_reward_value: existingProgram?.estimated_reward_value || 0,
-    stamp_label: existingProgram?.stamp_label || 'Stamps',
+    stamp_label: 'Stamps',
     earn_mode: existingProgram?.earn_mode || 'per_visit',
     stamp_icon: existingProgram?.stamp_icon || 'stamp',
     earn_instructions: existingProgram?.earn_instructions || '',
@@ -76,7 +80,6 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
     timezone: existingProgram?.timezone || 'Europe/London',
     max_earns_per_day: existingProgram?.max_earns_per_day || 1,
     min_gap_minutes: existingProgram?.min_gap_minutes ?? 30,
-    estimated_reward_value: existingProgram?.estimated_reward_value || 0,
   })
 
   const updateField = useCallback(<K extends keyof LoyaltyProgramFormData>(
@@ -92,7 +95,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
       const res = await fetch('/api/loyalty/program/upsert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, type: 'stamps', stamp_label: 'Stamps' }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Save failed')
@@ -174,7 +177,10 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
       {step === 0 && (
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-white text-lg">Program Basics</CardTitle>
+            <CardTitle className="text-white text-lg">Stamp card basics</CardTitle>
+            <p className="text-sm text-zinc-500 pt-1">
+              Set up your white-label stamp card loyalty program. Customers collect stamps on a branded wallet card until they unlock a reward.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -187,42 +193,28 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Type</Label>
-              <Select value={form.type} onValueChange={(v) => {
-                updateField('type', v as 'stamps' | 'points')
-                updateField('stamp_label', v === 'stamps' ? 'Stamps' : 'Points')
-              }}>
-                <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  <SelectItem value="stamps">Stamps</SelectItem>
-                  <SelectItem value="points">Points</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-zinc-500">
-                {form.type === 'stamps'
-                  ? 'Collect X stamps for a reward. Simple and easy to understand.'
-                  : 'Earn points per purchase. Flexible for different reward tiers.'}
+            <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/30 px-4 py-3">
+              <p className="text-sm text-white font-medium">Stamp card</p>
+              <p className="text-xs text-zinc-500 mt-1">
+                Collect stamps for a reward. Classic punch-card style — clear for customers, easy for staff. Points cards are not available.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">Earn Mode</Label>
+              <Label className="text-zinc-300">How customers earn stamps</Label>
               <Select value={form.earn_mode} onValueChange={(v) => updateField('earn_mode', v as 'per_visit' | 'per_transaction')}>
                 <SelectTrigger className="bg-zinc-800/50 border-zinc-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-800 border-zinc-700">
-                  <SelectItem value="per_visit">Per Visit</SelectItem>
-                  <SelectItem value="per_transaction">Per Transaction</SelectItem>
+                  <SelectItem value="per_visit">Per visit</SelectItem>
+                  <SelectItem value="per_transaction">Per purchase</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-zinc-500">
                 {form.earn_mode === 'per_visit'
-                  ? 'Your customers earn 1 stamp each time they visit. Perfect for cafes, pubs, and restaurants.'
-                  : 'Your customers earn 1 stamp per purchase. Great for takeaways and shops where people might buy multiple times per visit.'}
+                  ? 'They earn 1 stamp each time they visit. Perfect for cafés, pubs, and restaurants.'
+                  : 'They earn 1 stamp per purchase. Great for takeaways and shops where people might buy more than once per visit.'}
               </p>
             </div>
 
@@ -230,7 +222,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
             <div className="space-y-3">
               <Label className="text-zinc-300">Choose your stamp icon</Label>
               <p className="text-xs text-zinc-500">
-                This is what your customers see on their rewards card in Qwikker. Pick the one that best represents your business.
+                This icon fills in on the stamp card as customers earn. Pick the one that best represents your business.
               </p>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {(Object.entries(STAMP_ICONS) as [StampIconKey, typeof STAMP_ICONS[StampIconKey]][]).map(
@@ -273,7 +265,7 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label className="text-zinc-300">
-                How many {form.stamp_label.toLowerCase()} before they get a reward?
+                How many stamps before they get a reward?
               </Label>
               <Input
                 type="number"
@@ -596,15 +588,15 @@ export function LoyaltySpecsForm({ profile, existingProgram, onProgramUpdate }: 
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <ReviewRow label="Program Name" value={form.program_name} />
-              <ReviewRow label="Type" value={form.type === 'stamps' ? 'Stamps' : 'Points'} />
-              <ReviewRow label="Earn Mode" value={form.earn_mode === 'per_visit' ? 'Per Visit' : 'Per Transaction'} />
+              <ReviewRow label="Card type" value="Stamp card" />
+              <ReviewRow label="Earn Mode" value={form.earn_mode === 'per_visit' ? 'Per visit' : 'Per purchase'} />
               <ReviewRow
                 label="Stamp Icon"
                 value={STAMP_ICONS[form.stamp_icon as StampIconKey]?.label || form.stamp_icon}
               />
               <ReviewRow
                 label="Reward"
-                value={`Collect ${form.reward_threshold} ${form.stamp_label.toLowerCase()} to get ${form.reward_description || '...'}`}
+                value={`Collect ${form.reward_threshold} stamps to get ${form.reward_description || '...'}`}
               />
               <ReviewRow label="Max Per Day" value={`${form.max_earns_per_day}`} />
               <ReviewRow label="Min Gap" value={form.min_gap_minutes > 0 ? `${form.min_gap_minutes} minutes` : 'None'} />

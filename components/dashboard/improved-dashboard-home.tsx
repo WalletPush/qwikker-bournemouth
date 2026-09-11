@@ -1689,7 +1689,7 @@ export function ImprovedDashboardHome({ profile }: ImprovedDashboardHomeProps) {
               <div className="space-y-3">
                 <div className="bg-zinc-900/40 border border-zinc-700/30 rounded-lg p-4 text-center">
                   <p className="text-zinc-300 text-sm">Bring customers back with stamp rewards</p>
-                  <p className="text-zinc-500 text-xs mt-1">Set up your loyalty program in minutes.</p>
+                  <p className="text-zinc-500 text-xs mt-1">Set up your white-label stamp card in minutes.</p>
                 </div>
                 <Button asChild variant="outline" size="sm" className="w-full border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/40">
                   <Link href="/dashboard/loyalty">Set Up Loyalty</Link>

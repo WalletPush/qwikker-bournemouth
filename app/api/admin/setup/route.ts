@@ -48,6 +48,7 @@ function sanitizeConfigForClient(data: any) {
     resend_from_name: data.resend_from_name,
     walletpush_template_id: data.walletpush_template_id,
     walletpush_dashboard_url: data.walletpush_dashboard_url,
+    walletpush_loyalty_master_template_id: data.walletpush_loyalty_master_template_id,
     slack_channel: data.slack_channel,
     
     // 🔒 SECRETS: Return masked values + "has_*" flags
@@ -267,6 +268,9 @@ export async function POST(request: NextRequest) {
     if (config.resend_from_name !== undefined && config.resend_from_name !== '') updates.resend_from_name = config.resend_from_name
     if (config.walletpush_template_id !== undefined && config.walletpush_template_id !== '') updates.walletpush_template_id = config.walletpush_template_id
     if (config.walletpush_dashboard_url !== undefined && config.walletpush_dashboard_url !== '') updates.walletpush_dashboard_url = config.walletpush_dashboard_url
+    if (config.walletpush_loyalty_master_template_id !== undefined && config.walletpush_loyalty_master_template_id !== '') {
+      updates.walletpush_loyalty_master_template_id = config.walletpush_loyalty_master_template_id
+    }
     if (config.slack_channel !== undefined && config.slack_channel !== '') updates.slack_channel = config.slack_channel
 
     // 🔒 SECRET fields: only update if value is real (not masked, not empty)

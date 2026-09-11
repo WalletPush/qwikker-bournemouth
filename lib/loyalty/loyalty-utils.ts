@@ -30,24 +30,60 @@ export const CONSUME_RATE_LIMIT_MINUTES = 5
 // ─── Stamp Icons ────────────────────────────────────────────────
 
 export const STAMP_ICONS = {
-  stamp:    { icon: 'Stamp',     label: 'Stamp' },
-  bean:     { icon: 'Bean',       label: 'Coffee Bean' },
-  scissors: { icon: 'Scissors',  label: 'Scissors' },
-  flame:    { icon: 'Flame',     label: 'Flame' },
-  burger:   { icon: 'Hamburger', label: 'Burger' },
-  cocktail: { icon: 'Wine',      label: 'Cocktail' },
-  pizza:    { icon: 'Pizza',     label: 'Pizza' },
-  star:     { icon: 'Star',      label: 'Star' },
-  heart:    { icon: 'Heart',     label: 'Heart' },
-  cake:     { icon: 'CakeSlice', label: 'Cake' },
-  dumbbell: { icon: 'Dumbbell',  label: 'Dumbbell' },
-  paw:      { icon: 'PawPrint',  label: 'Paw' },
+  stamp:     { icon: 'Stamp',           label: 'Stamp' },
+  bean:      { icon: 'Bean',            label: 'Coffee Bean' },
+  coffee:    { icon: 'Coffee',          label: 'Coffee' },
+  scissors:  { icon: 'Scissors',        label: 'Scissors' },
+  flame:     { icon: 'Flame',           label: 'Flame' },
+  burger:    { icon: 'Hamburger',       label: 'Burger' },
+  cocktail:  { icon: 'Wine',            label: 'Cocktail' },
+  beer:      { icon: 'Beer',            label: 'Beer' },
+  pizza:     { icon: 'Pizza',           label: 'Pizza' },
+  utensils:  { icon: 'UtensilsCrossed', label: 'Utensils' },
+  icecream:  { icon: 'IceCreamCone',    label: 'Ice Cream' },
+  leaf:      { icon: 'Leaf',            label: 'Leaf' },
+  star:      { icon: 'Star',            label: 'Star' },
+  heart:     { icon: 'Heart',           label: 'Heart' },
+  cake:      { icon: 'CakeSlice',       label: 'Cake' },
+  sparkles:  { icon: 'Sparkles',        label: 'Sparkles' },
+  dumbbell:  { icon: 'Dumbbell',        label: 'Dumbbell' },
+  paw:       { icon: 'PawPrint',        label: 'Paw' },
+  waves:     { icon: 'Waves',           label: 'Waves' },
+  shopping:  { icon: 'ShoppingBag',     label: 'Shopping' },
 } as const
 
 export type StampIconKey = keyof typeof STAMP_ICONS
 
 export function isValidStampIcon(key: string): key is StampIconKey {
   return key in STAMP_ICONS
+}
+
+/** WalletPush stamp art: earned/unearned PNGs under /loyalty/stamp-icons/ */
+export type StampIconVariant = 'earned' | 'unearned'
+export type StampIconSize = 'full' | 256 | 87
+
+/**
+ * Public path for a stamp icon PNG (absolute from site root).
+ * full = 1024² master; use 256 for WalletPush upload, 87 for thumbnails.
+ */
+export function getStampIconPath(
+  key: StampIconKey,
+  variant: StampIconVariant,
+  size: StampIconSize = 'full'
+): string {
+  const suffix = size === 'full' ? '' : `-${size}`
+  return `/loyalty/stamp-icons/${key}-${variant}${suffix}.png`
+}
+
+/** Absolute URL for uploading stamp art to WalletPush (needs public origin). */
+export function getStampIconAbsoluteUrl(
+  origin: string,
+  key: StampIconKey,
+  variant: StampIconVariant,
+  size: StampIconSize = 256
+): string {
+  const base = origin.replace(/\/$/, '')
+  return `${base}${getStampIconPath(key, variant, size)}`
 }
 
 // ─── ID / Token Generation ──────────────────────────────────────

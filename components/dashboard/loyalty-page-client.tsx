@@ -39,8 +39,8 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
         <ElegantModal
           isOpen={showUpgradeModal}
           onClose={() => { window.location.href = '/dashboard' }}
-          title="Qwikker Loyalty"
-          description="Create a digital loyalty program to build repeat customers and increase revenue."
+          title="Stamp Card Loyalty"
+          description="Set up your white-label stamp card loyalty program — branded for your business, live in Apple & Google Wallet."
           type="info"
           size="md"
           actions={[
@@ -57,11 +57,11 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
               <h4 className="font-medium text-emerald-400 mb-3 text-sm">What you get with Spotlight</h4>
               <div className="space-y-2 text-sm text-zinc-400">
                 {[
-                  'Custom branded loyalty cards in Apple & Google Wallet',
-                  'QR-based earn system -- zero hardware needed',
-                  'Push notifications to loyalty members',
+                  'Your own branded stamp card in Apple & Google Wallet',
+                  'QR-based stamp earn — zero hardware needed',
+                  'Push notifications to stamp card members',
                   'Real-time member analytics and stats',
-                  'Tap-to-redeem rewards -- no staff app required',
+                  'Tap-to-redeem rewards — no staff app required',
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-2">
                     <div className="w-1 h-1 bg-emerald-500 rounded-full flex-shrink-0" />
@@ -83,9 +83,9 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+          <h1 className="text-2xl font-semibold text-white">Stamp Card Loyalty</h1>
           <p className="text-zinc-400 mt-1 text-sm">
-            Set up your loyalty program in a few minutes. Your customers will love it.
+            Set up your white-label stamp card loyalty program. Customers collect stamps on a branded wallet card — hit the target, get the reward.
           </p>
         </div>
         <LoyaltySpecsForm
@@ -104,8 +104,8 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
-          <p className="text-zinc-400 mt-1 text-sm">Your loyalty card is being set up.</p>
+          <h1 className="text-2xl font-semibold text-white">Stamp Card Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">Your stamp card is being set up.</p>
         </div>
         {program && (
           <LoyaltyCardPreview
@@ -122,7 +122,7 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
                 </div>
                 <div>
                   <p className="text-white font-medium">Specs submitted</p>
-                  <p className="text-zinc-500">Your loyalty card details have been received</p>
+                  <p className="text-zinc-500">Your stamp card details have been received</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-sm">
@@ -131,7 +131,7 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
                 </div>
                 <div>
                   <p className="text-white font-medium">Building your card</p>
-                  <p className="text-zinc-500">Our team is creating your Apple & Google Wallet loyalty card</p>
+                  <p className="text-zinc-500">Our team is creating your branded Apple & Google Wallet stamp card</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-sm">
@@ -170,8 +170,8 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
-          <p className="text-zinc-400 mt-1 text-sm">This loyalty program has ended.</p>
+          <h1 className="text-2xl font-semibold text-white">Stamp Card Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">This stamp card program has ended.</p>
         </div>
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardContent className="pt-6">
@@ -182,11 +182,11 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
               <div className="flex-1">
                 <h3 className="text-white font-medium">Program Ended</h3>
                 <p className="text-zinc-400 text-sm mt-1">
-                  Your loyalty program has been permanently ended. Existing members&apos; wallet passes
+                  Your stamp card program has been permanently ended. Existing members&apos; wallet passes
                   will remain on their phones but can no longer earn or redeem stamps.
                 </p>
                 <p className="text-zinc-500 text-xs mt-3">
-                  If you&apos;d like to start a new loyalty program, please contact your city admin.
+                  If you&apos;d like to start a new stamp card program, please contact your city admin.
                 </p>
               </div>
             </div>
@@ -207,8 +207,8 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
-          <p className="text-zinc-400 mt-1 text-sm">Your loyalty program is currently paused.</p>
+          <h1 className="text-2xl font-semibold text-white">Stamp Card Loyalty</h1>
+          <p className="text-zinc-400 mt-1 text-sm">Your stamp card program is currently paused.</p>
         </div>
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardContent className="pt-6">
@@ -262,9 +262,9 @@ export function LoyaltyPageClient({ profile, program: initialProgram }: LoyaltyP
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Qwikker Loyalty</h1>
+        <h1 className="text-2xl font-semibold text-white">Stamp Card Loyalty</h1>
         <p className="text-zinc-400 mt-1 text-sm">
-          {program?.program_name || 'Your loyalty program'} is live.
+          {program?.program_name || 'Your stamp card'} is live.
         </p>
       </div>
       {program && (

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- stamp plate -->
+  <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="#0B0B0D" fill-opacity="0.55"/>
+  <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="10"/>
+  <g transform="translate(192,192) scale(26.666666)">
+  <path fill="#E8A05C" d="M4.2 11.2c0-3.4 3.2-6.2 7.8-6.2s7.8 2.8 7.8 6.2H4.2z"/>
+  <path fill="#F5C98B" d="M5 10.4c.6-2.4 3.2-4.2 7-4.2s6.4 1.8 7 4.2H5z" opacity=".9"/>
+  <path fill="#7CB342" d="M3.8 11.5c1.2.9 2.2.4 3.2.9s1.8.2 2.8.8 2 .1 3.1.7 2.1-.1 3.2.6 2.2.2 3.3.8v1.1H3.8z"/>
+  <path fill="#F5C518" d="M4 13.2h16l-1.2 1.4H5.2z"/>
+  <path fill="#5D4037" d="M4.2 14.6h15.6c.5 0 .9.4.9.9v.6c0 .4-.3.7-.7.7H4c-.4 0-.7-.3-.7-.7v-.6c0-.5.4-.9.9-.9z"/>
+  <path fill="#D4894A" d="M4.5 17c0 1.8 2.8 3.2 7.5 3.2s7.5-1.4 7.5-3.2H4.5z"/>
+  <circle fill="#FFF8E7" cx="8" cy="8.2" r=".45"/><circle fill="#FFF8E7" cx="12" cy="7.4" r=".4"/><circle fill="#FFF8E7" cx="15.5" cy="8.4" r=".45"/>
+</g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- stamp plate (empty well) -->
+  <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="#2A2A2E" fill-opacity="0.42"/>
+  <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="10"/>
+  <g transform="translate(192,192) scale(26.666666)">
+  <path fill='#A8A8AC' d='M5 21.5h14v1.2H5z'/>
+  <path fill='#A8A8AC' d='M4.2 14.2A2.3 2.3 0 0 1 6.4 12.2h11.2a2.3 2.3 0 0 1 2.2 2v2.3a.9.9 0 0 1-.9.9H5.1a.9.9 0 0 1-.9-.9v-2.3z'/>
+  <path fill='#8E8E93' d='M9.2 12.2V8.2c0-1.1.7-1.6.7-2.7A2.5 2.5 0 0 1 12 3a2.5 2.5 0 0 1 2.1 2.5c0 1.1.7 1.6.7 2.7v4H9.2z'/>
+</g>
+</svg>
